@@ -8,6 +8,7 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
  motherboard:{label:'マザーボード',designCost:2000,work:20,demand:55,reference:200,fields:{socket:{label:'ソケット',options:['Atlas','Nova'],default:'Atlas'},memoryGen:{label:'メモリ世代',options:['DDR4','DDR5'],default:'DDR4'},slots:{label:'拡張スロット',min:1,max:8,step:1,default:4},features:{label:'機能数',min:1,max:10,step:1,default:2}}},
  ram:{label:'RAM',designCost:2000,work:20,demand:70,reference:320,fields:{memoryGen:{label:'メモリ世代',options:['DDR4','DDR5'],default:'DDR4'},capacity:{label:'容量',min:4,max:128,step:1,default:16},speed:{label:'速度',min:1600,max:6400,step:100,default:3200}}},
  storage:{label:'ストレージ',designCost:2000,work:20,demand:70,reference:150,fields:{capacity:{label:'容量',min:128,max:4096,step:1,default:512},speed:{label:'転送速度',min:100,max:7000,step:100,default:1000}}},
+ monitor:{label:'モニター',designCost:3000,work:20,demand:45,reference:600,fields:{resolution:{label:'解像度相当',min:720,max:4320,step:1,default:1080},refresh:{label:'リフレッシュレート',min:30,max:360,step:1,default:60},gamut:{label:'色域スコア',min:50,max:100,step:1,default:90},appearance:{label:'外観',options:['graphite','silver','teal'],default:'silver'}}},
 };
 export const hardwareBalance={baseFactoryCapacity:20,developmentPerWeek:10,researchPerWeek:10,maxInventory:100000,maxPrice:1000000,
  cpu:{coreCost:20,clockCost:10,ipcCost:60,powerCoefficient:.6,scoreCoefficient:100},
@@ -15,5 +16,6 @@ export const hardwareBalance={baseFactoryCapacity:20,developmentPerWeek:10,resea
  motherboard:{baseCost:30,slotCost:10,featureCost:8,slotScore:25,featureScore:50},
  ram:{capacityCost:3,speedCost:.005,scoreDivisor:160},storage:{capacityCost:.1,speedCost:.01,capacityScore:.1,speedScore:.1},
  weeklyVariance:.2,awarenessFloor:.7,qualityFloor:.5,ageDecay:360,minimumAgeFactor:.25,
+ monitor:{resolutionCost:.1,refreshCost:.8,gamutCost:1,scoreCoefficient:.001},
 } as const;
 export function defaultSpec(kind:HardwareKind):Spec{return Object.fromEntries(Object.entries(hardwareCatalog[kind].fields).map(([k,v])=>[k,v.default]));}

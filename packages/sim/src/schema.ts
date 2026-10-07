@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { balance } from '../../content/src/balance';
 import {hardwareKinds} from '../../content/src/research';
+import {productKinds} from '../../content/src/devices';
 export const specSchema=z.record(z.string(),z.union([z.number(),z.string().max(80)]));
-export const productSchema=z.object({id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(hardwareKinds),spec:specSchema,
+export const productSchema=z.object({id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
  performance:z.number().positive(),power:z.number().nonnegative(),unitCost:z.number().int().positive(),remaining:z.number().nonnegative(),
  price:z.number().int().min(1).max(1000000),inventory:z.number().int().min(0).max(100000),target:z.number().int().min(0).max(100000),
  line:z.boolean(),launched:z.boolean(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
@@ -34,4 +35,5 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('launch'),id:z.string().min(1)}).strict(),
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(100000)}).strict(),
  z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1000000)}).strict(),
+ z.object({type:z.literal('assemble'),kind:z.enum(['pc','laptop']),name:z.string().trim().min(1).max(80),parts:z.object({cpu:z.string(),gpu:z.string(),motherboard:z.string(),ram:z.string(),storage:z.string()}).strict(),purpose:z.enum(['gaming','office','server']),appearance:z.enum(['graphite','silver','teal']),price:z.number().int().min(1).max(1000000),osId:z.string().optional()}).strict(),
 ]);

@@ -1,7 +1,7 @@
-export const hardwareKinds=['cpu','gpu','motherboard','ram','storage'] as const;
+export const hardwareKinds=['cpu','gpu','motherboard','ram','storage','monitor'] as const;
 export type HardwareKind=typeof hardwareKinds[number];
 export type Tech={id:string,label:string,category:string,axis:string,level:number,cost:number,work:number,prerequisites:string[],effect:number};
-export const techCatalog:Tech[]=hardwareKinds.flatMap(category=>Array.from({length:3},(_,i)=>({
+export const techCatalog:Tech[]=[...hardwareKinds,'pc','laptop','os'].flatMap(category=>Array.from({length:3},(_,i)=>({
  id:`${category}-compute-${i+1}`,label:`${category.toUpperCase()} 基盤技術 ${i+1}`,category,axis:'compute',level:i+1,
  cost:4000*(i+1),work:10*(i+1),prerequisites:i?[`${category}-compute-${i}`]:[],effect:0.08,
 })));

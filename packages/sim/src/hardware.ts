@@ -2,6 +2,7 @@ import {hardwareCatalog,hardwareBalance as b,type Spec} from '../../content/src/
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,income,logEvent} from './finance';
 import {nextRandom} from './random';
+import {productCatalog} from '../../content/src/devices';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -19,6 +20,7 @@ export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[])
   case'motherboard':performance=n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore;power=10+n('features');unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost;break;
   case'ram':performance=n('capacity')*n('speed')/b.ram.scoreDivisor;power=n('capacity')*.2;unitCost=n('capacity')*b.ram.capacityCost+n('speed')*b.ram.speedCost;break;
   case'storage':performance=n('capacity')*b.storage.capacityScore+n('speed')*b.storage.speedScore;power=n('speed')*.005;unitCost=n('capacity')*b.storage.capacityCost+n('speed')*b.storage.speedCost;break;
+  case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*.02;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
  performance*=1+Math.max(0,techEffect(completed,kind,'compute')-.08);
  return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost))};
@@ -55,7 +57,7 @@ export function manufacture(s:GameState){
 }
 export function sellProducts(s:GameState){
  for(const p of s.products.filter(p=>p.launched)){
-  const [r,next]=nextRandom(s.seed);s.seed=next;const def=hardwareCatalog[p.kind];
+  const [r,next]=nextRandom(s.seed);s.seed=next;const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(2,p.performance/def.reference)*(p.unitCost*2/p.price)**1.5;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
