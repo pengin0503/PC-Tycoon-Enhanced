@@ -3,6 +3,8 @@ import {techById,type HardwareKind,techEffect} from '../../content/src/research'
 import {expense,income,logEvent} from './finance';
 import {nextRandom} from './random';
 import {productCatalog} from '../../content/src/devices';
+import {offices,managementBalance} from '../../content/src/management';
+import {workBonus} from './management';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -30,8 +32,8 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
   if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
   if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
-  if(s.research.active.length>=1)throw new Error('研究枠が埋まっています');
-  expense(s,t.cost);s.research.active.push({id:c.id,remaining:t.work});logEvent(s,'researchStarted',t.label);return true;
+  if(s.research.active.length>=offices[s.officeLevel-1].researchSlots)throw new Error('研究枠が埋まっています');
+  expense(s,Math.round(t.cost*(s.difficulty==='hard'?managementBalance.hardResearchCost:1)));s.research.active.push({id:c.id,remaining:t.work});logEvent(s,'researchStarted',t.label);return true;
  }
  if(c.type==='design'){
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];const result=evaluateHardware(c.kind,c.spec,s.research.completed);
@@ -48,7 +50,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
 }
 export function manufacture(s:GameState){
  if(s.company.debt>0)return;
- const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=b.baseFactoryCapacity;
+ const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=b.baseFactoryCapacity*s.factoryLevel;
  for(let i=0;i<lines.length;i++){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
   const own=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
@@ -69,9 +71,9 @@ export function sellProducts(s:GameState){
  }
 }
 export function researchAndDevelopment(s:GameState){
- for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-b.researchPerWeek/s.research.active.length);
+ for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek+workBonus(s,'research'))/s.research.active.length);
  for(const r of s.research.active.filter(r=>r.remaining===0)){s.research.completed.push(r.id);logEvent(s,'researchComplete',techById.get(r.id)?.label??r.id);}
  s.research.active=s.research.active.filter(r=>r.remaining>0);
  const developing=s.products.filter(p=>p.remaining>0);
- for(const p of developing){p.remaining=Math.max(0,p.remaining-b.developmentPerWeek/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
+ for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
 }
