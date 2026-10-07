@@ -1,5 +1,6 @@
 import { balance } from '../../content/src/balance';
-import { gameSchema, newGameSchema, baseCommandSchema } from './schema';
+import { gameSchema, newGameSchema, gameCommandSchema } from './schema';
+import {hardwareCommand,researchAndDevelopment} from './hardware';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
 export type { GameState, GameCommand, NewGameOptions } from './types';
@@ -12,11 +13,12 @@ export function createGame(options: NewGameOptions): GameState {
     finance:{revenue:0,expenses:0,capital:0},events:[]});
 }
 export function command(state: GameState, input: GameCommand): GameState {
-  const c=baseCommandSchema.parse(input); const s=gameSchema.parse(state);
+  const c=gameCommandSchema.parse(input); const s=gameSchema.parse(state);
+  hardwareCommand(s,c);
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
     s.day++; logEvent(s,'daily');
-    if(s.day%7===0) logEvent(s,'weekly');
+    if(s.day%7===0) {researchAndDevelopment(s);logEvent(s,'weekly');}
     if(s.day%30===0) {expense(s,balance.monthlyBase,true);logEvent(s,'monthly');}
   }
   return gameSchema.parse(s);
