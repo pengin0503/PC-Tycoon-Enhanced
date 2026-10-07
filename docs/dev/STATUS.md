@@ -24,4 +24,12 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - Ruling: balanced components can have equal rounded purpose scores; purpose-weight test now uses an intentionally CPU-heavy configuration. Distinctness for every balanced configuration was an invalid test assumption.
 - Self-review: passed phase acceptance and numeric/compatibility boundaries; author review. Android remains unverified.
 
-Next: F3 plan (staff, 10 offices, factories, advertising, competitors, acquisitions, difficulty). F3–F6 unimplemented.
+## F3
+- Complete: ten distinct office levels, factory capacity/costs, skill-based hiring/training/payroll, finite research slots, weekly advertising, loans/interest/repayment and monthly financial history.
+- Three competitors have independent cash/debt, PRNG, research, development, inventory, sales and pricing. Acquisitions transfer cash/stock/technology once. Difficulty affects capital, research cost, credit and competitor efficiency.
+- Verified: 57 unit tests, 6 browser tests, typecheck and production build. Self-review passed.
+- Ruling: overdue obligations remain `debt`; permitted borrowing is `loan`, so borrowed money can be spent and interest is visible.
+- Balance regression: autonomous competition made the default CPU 180-day cash fixture fall to 494160. Increasing fictional CPU demand 60→70 restored this playable profitable path; same test RED→GREEN, whole suite passed.
+- Fixed schema declaration order caught by suite (rival schema referenced money before initialization).
+
+Next: F4 plan (LLM simulation, shared compute, training, inference and business). F4–F6 unimplemented.

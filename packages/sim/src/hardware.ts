@@ -5,6 +5,7 @@ import {nextRandom} from './random';
 import {productCatalog} from '../../content/src/devices';
 import {offices,managementBalance} from '../../content/src/management';
 import {workBonus} from './management';
+import {competitorPressure} from './rivals';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -65,7 +66,7 @@ export function sellProducts(s:GameState){
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(2,p.performance/def.reference)*((p.kind==='os'?50:p.unitCost*2)/p.price)**1.5;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
   const units=Math.min(p.kind==='os'?500:p.inventory,Math.max(0,demand));
   if(units){if(p.kind!=='os')p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);}
  }

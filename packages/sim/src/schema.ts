@@ -2,14 +2,15 @@ import { z } from 'zod';
 import { balance } from '../../content/src/balance';
 import {hardwareKinds} from '../../content/src/research';
 import {productKinds} from '../../content/src/devices';
+export const money = z.number().int().min(0).max(balance.moneyLimit);
+export const seedSchema = z.number().int().min(0).max(0xffffffff);
 export const specSchema=z.record(z.string(),z.union([z.number(),z.string().max(80)]));
 export const productSchema=z.object({id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
  performance:z.number().positive(),power:z.number().nonnegative(),unitCost:z.number().int().positive(),remaining:z.number().nonnegative(),
  price:z.number().int().min(1).max(1000000),inventory:z.number().int().min(0).max(100000),target:z.number().int().min(0).max(100000),
  line:z.boolean(),launched:z.boolean(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
 }).strict();
-export const money = z.number().int().min(0).max(balance.moneyLimit);
-export const seedSchema = z.number().int().min(0).max(0xffffffff);
+export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(['cpu','gpu','ram']),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(1).max(2),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean()}).strict();
 export const newGameSchema = z.object({
   id: z.string().min(1).max(80), name: z.string().trim().min(1).max(80),
   year: z.number().int().min(1970).max(2200), difficulty: z.enum(['normal','hard']), seed: seedSchema,
@@ -22,6 +23,7 @@ export const gameSchema = z.object({
   finance: z.object({revenue:money,expenses:money,capital:money}).strict(),
   research:z.object({completed:z.array(z.string()).max(5000),active:z.array(z.object({id:z.string(),remaining:z.number().nonnegative()}).strict()).max(20)}).default({completed:[],active:[]}),
   products:z.array(productSchema).max(500).default([]),
+  rivals:z.array(rivalSchema).max(10).default([]),
   officeLevel:z.number().int().min(1).max(10).default(1),factoryLevel:z.number().int().min(1).max(10).default(1),advertising:money.default(0),
   staff:z.array(z.object({id:z.string(),role:z.enum(['research','engineering','marketing','ai']),skill:z.number().int().min(20).max(100),salary:money}).strict()).max(40).default([]),
   history:z.array(z.object({day:z.number().int(),cash:money,debt:money,loan:money,revenue:money,expenses:money,capital:money,share:z.number().min(0).max(1)}).strict()).max(240).default([]),
@@ -47,4 +49,5 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('marketing'),budget:z.number().int().min(0).max(1000000)}).strict(),
  z.object({type:z.literal('borrow'),amount:money.min(1)}).strict(),
  z.object({type:z.literal('repay'),amount:money.min(1)}).strict(),
+ z.object({type:z.literal('acquire'),id:z.string()}).strict(),
 ]);
