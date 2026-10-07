@@ -1,0 +1,6 @@
+import type {GameState,GameCommand} from '../../../packages/sim/src/index';
+import {productCatalog} from '../../../packages/content/src/devices';
+import {yen} from './i18n';
+export function ProductCards({state,send,kinds}:{state:GameState,send:(c:GameCommand)=>void,kinds:string[]}){
+ return <div className="grid-list">{state.products.filter(p=>kinds.includes(p.kind)).map(p=><article className="card" key={p.id}><h3>{p.name} <span className="pill">{productCatalog[p.kind].label}</span></h3><div className={`product-visual ${String(p.spec.appearance??'graphite')}`} aria-label={`外観 ${p.spec.appearance??'graphite'}`}><span>{p.kind==='laptop'?'▱':p.kind==='monitor'?'▣':'▥'}</span></div><p>性能 {p.performance} / 原価 {yen(p.unitCost)} / 電力 {p.power}</p><p>開発残量 {p.remaining.toFixed(1)} · 在庫 {p.inventory} · 販売 {p.sold}</p><p>売上 {yen(p.revenue)} / 粗利益 {yen(p.profit)}</p>{p.remaining>0?<progress max={20} value={20-p.remaining}/>:!p.launched?<button onClick={()=>send({type:'launch',id:p.id})}>発売する</button>:p.kind!=='os'&&<button onClick={()=>send({type:'line',id:p.id,target:p.line?0:100})}>{p.line?'生産停止':'生産開始'}</button>}<label>販売価格<input type="number" min={1} value={p.price} onChange={e=>send({type:'price',id:p.id,price:Number(e.target.value)})}/></label></article>)}</div>;
+}

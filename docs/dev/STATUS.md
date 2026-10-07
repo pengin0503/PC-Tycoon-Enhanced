@@ -17,4 +17,11 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - Verified: 41 unit tests and 4 browser tests; typecheck/build passed. CPU business reaches positive cash growth in the 180-day integration fixture. Save continuation produces identical sales.
 - Phase self-review: no major findings; all invalid inputs and finite-money production cases covered.
 
-Next: F2 plan (compatible PC/laptop assembly, monitor, OS development/preview). F2–F6 unimplemented; Android real-device verification will require hardware.
+## F2
+- Complete: CPU socket/RAM-generation compatibility; gaming/office/server PCs and laptops, vendor or own parts (own inventories consumed once), independent appearances, monitor display specs.
+- OS complete: versions, selected applications, quality/compatibility/support, licensing and monthly support costs, bundled-device performance effects, interactive virtual files/settings/browser/calculator.
+- Verified: 49 unit tests, 5 browser tests, strict typecheck and production build.
+- Ruling: balanced components can have equal rounded purpose scores; purpose-weight test now uses an intentionally CPU-heavy configuration. Distinctness for every balanced configuration was an invalid test assumption.
+- Self-review: passed phase acceptance and numeric/compatibility boundaries; author review. Android remains unverified.
+
+Next: F3 plan (staff, 10 offices, factories, advertising, competitors, acquisitions, difficulty). F3–F6 unimplemented.

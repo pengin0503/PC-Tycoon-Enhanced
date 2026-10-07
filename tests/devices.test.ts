@@ -23,3 +23,10 @@ it('monitor choices affect performance cost and appearance',()=>{
  const basic=d(1080,60),premium=d(2160,144);expect(premium.unitCost).toBeGreaterThan(basic.unitCost);expect(premium.performance).toBeGreaterThan(basic.performance);
  expect(()=>d(0,60)).toThrow();
 });
+it('assembly consumes own component stock and pays only unowned inputs',()=>{
+ let s=ready();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'Own CPU',spec:{cores:4,clock:3,ipc:1,process:14,socket:'Atlas'},price:400});s=cmd(s,{type:'advance',days:14});
+ s=cmd(s,assembly('pc','gaming',{...parts,cpu:'p-1'}));s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:100});
+ expect(cmd(s,{type:'advance',days:1}).products[1].inventory).toBe(0);
+ s.products[0].inventory=5;const n=cmd(s,{type:'advance',days:1});expect(n.products[0].inventory).toBe(0);expect(n.products[1].inventory).toBe(5);
+ expect(s.company.cash-n.company.cash).toBe(5*(s.products[1].unitCost-s.products[0].unitCost));
+});

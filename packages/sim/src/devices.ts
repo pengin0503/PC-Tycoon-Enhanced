@@ -22,5 +22,16 @@ export function deviceCommand(s:GameState,c:GameCommand):boolean{
   const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId);expense(s,b.designCost);
   appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,...(c.osId?{osId:c.osId}:{})},...result},b.work);return true;
  }
+ if(c.type==='developOS'){
+  if(!s.research.completed.includes('os-compute-1'))throw new Error('OS基盤研究が必要です');
+  if(s.products.some(p=>p.kind==='os'&&p.name===c.name&&Number(p.spec.version)>=c.version))throw new Error('新しいバージョン番号が必要です');
+  expense(s,Math.round(b.os.designCost*(.5+c.quality*.5)*(.5+c.compatibility*.5)));
+  appendProduct(s,{name:c.name,kind:'os',price:c.price,spec:{version:c.version,features:c.features.join(','),quality:c.quality,compatibility:c.compatibility,support:c.support},performance:Math.round(c.quality*c.compatibility*(.8+.2*c.support)*1000),power:0,unitCost:b.os.licenseCost},b.os.work);return true;
+ }
  return false;
 }
+export function osApps(product:Product):string[]{
+ if(product.kind!=='os'||product.remaining>0)return[];
+ return String(product.spec.features).split(',').filter(app=>app!=='browser'||Number(product.spec.compatibility)>=.6);
+}
+export function osMonthlyCost(s:GameState){return s.products.filter(p=>p.kind==='os'&&p.launched).reduce((n,p)=>n+Math.round(Number(p.spec.support)*b.os.supportMonthly),0);}

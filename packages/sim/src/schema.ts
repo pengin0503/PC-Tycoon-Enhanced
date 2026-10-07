@@ -36,4 +36,5 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(100000)}).strict(),
  z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1000000)}).strict(),
  z.object({type:z.literal('assemble'),kind:z.enum(['pc','laptop']),name:z.string().trim().min(1).max(80),parts:z.object({cpu:z.string(),gpu:z.string(),motherboard:z.string(),ram:z.string(),storage:z.string()}).strict(),purpose:z.enum(['gaming','office','server']),appearance:z.enum(['graphite','silver','teal']),price:z.number().int().min(1).max(1000000),osId:z.string().optional()}).strict(),
+ z.object({type:z.literal('developOS'),name:z.string().trim().min(1).max(80),version:z.number().int().min(1).max(100),features:z.array(z.enum(['files','calculator','browser'])).min(1).max(3).refine(a=>new Set(a).size===a.length),quality:z.number().min(.1).max(1),compatibility:z.number().min(.1).max(1),support:z.number().min(0).max(1),price:z.number().int().min(1).max(1000000)}).strict(),
 ]);

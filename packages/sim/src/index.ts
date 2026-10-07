@@ -1,7 +1,7 @@
 import { balance } from '../../content/src/balance';
 import { gameSchema, newGameSchema, gameCommandSchema } from './schema';
 import {hardwareCommand,researchAndDevelopment,manufacture,sellProducts} from './hardware';
-import {deviceCommand} from './devices';
+import {deviceCommand,osMonthlyCost} from './devices';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
 export type { GameState, GameCommand, NewGameOptions } from './types';
@@ -21,7 +21,7 @@ export function command(state: GameState, input: GameCommand): GameState {
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
     s.day++; manufacture(s);logEvent(s,'daily');
     if(s.day%7===0) {researchAndDevelopment(s);sellProducts(s);logEvent(s,'weekly');}
-    if(s.day%30===0) {expense(s,balance.monthlyBase,true);logEvent(s,'monthly');}
+    if(s.day%30===0) {expense(s,balance.monthlyBase+osMonthlyCost(s),true);logEvent(s,'monthly');}
   }
   return gameSchema.parse(s);
 }
