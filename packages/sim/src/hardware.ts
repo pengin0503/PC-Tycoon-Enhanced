@@ -1,6 +1,7 @@
 import {hardwareCatalog,hardwareBalance as b,type Spec} from '../../content/src/hardware';
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
-import {expense,logEvent} from './finance';
+import {expense,income,logEvent} from './finance';
+import {nextRandom} from './random';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -34,7 +35,34 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];const result=evaluateHardware(c.kind,c.spec,s.research.completed);
   expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:c.spec,...result,remaining:def.work,price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
+ if(c.type==='launch'||c.type==='line'||c.type==='price'){
+  const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
+  if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);}
+  if(c.type==='line'){if(!p.launched)throw new Error('発売してから生産を開始してください');p.target=c.target;p.line=c.target>0;}
+  if(c.type==='price')p.price=c.price;
+  return true;
+ }
  return false;
+}
+export function manufacture(s:GameState){
+ if(s.company.debt>0)return;
+ const lines=s.products.filter(p=>p.line&&p.launched);let capacity=b.baseFactoryCapacity;
+ for(let i=0;i<lines.length;i++){
+  const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
+  const units=Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/p.unitCost));
+  if(units){expense(s,units*p.unitCost);p.inventory+=units;capacity-=units;}
+ }
+}
+export function sellProducts(s:GameState){
+ for(const p of s.products.filter(p=>p.launched)){
+  const [r,next]=nextRandom(s.seed);s.seed=next;const def=hardwareCatalog[p.kind];
+  const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
+  const value=Math.min(2,p.performance/def.reference)*(p.unitCost*2/p.price)**1.5;
+  const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
+  const demand=Math.floor(def.demand*value*quality*awareness*age*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
+  const units=Math.min(p.inventory,Math.max(0,demand));
+  if(units){p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);income(s,units*p.price);logEvent(s,'sales',`${p.name}: ${units}`);}
+ }
 }
 export function researchAndDevelopment(s:GameState){
  for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-b.researchPerWeek/s.research.active.length);

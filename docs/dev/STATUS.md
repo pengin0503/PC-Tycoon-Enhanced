@@ -12,4 +12,9 @@ Design: `docs/superpowers/specs/2026-10-08-pc-tycoon-enhanced-foundation-design.
 
 ## Remaining / resume
 F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production build. Self-review against F0 acceptance: passed; author review per user constraints. No major findings. Build regression: removed empty CSS data URL import rejected by PostCSS; build now passes.
-Next: F1 plan (research/products/manufacturing/market). F1–F6 unimplemented; Android real-device verification will require hardware.
+## F1
+- Complete: 15 prerequisite-bearing research nodes, five component design families, weekly development, finite shared production, stock, launch/pricing, seeded weekly demand, product revenue/gross profit.
+- Verified: 41 unit tests and 4 browser tests; typecheck/build passed. CPU business reaches positive cash growth in the 180-day integration fixture. Save continuation produces identical sales.
+- Phase self-review: no major findings; all invalid inputs and finite-money production cases covered.
+
+Next: F2 plan (compatible PC/laptop assembly, monitor, OS development/preview). F2–F6 unimplemented; Android real-device verification will require hardware.

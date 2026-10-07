@@ -31,4 +31,7 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  ...baseCommandSchema.options,
  z.object({type:z.literal('research'),id:z.string().min(1)}).strict(),
  z.object({type:z.literal('design'),kind:z.enum(hardwareKinds),name:z.string().trim().min(1).max(80),spec:specSchema,price:z.number().int().min(1).max(1000000)}).strict(),
+ z.object({type:z.literal('launch'),id:z.string().min(1)}).strict(),
+ z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(100000)}).strict(),
+ z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1000000)}).strict(),
 ]);
