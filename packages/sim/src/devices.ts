@@ -5,6 +5,15 @@ import {hardwareBalance} from '../../content/src/hardware';
 import {techEffect} from '../../content/src/research';
 import {validateVisual,visualFinishCost} from './visual';
 import {assertProductPrice} from './pricing';
+/** Production overhead is fixed at design time, excluding separately sourced components. */
+export function assemblyOverhead(s:GameState,p:Product):number{
+ if(typeof p.spec.assemblyOverhead==='number')return Number(p.spec.assemblyOverhead);
+ const ids=['cpu','gpu','motherboard','ram','storage'];
+ const own=ids.reduce((n,k)=>n+(s.products.find(part=>part.id===p.spec[k])?.unitCost??0),0);
+ const generic=ids.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0);
+ return Math.max(1,p.unitCost-own-generic-Number(p.spec.procurementCost??0));
+}
+
 export function evaluateDevice(s:GameState,parts:Record<string,string>,purpose:'gaming'|'office'|'server',kind:'pc'|'laptop',osId?:string,allowLegacy=false){
  const ids=['cpu','gpu','motherboard','ram','storage'] as const;
  const rivals=s.rivals.flatMap(r=>r.products.map(p=>({part:p,owner:r})));
