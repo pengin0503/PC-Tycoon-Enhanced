@@ -5,11 +5,11 @@ import {nextRandom} from './random';
 import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
 import {assemblyOverhead} from './devices';
 import {addStock,removeStock} from './inventory';
-import {offices,managementBalance} from '../../content/src/management';
 import {workBonus} from './management';
 import {competitorPressure,settleProcurement} from './rivals';
 import {assertProductPrice} from './pricing';
 import {aiHardwareBoost,founderProjects} from './ai';
+import {researchPointCost,weeklyResearchPoints,distributionDemand} from './business';
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import type {GameState,GameCommand} from './types';
@@ -41,8 +41,9 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
   if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
   if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
-  if(s.research.active.length>=offices[s.officeLevel-1].researchSlots)throw new Error('研究枠が埋まっています');
-  expense(s,Math.round(t.cost*(s.difficulty==='hard'?managementBalance.hardResearchCost:1)));s.research.active.push({id:c.id,remaining:t.work});logEvent(s,'researchStarted',t.label);return true;
+  const points=researchPointCost(s,c.id);
+  if(s.company.researchPoints<points)throw new Error(`研究ポイントが不足しています（必要 ${points}）`);
+  s.company.researchPoints-=points;s.research.completed.push(c.id);logEvent(s,'researchComplete',t.label);return true;
  }
  if(c.type==='design'){
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
@@ -86,7 +87,7 @@ export function sellProducts(s:GameState){
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(b.valueCeiling,p.performance/def.reference)*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*distributionDemand(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
   const units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,Math.max(0,demand));
   if(units){
    const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);p.sold+=units;
@@ -101,6 +102,7 @@ export function sellProducts(s:GameState){
  }
 }
 export function researchAndDevelopment(s:GameState){
+ s.company.researchPoints+=weeklyResearchPoints(s,b.researchPerWeek);
  for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek/founderProjects(s)+workBonus(s,'research'))/s.research.active.length);
  for(const r of s.research.active.filter(r=>r.remaining===0)){s.research.completed.push(r.id);logEvent(s,'researchComplete',techById.get(r.id)?.label??r.id);}
  s.research.active=s.research.active.filter(r=>r.remaining>0);

@@ -40,8 +40,11 @@ it('subscriptions charge monthly and open weights improve reputation without API
  const open=cmd(cmd(trained,{...deploy,mode:'open'}),{type:'advance',days:30});expect(open.company.reputation).toBeGreaterThan(trained.company.reputation);expect(open.models[0].service!.revenue).toBe(0);expect(open.models[0].service!.cost).toBe(0);
 });
 it('quantization is researched and founder work is shared',()=>{
- let s=ready();s=cmd(s,train);s=cmd(s,{type:'research',id:'ai-quantization-1'});const week=cmd(s,{type:'advance',days:7});expect(week.models[0].status).toBe('training');
- const done=cmd(week,{type:'advance',days:14});expect(done.models[0].status).toBe('ready');expect(cmd(done,{...deploy,bits:4}).models[0].service!.bits).toBe(4);
+ let s=ready();s.company.researchPoints=10000;s=cmd(s,train);s=cmd(s,{type:'research',id:'ai-quantization-1'});expect(s.research.completed).toContain('ai-quantization-1');
+ // a concurrent hardware design splits the founder's weekly work with model preparation/training
+ const busy=cmd(cmd(s,{type:'design',kind:'gpu',name:'Next',spec:{...defaultSpec('gpu'),vram:32},price:600}),{type:'advance',days:7});const solo=cmd(s,{type:'advance',days:7});
+ expect(busy.models[0].remainingSeconds+busy.models[0].preparationRemaining).toBeGreaterThan(solo.models[0].remainingSeconds+solo.models[0].preparationRemaining);
+ const done=cmd(solo,{type:'advance',days:14});expect(done.models[0].status).toBe('ready');expect(cmd(done,{...deploy,bits:4}).models[0].service!.bits).toBe(4);
  const noTech=cmd(cmd(ready(),train),{type:'advance',days:7});expect(()=>cmd(noTech,{...deploy,bits:4})).toThrow();
 });
 it('private evaluations do not boost sales until model commercialization',()=>{

@@ -6,6 +6,7 @@ import {deviceSlots} from '../../content/src/devices';
 import {inventoryValue} from './inventory';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
+import {negotiateAcquisition} from './business';
 import type {GameState,GameCommand} from './types';
 type Rival=GameState['rivals'][number];
 export function newRivals(seed:number,difficulty:'normal'|'hard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:difficulty==='hard'?b.hardEfficiency:1,researchLevel:0,researchRemaining:0,products:[],acquired:false}));}
@@ -47,7 +48,8 @@ export function valuation(s:GameState,id:string){const r=s.rivals.find(r=>r.id==
 export function rivalCommand(s:GameState,c:GameCommand):boolean{
  if(c.type!=='acquire')return false;const r=s.rivals.find(r=>r.id===c.id);if(!r||r.acquired)throw new Error('買収対象を確認してください');
  const products=r.products.filter(p=>p.remaining===0);if(s.products.length+products.length>500)throw new Error('製品数の上限です');
- expense(s,valuation(s,r.id),false,true);s.company.cash+=r.cash;s.company.debt+=r.debt;r.cash=0;r.debt=0;r.acquired=true;
+ const price=negotiateAcquisition(s,r,valuation(s,r.id),c.offer);if(price===null)return true;
+ expense(s,price,false,true);s.company.cash+=r.cash;s.company.debt+=r.debt;r.cash=0;r.debt=0;r.acquired=true;
  if(r.researchLevel>0&&!s.research.completed.includes(`${r.focus}-compute-1`))s.research.completed.push(`${r.focus}-compute-1`);
  const mapping=new Map<string,string>();
  const affected=s.products.filter(p=>(p.kind==='pc'||p.kind==='laptop')&&deviceSlots.some(k=>products.some(part=>part.id===p.spec[k])));
