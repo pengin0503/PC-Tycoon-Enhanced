@@ -14,6 +14,7 @@ test('notification inbox categorizes and acknowledges durable notices',async({pa
  await expect(center).toContainText('CPU');
  await center.getByRole('button',{name:'すべて既読'}).click();
  await expect(bell).toContainText('0');
+ await center.getByRole('button',{name:'通知センターを閉じる'}).click();
  await page.getByRole('button',{name:'保存',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('保存しました');
  await page.reload();
