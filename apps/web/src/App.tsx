@@ -1,7 +1,7 @@
 import { t as uiText } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { command, createGame, type GameState, type GameCommand } from '../../../packages/sim/src/index';
-import { exportSave, importSave } from '../../../packages/save/src/index';
+import { importSave } from '../../../packages/save/src/index';
 import { SaveRepository } from '../../../packages/save/src/repository';
 import { ja, eventLabel, yen } from './i18n';
 import './styles.css';
@@ -14,7 +14,10 @@ import { AIPanel } from './AIPanel';
 import { FinancePanel } from './FinancePanel';
 import { OfficeScene } from './OfficeScene';
 import { monthlyCosts } from '../../../packages/sim/src/management';
+import {useOfflineStatus} from './pwa';
+import {downloadGame} from './save-export';
 export default function App() {
+    const offlineStatus=useOfflineStatus();
     const [state, setState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState(uiText("ui_3605ed779438"));
@@ -90,8 +93,7 @@ export default function App() {
     catch (e) {
         report(e);
     } }
-    function download() { if (!state)
-        return; const url = URL.createObjectURL(new Blob([exportSave(state)], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `pc-tycoon-${state.id}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    async function download() { if (!state) return; try {await downloadGame(state);setNotice(ja.exported);} catch(e){report(e);} }
     async function list() { try {
         await writer.current;
         setSlots(await repo.current.list());
@@ -114,6 +116,7 @@ export default function App() {
     } }
     return <div className="app-shell"><aside className="sidebar"><div className="brand"><span className="brand-mark">P<span>T</span></span><div>PC TYCOON<small>ENHANCED</small></div></div><p className="sidebar-label">TECH COMPANY SIMULATOR</p><button className="mobile-menu-toggle" aria-expanded={menuOpen} onClick={() => setMenu(!menuOpen)}>{uiText("ui_8f99b5f7c588")}</button><nav className={menuOpen ? "menu-open" : ""} aria-label={uiText("ui_3161d4d1bc3b")}>{[['company', uiText("ui_be2b33d39b0d")], ['hardware', uiText("ui_06e225ea8775")], ['research', uiText("ui_b31c66f6eae1")], ['devices', uiText("ui_1c7b5d5acd91")], ['os', 'OS'], ['management', uiText("ui_172297b0f7cb")], ['ai', 'AI Lab'], ['finance', uiText("ui_769fe8df57c5")]].map(([id, label]) => <button key={id} disabled={!state} className={tab === id ? 'selected' : ''} onClick={() => { setTab(id); setMenu(false); }}>{label}</button>)}</nav><p className="side-note">{uiText("ui_b6a935fdbf04")}<br />{uiText("ui_82cec84d5cc5")}</p></aside><main>
  <header><div><p className="eyebrow">BUILD YOUR NEXT GENERATION</p><h1>{state?.company.name ?? uiText("ui_b468eb328323")}</h1></div>{state && <span className="date">{state.year + Math.floor(state.day / 360)}{uiText("ui_6d332ee4da56")}{ja.day} <b data-testid="day">{state.day}</b> / {ja[state.difficulty]}</span>}</header>
+ {offlineStatus && <p className="offline-status">{ja[offlineStatus]}</p>}
  {error && <div role="alert" className="error">{error}</div>}<div role="status" className="notice">{notice}</div>
  {loading ? <p>{uiText("ui_54d9d6c50126")}</p> : !state ? <section className="card start-card"><h2>{uiText("ui_28aa4eb4f421")}</h2><p>{uiText("ui_686c00bd7eca")}</p><div className="form-grid"><label>{ja.name}<input value={name} maxLength={80} onChange={e => setName(e.target.value)}/></label><label>{ja.year}<input type="number" min={1970} max={2200} value={year} onChange={e => setYear(Number(e.target.value))}/></label><label>{ja.seed}<input type="number" min={0} max={4294967295} value={seed} onChange={e => setSeed(Number(e.target.value))}/></label><label>{ja.difficulty}<select value={difficulty} onChange={e => setDifficulty(e.target.value as 'normal' | 'hard')}><option value="normal">{ja.normal}</option><option value="hard">{ja.hard}</option></select></label></div><button className="primary" onClick={start}>{ja.start}</button><label className="file-label">{ja.import}<input type="file" accept="application/json,.json" onChange={e => void readFile(e.target.files?.[0])}/></label></section> : <>
  <section className="metrics" aria-label={uiText("ui_26e0c104ffac")}>{[[ja.cash, state.company.cash, 'cash'], [ja.revenue, state.finance.revenue, 'revenue'], [ja.expenses, state.finance.expenses, 'expenses'], [ja.debt, state.company.debt, 'debt']].map(([label, value, id]) => <article className="metric" key={id}><span>{label}</span><strong data-testid={String(id)}>{yen(Number(value))}</strong></article>)}</section>

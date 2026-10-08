@@ -8,6 +8,8 @@ export const ja={
   researchStarted:'研究開始',researchComplete:'研究完了',designStarted:'設計開始',designComplete:'設計完了',launched:'発売',sales:'製品販売',
   officeUpgrade:'オフィス拡張',hired:'採用',marketingStopped:'広告停止',acquired:'企業買収',
   clusterPurchased:'クラスタ購入',trainingStarted:'学習開始',trainingComplete:'モデル評価完了',trainingFailed:'学習失敗',serviceStopped:'AIサービス停止',
+  exported:'JSON書き出し処理が完了しました。',
+  offlinePreparing:'オフライン準備中。完了するまで通信を維持してください。',offlineReady:'オフラインでプレイ可能',offlineUpdate:'更新準備完了。すべてのゲーム画面を閉じて開き直すと反映されます。',offlineError:'オフライン準備に失敗しました。通信・空き容量を確認して再起動してください。',offlineNative:'端末内でプレイ可能',
   marketEvent:'市況イベント',
 } as const;
 export function eventLabel(kind:string){return kind in ja ? ja[kind as keyof typeof ja]:kind;}

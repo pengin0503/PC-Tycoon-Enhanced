@@ -45,4 +45,12 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - Self-review regressions RED→GREEN: bundled OS sales now allocate license revenue without double counting; OS power research changes responsiveness as well as license cost. Tunable simulation coefficients extracted into content data; existing numeric/replay tests still pass.
 - Feature acceptance and original coefficient rationale: FEATURES.md / BALANCE.md. No unpublished original-game equivalence claimed.
 
-Next: F6 (production PWA cache/offline gates, Capacitor Android packaging/build). Java17 is available; Gradle/adb/Android SDK were absent at initial inspection. Build will be attempted; physical Android verification requires a device and remains unverified.
+
+## F6 — distribution in verification
+- Implemented: production manifest/original icons,6MiB complete shell/font precache, atomic failed-update rollback and deferred activation/readiness UI; Capacitor8.5.3 wrapper, native document export with5MiB limit/safe filename, own launcher/splash, cloud backup disabled.
+- Last local gates passed:91 unit tests,10 development browser tests,2 production offline/update tests, strict typecheck/build; native sync copied dist successfully.
+- Local Gradle resource processing ran before execution-server connection loss. APK outcome was not retrieved; no local APK success claimed.
+- Recovery: retain remote F0–F5 (F5 CI37708621901 success); recover distribution sources via GitHub APIs and pinned official template. Recovered PNG icons are original SVG shapes and get browser decoding checks. CI must verify this recovered tree; temporary lock-sync job only pushes this branch normally, never main.
+- Local history (ff6f6f5 PWA plus uncommitted Android) can differ from recovered remote history. Before resuming, fetch/checkout the latest remote feature branch and use its STATUS/history; do not replay old local commits blindly.
+
+Next: observe recovery CI game and Android build/asset/signature gates, fix any reproduced failures, remove temporary lock-sync/write permission, update phase evidence and push. Physical Android launch/touch/picker/restart/browser↔APK JSON round trip remains unverified without a device.

@@ -23,7 +23,7 @@
 | PC-17 | Valuation, affordability, one-time cash/debt/stock/technology transfer | rivals tests |
 | PC-18 | Monthly cash/flows/share, product gross profit, rival comparison and events | `content.spec.ts`, `FinancePanel.tsx`; engine accounting tests |
 | PC-19 | Normal/hard capital, demand, research cost, rival efficiency and credit | foundation/management/rivals tests |
-| PC-20 | Engine and saves have no server dependency | `save.test.ts`; offline shell/new-game/save acceptance belongs to F6 |
+| PC-20 | Engine and saves have no server dependency | `save.test.ts`; production offline acceptance is tested in offline.pwa.ts |
 | AI-01 | Dense/MoE, total/active, layers/hidden, attention/context | `ai-math.test.ts` numeric and geometry boundaries |
 | AI-02 | Tokens/quality/diversity/budget/time, preparation and seeded failure | AI math/business tests |
 | AI-03 | Own/vendor GPU/server stock, VRAM, network/cooling, capex/power/depreciation | AI cluster/math tests |
@@ -34,4 +34,4 @@
 
 `packages/` prefixes apply to `sim/src/…`; tests are under `tests/`. UI is under `apps/web/src/`. F5 gates: 87 unit tests, 10 browser tests, strict typecheck and production build. Desktop1440px/mobile390px screenshots reviewed; Japanese font is bundled. 320px horizontal overflow, keyboard and hidden-page timing are browser-tested. Browser emulation is not Android hardware verification.
 
-Remaining distribution acceptance: F6 production PWA offline reload/cache update and Capacitor APK build; physical Android launch, touch/WebView/storage and JSON transfer between APK/browser must be reported separately.
+Remaining distribution acceptance: recovery CI/Capacitor APK build; physical Android launch, touch/WebView/storage and JSON transfer between APK/browser must be reported separately.
