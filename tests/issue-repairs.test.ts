@@ -70,7 +70,7 @@ it('#6 notifications persist unique IDs across same-day identical events and sup
  expect((saved as any).notifications).toEqual(notices);
  const read=commandAny(saved,{type:'markNotificationsRead',id:last});
  expect((read as any).notificationReadId).toBe(last);
- expect(commandAny(read,{type:'markNotificationsRead',id:last}).notificationReadId).toBe(last);
+ expect((commandAny(read,{type:'markNotificationsRead',id:last}) as any).notificationReadId).toBe(last);
  expect((s as any).notificationReadId??0).toBe(0);
 });
 it('#3 old version-1 inventory without valuation remains valid and takes default manufactured cost',()=>{
