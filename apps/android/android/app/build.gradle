@@ -4,7 +4,7 @@ android {
     namespace = "com.pengin0503.pctycoon"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.getcapacitor.app"
+        applicationId "com.pengin0503.pctycoon"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -3,6 +3,8 @@ from pathlib import Path
 import hashlib
 import json
 import zipfile
+import os
+import subprocess
 root = Path(__file__).resolve().parents[1]
 apk = root / 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk'
 with zipfile.ZipFile(apk) as package:
@@ -15,4 +17,8 @@ with zipfile.ZipFile(apk) as package:
         assert package.read(path) == file.read_bytes(), f'Stale or missing APK asset: {path}'
     assert any(file.suffix == '.woff2' for file in files), 'Japanese font must be offline'
     assert package.read('classes.dex'), 'Native code is missing'
+sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '')))
+badging = subprocess.check_output([str(sdk / 'build-tools/36.0.0/aapt'), 'dump', 'badging', str(apk)], text=True)
+assert "package: name='com.pengin0503.pctycoon'" in badging
+assert "sdkVersion:'24'" in badging and "targetSdkVersion:'36'" in badging
 print(f'APK verified: {len(files)} current web assets; no remote server; SHA256 {hashlib.sha256(apk.read_bytes()).hexdigest()}')
