@@ -58,7 +58,7 @@ it('competitor launches notify once on completion; choices change simulation and
  const a=cmd(s,{type:'advance',days:7}),b=cmd(a,{type:'advance',days:7});
  expect(a.events.filter(e=>e.kind==='rivalLaunch')).toHaveLength(1);
  expect(b.events.filter(e=>e.kind==='rivalLaunch')).toHaveLength(1);
- const pending={...fresh(),pendingDecision:{id:'supply-boost',title:'生産力の投資',description:'短期契約を購入する',cost:2500}};
+ const pending={...fresh(),pendingDecision:{id:'supply-boost' as const,title:'生産力の投資',description:'短期契約を購入する',cost:2500}};
  const saved=importSave(exportSave(pending));
  expect(saved.pendingDecision?.id).toBe('supply-boost');
  const invested=cmd(saved,{type:'eventDecision',choice:'invest'});
