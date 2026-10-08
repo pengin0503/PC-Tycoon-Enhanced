@@ -27,6 +27,7 @@ export function command(state: GameState, input: GameCommand): GameState {
   rivalCommand(s,c);
   aiCommand(s,c);
   eventCommand(s,c);
+  if(c.type==='markNotificationsRead')s.notificationReadId=Math.max(s.notificationReadId,Math.min(s.notificationSeq,c.id));
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
     s.day++; marketDaily(s);manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
