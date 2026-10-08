@@ -23,7 +23,7 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
  const art=kind==='cpu'?<><path d="M112 169L271 81L416 154L257 248Z" fill={primary} stroke={metal} strokeWidth="8"/>
   <path d="M149 166L273 103L378 154L253 221Z" fill={tier>=2?'#b5c4c7':'#758e9e'} stroke="#e0ebec" strokeWidth="4"/>
   <path d="M202 169L278 126L337 155L260 202Z" fill="#233c55" stroke={accent} strokeWidth="5"/>
-  {tier>=1&&Array.from({length:6},(_,i)=><path key={i} d={`M${160+i*28} ${196-i*12} l18 8`} stroke={accent} strokeWidth="4"/>}
+  {tier>=1&&Array.from({length:6},(_,i)=><path key={i} d={`M${160+i*28} ${196-i*12} l18 8`} stroke={accent} strokeWidth="4"/>)}
   {tier>=4&&<path d="M148 175L258 229L378 164" fill="none" stroke="#5cf1d0" strokeWidth="5"/>}</>
  :kind==='gpu'?<>{chassis}{[0,1,...(tier>=2?[2]:[])].map(n=>fan(177+80*n,138-n*25,29,n))}
   {tier>=1&&<path d="M90 188L222 234" stroke={metal} strokeWidth="5"/>}</>
