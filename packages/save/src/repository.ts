@@ -4,6 +4,7 @@ type Row={id:string,json:string,order:number};
 export class SaveRepository {
   private db?: Promise<IDBDatabase>;
   private closed=false;
+  warnings:string[]=[];
   constructor(private factory: IDBFactory|undefined=globalThis.indexedDB,private name='pc-tycoon-enhanced'){}
   private open():Promise<IDBDatabase> {
     if(this.closed) return Promise.reject(new Error('保存接続は閉じています'));
@@ -37,8 +38,9 @@ export class SaveRepository {
   }
   async load(id:string):Promise<GameState|null> {const row=(await this.rows()).find(r=>r.id===id);return row?importSave(row.json):null;}
   async latest():Promise<GameState|null> {
+    this.warnings=[];
     const rows=(await this.rows()).sort((a,b)=>b.order-a.order);
-    for(const row of rows) {try{return importSave(row.json);}catch{/* Fall back to an intact snapshot; explicit slot load still reports corruption. */}}
+    for(const row of rows) {try{return importSave(row.json);}catch{this.warnings.push(`破損セーブ ${row.id} をスキップしました`);}}
     if(rows.length) throw new Error('有効なセーブがありません。JSONから復元してください');
     return null;
   }

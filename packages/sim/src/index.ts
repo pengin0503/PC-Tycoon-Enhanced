@@ -6,6 +6,8 @@ import {newRivals,rivalCommand,rivalDaily,rivalWeekly,rivalMonthly,marketShare} 
 import {managementCommand,marketingWeek,monthlyCosts,monthlyHistory} from './management';
 import {aiCommand,aiDaily,aiWeekly,aiMonthly} from './ai';
 import {marketDaily,marketMonthly} from './events';
+import {validateGame} from './validation';
+export {validateGame} from './validation';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
 export type { GameState, GameCommand, NewGameOptions } from './types';
@@ -18,7 +20,7 @@ export function createGame(options: NewGameOptions): GameState {
     finance:{revenue:0,expenses:0,capital:0},rivals:newRivals(o.seed,o.difficulty),events:[]});
 }
 export function command(state: GameState, input: GameCommand): GameState {
-  const c=gameCommandSchema.parse(input); const s=gameSchema.parse(state);
+  const c=gameCommandSchema.parse(input); const s=validateGame(state);
   hardwareCommand(s,c);
   deviceCommand(s,c);
   managementCommand(s,c);
@@ -30,5 +32,5 @@ export function command(state: GameState, input: GameCommand): GameState {
     if(s.day%7===0) {aiWeekly(s);researchAndDevelopment(s);marketingWeek(s);sellProducts(s);rivalWeekly(s);logEvent(s,'weekly');}
     if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);marketMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');}
   }
-  return gameSchema.parse(s);
+  return validateGame(s);
 }

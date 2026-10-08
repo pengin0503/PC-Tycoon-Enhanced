@@ -24,7 +24,7 @@ export default function App(){
   writer.current=writer.current.catch(()=>{}).then(()=>repo.current.save(snapshot)).then(()=>{if(manual)setNotice('保存しました');}).catch(report);
   return writer.current;
  }
- useEffect(()=>{let alive=true;repo.current.latest().then(s=>{if(alive)setState(s);}).catch(e=>{if(alive)report(e);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[]);
+ useEffect(()=>{let alive=true;repo.current.latest().then(s=>{if(alive){setState(s);if(repo.current.warnings.length)setNotice(repo.current.warnings.join(" / "));}}).catch(e=>{if(alive)report(e);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[]);
  useEffect(()=>{if(state&&!loading)void save(state);},[state,loading]);
  useEffect(()=>{if(!speed)return;const id=setInterval(()=>{if(document.visibilityState==='visible'&&current.current){try{setState(command(current.current,{type:'advance',days:speed}));}catch(e){report(e);setSpeed(0);}}},1000);return()=>clearInterval(id);},[speed]);
  function send(c:GameCommand){if(!state)return;try{setError('');setState(command(state,c));}catch(e){report(e);}}
