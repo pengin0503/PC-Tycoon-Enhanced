@@ -11,7 +11,7 @@ it('release APK signing requires an external persistent keystore and never embed
  expect(gradle).toContain('PCT_ANDROID_KEY_PASSWORD');
  expect(workflow).toContain('workflow_dispatch');
  expect(workflow).toContain('assembleRelease');
- expect(workflow).toContain('apksigner verify');
+ expect(workflow).toMatch(/apksigner["']? verify/);
  expect(workflow).toContain('secrets.PCT_ANDROID_KEYSTORE_BASE64');
  expect(workflow).toContain('app-release.apk');
  expect(gradle).not.toContain('storePassword "');
