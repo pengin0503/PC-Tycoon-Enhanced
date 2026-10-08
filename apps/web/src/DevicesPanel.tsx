@@ -1,3 +1,4 @@
+import {PanelPages} from './PanelPages';
 import {useState} from 'react';
 import {vendorParts} from '../../../packages/content/src/devices';
 import {unlockedVisualTier} from '../../../packages/content/src/research';
@@ -16,7 +17,7 @@ export function DevicesPanel({state,send}:{state:GameState,send:(c:GameCommand)=
  const [parts,setParts]=useState({cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'});
  const available=unlockedVisualTier(state.research.completed,kind);
  const visualTier=Math.min(tier,available);
- return <><div className="workbench">
+ return <PanelPages labels={['設計スタジオ','製品一覧']}><div className="workbench">
   <section className="card product-stage"><p className="eyebrow">PRODUCT STUDIO / {kind.toUpperCase()}</p><ProductIllustration kind={kind} color={appearance} tier={visualTier}/>
    <h2>{name}</h2><p>{purpose.toUpperCase()} · 外観グレード {visualTier}</p></section>
   <section className="card design-controls"><h2>完成PC・ノートPC設計</h2>
@@ -28,5 +29,5 @@ export function DevicesPanel({state,send}:{state:GameState,send:(c:GameCommand)=
    <label>OS<select value={osId} onChange={e=>setOS(e.target.value)}><option value="">OSなし</option>{state.products.filter(p=>p.kind==='os'&&p.launched).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>
    <RangeField label="販売価格" min={500} max={30000} step={100} value={price} onChange={setPrice} unit="円"/>
    <button className="primary" disabled={!state.research.completed.includes(`${kind}-compute-1`)} onClick={()=>send({type:'assemble',kind,name,parts,purpose,appearance,price,...(osId?{osId}:{}),visual:{tier:visualTier,color:appearance}})}>組立設計を開始</button>
-  </section></div><section className="card product-list"><h2>端末ラインアップ</h2><ProductCards state={state} send={send} kinds={['pc','laptop','monitor']}/></section></>;
+  </section></div><section className="card product-list"><h2>端末ラインアップ</h2><ProductCards state={state} send={send} kinds={['pc','laptop','monitor']}/></section></PanelPages>;
 }

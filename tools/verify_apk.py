@@ -7,7 +7,9 @@ import os
 import subprocess
 from android_preferences import preference_is_false
 root = Path(__file__).resolve().parents[1]
-apk = root / 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk'
+apk = Path(os.environ.get('PCT_VERIFY_APK', 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk'))
+if not apk.is_absolute():
+    apk = root / apk
 with zipfile.ZipFile(apk) as package:
     config = json.loads(package.read('assets/capacitor.config.json'))
     assert config['appId'] == 'com.pengin0503.pctycoon'

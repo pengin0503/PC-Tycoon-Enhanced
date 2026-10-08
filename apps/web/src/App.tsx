@@ -6,6 +6,7 @@ import { SaveRepository } from '../../../packages/save/src/repository';
 import { ja, eventLabel, yen } from './i18n';
 import './styles.css';
 import './landscape.css';
+import './android-game.css';
 import { HardwarePanel } from './HardwarePanel';
 import { ResearchPanel } from './ResearchPanel';
 import { DevicesPanel } from './DevicesPanel';
@@ -69,6 +70,9 @@ export default function App() {
     } }, 1000); return () => clearInterval(id); }, [speed]);
     useEffect(()=>{const sync=()=>{setTab(screenFromHash());document.getElementById('game-main')?.scrollTo({top:0});};window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync);},[]);
     function navigate(screen:Screen){setTab(screen);const hash='#/'+screen;if(window.location.hash!==hash)window.location.hash=hash;document.getElementById('game-main')?.scrollTo({top:0});}
+    useEffect(()=>{const back=()=>{const el=document.activeElement;if(el instanceof HTMLInputElement||el instanceof HTMLTextAreaElement){el.blur();return;}
+      if(screenFromHash()!=='company'){if(window.history.length>1){window.history.back();}else{window.location.hash='#/company';}}
+    };window.addEventListener('pct:back',back);return()=>window.removeEventListener('pct:back',back);},[]);
     function send(c: GameCommand) { if (!state)
         return; try {
         setError('');
@@ -120,7 +124,7 @@ export default function App() {
     catch (e) {
         report(e);
     } }
-    return <div className="app-shell"><main id="game-main" className="game-main">
+    return <div className="app-shell"><main id="game-main" className="game-main" data-native-scene={Boolean(state)}>
  <header><div><p className="eyebrow">PC TYCOON ENHANCED · BUILD YOUR NEXT GENERATION</p><h1>{state?.company.name ?? uiText("ui_b468eb328323")}</h1></div>{state && <span className="date">{state.year + Math.floor(state.day / 360)}{uiText("ui_6d332ee4da56")}{ja.day} <b data-testid="day">{state.day}</b> / {ja[state.difficulty]}</span>}</header>
  {offlineStatus && <p className="offline-status">{ja[offlineStatus]}</p>}
  {error && <div role="alert" className="error">{error}</div>}<div role="status" className="notice">{notice}</div>
