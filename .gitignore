@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.superpowers/
+test-results/
+playwright-report/
+*.local
+apps/android/android/.gradle/
+apps/android/android/app/build/
+apps/android/android/build/

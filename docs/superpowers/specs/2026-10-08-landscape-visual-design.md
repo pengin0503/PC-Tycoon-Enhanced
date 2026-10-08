@@ -1,0 +1,24 @@
+# PC Tycoon Enhanced — landscape game UI and visual products
+
+Date: 2026-10-08. Status: approved for uninterrupted execution by user. Source: `docs/superpowers/specs/2026-10-08-pc-tycoon-enhanced-foundation-design.md` plus the subsequent explicit UI/visual requirements. Current feature implementation branch baseline `0052df6`. No main merge, force push, copied PC Tycoon 2 artwork or inferred proprietary design.
+
+## Product intent and acceptance
+
+Create an original, landscape-first management game's screen-by-screen navigation, eliminate the old always-visible dashboard beneath unrelated panels, replace free-form numeric hardware specs with bounded sliders, and let research unlock **visibly distinct** stylized 3D-like product appearances. Product names remain text. Preserve the F0–F6 simulation/AI/PWA/Android features and offline behavior. Visual direction: stylized, legible low-poly/illustrated 3/4 product render, not copied or traced from PC Tycoon 2.
+
+## Architectural choices
+
+- Keep React/TypeScript/Vite; separate navigation from game state and do not add a heavyweight router or rendering engine. Navigation via hash paths `#/company`, `#/hardware`, `#/research`, `#/devices`, `#/os`, `#/management`, `#/ai`, `#/finance`, `#/save`. Browser back/forward works. Changing pages resets the scrolling main panel to top and hides other panels, rather than layering them all below a global dashboard.
+- Landscape first: upper HUD with identity, balances, simulation clock/actions; compact bottom navigation (with horizontal overflow for smaller landscapes). Flexible two-column product workbench: left live preview, right controls and product catalog, with local scrolling within content only. When landscape is not available (iPad browser rotation cannot be mandated), gracefully adapt to narrow/portrait viewport; no clipped controls or hidden save functionality. Android requests landscape via manifest, but responsive UI must survive platforms ignoring the request.
+- Hardware numeric fields use accessible `input[type=range]`, explicit current value, min/max/step and keyboard semantics. Choice fields use selects. The displayed maximum must match server-side researched capacity; no changes to legacy value semantics. Price is a bounded slider with an accessible displayed value. Name remains free text.
+- Add 40 cosmetic research nodes: one five-step `visual` branch for each of CPU, GPU, motherboard, RAM, storage, monitor, PC and laptop. Each stage has an explicit prior-stage prerequisite, and first stage requires the corresponding foundation node. IDs: `<category>-visual-1..5`. Their effect is finite and bounded; no fake increase in core performance. Research reveals appearance options; associated manufacturing finish has explicit additional cost and a small bounded demand effect. Do not alter existing 3000 node IDs.
+- Product visual choice is `visual?:{tier:0..5,color:'graphite'|'silver'|'teal'}` on saved product; `design` and `assemble` commands accept an optional visual choice. Server validates visual tier against completed research, not just UI. Previous save version 1 without `visual` must load and behave as tier 0; do not invalidate old JSON. Show preview before submitting and retain appearance on published products.
+- Implement original vector pseudo-3D assets with layered isometric silhouettes, edges, shadows, heat spreaders, fans, panels, memory chips and lighting. No remote assets, no existing original-game assets, and no GPU-heavy WebGL context. Variation must distinguish type, selected finish, tier, and color without exploding the APK size. Accessible role/label and reduced-motion compatibility.
+- Save/Load/JSON export/import and restart remain discoverable at every resolution in their own `save` route and in a persistent quick-save toolbar. Preserve automation-accessible button names.
+- Existing 3000-technology test updates to 3040 and confirms unique reachable nodes. Updated category axes must preserve six **functional** research branches; cosmetic branch is independent. Existing legacy product/save tests remain unchanged unless testing new behavior. Company income calculations stay deterministic.
+
+## Validation, review and constraints
+
+- TDD red–green: reachability/lock of visual tiers and legacy save compatibility; browser tests for route uniqueness, back navigation and slider keyboard ranges, browser no overflow in 844x390/390x844/1365x768. CI: `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e`, `npm run test:pwa`, APK compile/inspect.
+- No physical Android or iPad completion claims without actual hardware. Keep PWA production offline and APK existing assets verification. CI check status for pushed commits.
+- Exclusions: 3D physical meshes / animation, downloading actual PC Tycoon 2 sprites, cloud saves, balancing unrelated AI simulation. Future optional Blender renders may replace vector illustrations while preserving the visual API.
