@@ -84,3 +84,16 @@ it('#3 old version-1 inventory without valuation remains valid and takes default
  sellProducts(old);
  expect(old.products[0].profit).toBe(old.products[0].sold*old.products[0].price-(cost-(old.products[0] as any).inventoryValue));
 });
+
+it('#3 assigning own GPU to AI cluster removes the same proportional stock value',()=>{
+ let s=createGame({id:'gpu-stock',name:'自社GPU',year:2026,difficulty:'normal',seed:1});
+ s.research.completed=['gpu-compute-1','ai-compute-1'];
+ s=commandAny(s,{type:'design',kind:'gpu',name:'G1',spec:defaultSpec('gpu'),price:600});
+ s=commandAny(s,{type:'advance',days:14});s=commandAny(s,{type:'launch',id:'p-1'});s=commandAny(s,{type:'line',id:'p-1',target:4});
+ s=commandAny(s,{type:'advance',days:1});
+ const before=s.products[0];const previous=(before as any).inventoryValue;
+ const after=commandAny(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
+ expect(after.products[0].inventory).toBe(before.inventory-1);
+ expect((after.products[0] as any).inventoryValue).toBe(previous-before.unitCost);
+ expect(after.clusters[0].purchaseCost).toBe(2000+before.unitCost);
+});
