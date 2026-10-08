@@ -1,3 +1,4 @@
+import {PanelPages} from './PanelPages';
 import {useState} from 'react';
 import {hardwareKinds,unlockedVisualTier,techEffect,type HardwareKind} from '../../../packages/content/src/research';
 import {defaultSpec,hardwareCatalog,type Spec} from '../../../packages/content/src/hardware';
@@ -21,7 +22,7 @@ export function HardwarePanel({state,send}:{state:GameState,send:(c:GameCommand)
  const ready=state.research.completed.includes(`${kind}-compute-1`);
  const preview=evaluateHardware(kind,spec,[...state.research.completed,`${kind}-compute-1`]);
  function choose(next:HardwareKind){setKind(next);setSpec(defaultSpec(next));setVisual({tier:0,color:'graphite'});}
- return <><div className="workbench">
+ return <PanelPages labels={['設計スタジオ','製品一覧']}><div className="workbench">
   <section className="card product-stage"><p className="eyebrow">DESIGN STUDIO / {kind.toUpperCase()}</p>
    <ProductIllustration kind={kind} tier={tier} color={visual.color} spec={spec}/>
    <h2>{name||definition.label}</h2><p>設計プレビュー · 外観グレード {tier}</p>
@@ -44,5 +45,5 @@ export function HardwarePanel({state,send}:{state:GameState,send:(c:GameCommand)
    <RangeField label="販売価格" min={100} max={20000} step={25} value={price} onChange={setPrice} unit="円"/>
    <button className="primary" disabled={!ready||!name.trim()} onClick={()=>send({type:'design',kind,name,spec,price,visual:{...visual,tier}})}>設計を開始</button>
   </section>
- </div><section className="card product-list"><h2>製品ラインアップ</h2><ProductCards state={state} send={send} kinds={[...hardwareKinds]}/></section></>;
+ </div><section className="card product-list"><h2>製品ラインアップ</h2><ProductCards state={state} send={send} kinds={[...hardwareKinds]}/></section></PanelPages>;
 }
