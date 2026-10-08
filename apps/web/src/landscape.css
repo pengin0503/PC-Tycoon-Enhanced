@@ -56,3 +56,7 @@
 .design-controls{background:linear-gradient(150deg,#192e43,#111d30);border-color:#345168}
 .game-main>header .eyebrow{letter-spacing:2px;color:#78dec8}
 @media(max-width:950px){.screen-nav button svg{width:17px;height:17px}.screen-nav button{gap:2px}}
+
+/* Compact icon-led time controls. Accessible names remain text. */
+.game-hud .time-controls{justify-content:flex-end}
+.game-hud .time-controls .button-row button{min-width:39px;min-height:34px;padding:3px 7px;font-size:16px;font-weight:700;line-height:1.15}

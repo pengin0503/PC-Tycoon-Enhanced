@@ -2,11 +2,13 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
 import {importSave,exportSave} from '../packages/save/src/index';
+import {priceRange} from '../packages/sim/src/pricing';
+import {evaluateHardware} from '../packages/sim/src/hardware';
 const cmd=(s:any,c:any)=>command(s,c);
 function developed(kind:any='cpu'){
  let s=createGame({id:'market',name:'製品社',year:2026,difficulty:'normal',seed:42});
  s=cmd(s,{type:'research',id:`${kind}-compute-1`});s=cmd(s,{type:'advance',days:7});
- s=cmd(s,{type:'design',kind,name:'第一世代',spec:defaultSpec(kind),price:400});return cmd(s,{type:'advance',days:14});
+ const spec=defaultSpec(kind);const metrics=evaluateHardware(kind,spec,[...s.research.completed]);const {max}=priceRange({kind,...metrics});s=cmd(s,{type:'design',kind,name:'第一世代',spec,price:Math.min(400,max)});return cmd(s,{type:'advance',days:14});
 }
 function released(){let s=cmd(developed(),{type:'launch',id:'p-1'});return cmd(s,{type:'line',id:'p-1',target:100});}
 it('manufactures inventory then sells with positive unit economics',()=>{
@@ -22,7 +24,7 @@ it('does not manufacture using nonexistent cash',()=>{
  const s=released();s.company.cash=0;const n=cmd(s,{type:'advance',days:1});expect(n.products[0].inventory).toBe(0);expect(n.company.cash).toBe(0);
 });
 it('sales reflect price elasticity and replay exactly after restore',()=>{
- const s=released();const expensive=cmd(s,{type:'price',id:'p-1',price:1000000});
+ const s=released();const expensive=cmd(s,{type:'price',id:'p-1',price:priceRange(s.products[0]).max});
  const normal=cmd(s,{type:'advance',days:70});expect(normal.products[0].sold).toBeGreaterThan(cmd(expensive,{type:'advance',days:70}).products[0].sold);
  expect(normal).toEqual(cmd(importSave(exportSave(s)),{type:'advance',days:70}));
 });

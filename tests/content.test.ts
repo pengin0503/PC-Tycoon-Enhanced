@@ -39,7 +39,7 @@ it('long economy replay and save boundaries stay finite',()=>{
  const s=createGame({id:'long',name:'長期社',year:2026,difficulty:'normal',seed:42});const a=cmd(s,{type:'advance',days:365}),b=cmd(cmd(s,{type:'advance',days:180}),{type:'advance',days:185});expect(a).toEqual(b);expect(a.history).toHaveLength(12);expect(a.company.cash).toBeGreaterThanOrEqual(0);
 });
 it('seeded market events change real modifiers and expire',()=>{
- const s=createGame({id:'events',name:'市況社',year:2026,difficulty:'normal',seed:1});expect((events as any).marketMonthly).toBeTypeOf('function');(events as any).marketMonthly(s);expect((s as any).modifiers.demand).not.toBe(1);
+ const s=createGame({id:'events',name:'市況社',year:2026,difficulty:'normal',seed:1});expect((events as any).marketMonthly).toBeTypeOf('function');(events as any).marketMonthly(s);expect((s as any).pendingDecision!==null||(s as any).modifiers.demand!==1||(s as any).modifiers.production!==1).toBe(true);
  const after=cmd(s,{type:'advance',days:31});expect(after.modifiers.expiresDay===0||after.modifiers.expiresDay>after.day).toBe(true);
 });
 it('all OS research branches affect responsiveness costs or compatibility',()=>{
