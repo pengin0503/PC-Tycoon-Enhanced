@@ -3,6 +3,7 @@ import type {GameState,GameCommand,Product} from './types';
 import {expense,logEvent} from './finance';
 import {hardwareBalance} from '../../content/src/hardware';
 import {techEffect} from '../../content/src/research';
+import {validateVisual,visualFinishCost} from './visual';
 export function evaluateDevice(s:GameState,parts:Record<string,string>,purpose:'gaming'|'office'|'server',kind:'pc'|'laptop',osId?:string){
  const ids=['cpu','gpu','motherboard','ram','storage'] as const;
  const resolved=ids.map(k=>{const p=s.products.find(p=>p.id===parts[k])??vendorParts.find(p=>p.id===parts[k]);if(!p||p.kind!==k||('remaining'in p&&p.remaining>0))throw new Error('利用可能な部品を選択してください');return p;});
@@ -15,15 +16,15 @@ export function evaluateDevice(s:GameState,parts:Record<string,string>,purpose:'
  const e=(axis:string)=>techEffect(s.research.completed,kind,axis);
  return {reliability:hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability'))),performance:Math.round(score*osFactor*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('compatibility'))*(kind==='laptop'?b.laptopCooling:1)),power:Math.round(resolved.reduce((n,p)=>n+p.power,0)*Math.exp(-e('power'))),unitCost:resolved.reduce((n,p)=>n+p.unitCost,0)+Math.round((b.caseCost+(kind==='laptop'?b.laptopPackaging:0))*Math.exp(-e('cost')*b.packagingResearchScale))+(os?os.unitCost:0)};
 }
-export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'|'price'|'performance'|'power'|'unitCost'> & {reliability?:number},work:number){
+export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'|'price'|'performance'|'power'|'unitCost'> & {reliability?:number,visual?:Product['visual']},work:number){
  if(s.products.length>=500)throw new Error('製品数の上限です');
  s.products.push({...data,reliability:data.reliability??hardwareBalance.reliabilityBase,id:`p-${s.products.length+1}`,remaining:work,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',data.name);
 }
 export function deviceCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='assemble'){
   if(!s.research.completed.includes(`${c.kind}-compute-1`))throw new Error('端末の基盤研究が必要です');
-  const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId);expense(s,b.designCost);
-  appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,...(c.osId?{osId:c.osId}:{})},...result},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
+  const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId);const tier=validateVisual(s.research.completed,c.kind,c.visual);expense(s,b.designCost);
+  appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,...(c.osId?{osId:c.osId}:{})},...result,unitCost:result.unitCost+visualFinishCost(tier),...(c.visual?{visual:c.visual}:{})},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
  }
  if(c.type==='developOS'){
   if(!s.research.completed.includes('os-compute-1'))throw new Error('OS基盤研究が必要です');
