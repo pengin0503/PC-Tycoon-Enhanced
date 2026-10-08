@@ -54,3 +54,5 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - Local history (ff6f6f5 PWA plus uncommitted Android) can differ from recovered remote history. Before resuming, fetch/checkout the latest remote feature branch and use its STATUS/history; do not replay old local commits blindly.
 
 Next: observe recovery CI game and Android build/asset/signature gates, fix any reproduced failures, remove temporary lock-sync/write permission, update phase evidence and push. Physical Android launch/touch/picker/restart/browser↔APK JSON round trip remains unverified without a device.
+
+Recovery CI37711303092: game job passed91 unit/10 browser/2 production tests/typecheck/build. Android preparation failed because setup-android defaults to obsolete SDK package tools; explicit platform-tools and pinned command-line tools replace that default. Added appId contract regression against template applicationId=com.getcapacitor.app vs native com.pengin0503.pctycoon; expect RED before correction. Lock36724b4 is synchronized. One-time CI writer/job removed; permanent workflow is read-only.
