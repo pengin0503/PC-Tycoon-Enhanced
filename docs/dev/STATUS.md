@@ -34,3 +34,10 @@ F0–F5 accepted. F6 PWA/debug APK software gates accepted; Android physical-dev
 2. On a real Android device, install the CI debug APK; with networking disabled test first launch/new game, touch/keyboard/insets, every screen, background/picker suspension, save/close/reopen.
 3. Browser→APK and APK→browser JSON transfer must preserve equal continuation; malformed import and storage failure must preserve the prior game.
 4. Record device/OS/WebView and results. Add reproduction tests for any failure; commit fixes by feature and push normally. Release signing/store publication have not been performed.
+
+## PC Tycoon 2 parity extension — 2026-10-08
+Branch `claude/gallant-curie-k0htkq` from `main` `f80a509`. Spec: `docs/superpowers/specs/2026-10-08-pct2-parity-design.md` (user approved scope G1–G5 and a closer-to-original UI flow; private use only).
+- Engine: G2 components, G1 reception, G3 business, G4 OS security, G5 progression. Save stays `version:1`; every new field is optional/defaulted and legacy JSON loads.
+- Intentional behavior changes: research spends research points and completes instantly (no cash, no slots); tech count 3040 → 3345 (PSU domain); one AI test now checks seeded failure across seeds.
+- UI rebuilt around the original game's flow with original SVG art; browser tests updated to the new navigation.
+- Local verification: typecheck, 142 Vitest, 29 Playwright, 2 production PWA, 6 Python, production build. Android physical-device acceptance remains unverified.
