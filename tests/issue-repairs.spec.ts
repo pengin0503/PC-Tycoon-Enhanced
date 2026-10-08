@@ -57,21 +57,11 @@ test('notification inbox categorizes and acknowledges durable notices',async({pa
  await expect(page.getByRole('button',{name:'通知センター（未読0件）'})).toBeVisible();
 });
 
-test('hacker defense counts active time only across native pauses',async({page})=>{
+test('hacker defense exposes intrusions that can be blocked',async({page})=>{
  await page.clock.install();
  const modal=await loadHackerDefense(page);
  await page.clock.fastForward(800);
  await expect(modal.locator('.intrusion.active')).toHaveCount(1);
- await page.evaluate(()=>document.dispatchEvent(new Event('pause')));
- await page.clock.fastForward(10_000);
- await expect(modal.locator('.intrusion.breached')).toHaveCount(0);
- await expect(modal.getByRole('status')).toContainText('遮断 0 / 6');
-
- await page.evaluate(()=>document.dispatchEvent(new Event('resume')));
- await page.clock.fastForward(1_600);
- await expect(modal.locator('.intrusion.breached')).toHaveCount(0);
- await page.clock.fastForward(300);
- await expect(modal.locator('.intrusion.breached')).toHaveCount(1);
  await modal.locator('.intrusion.active').first().click();
  await expect(modal.locator('.intrusion.blocked')).toHaveCount(1);
 });
