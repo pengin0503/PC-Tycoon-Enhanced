@@ -57,7 +57,7 @@ export function rivalCommand(s:GameState,c:GameCommand):boolean{
   p.inventory=0;p.inventoryValue=0;
  }
  for(const p of affected){
-  const spec={...p.spec,assemblyOverhead:overheads.get(p.id)!};
+  const spec:Record<string,string|number>={...p.spec,assemblyOverhead:overheads.get(p.id)!};
   for(const key of ['cpu','gpu','motherboard','ram','storage']){const replacement=mapping.get(String(spec[key]));if(replacement)spec[key]=replacement;}
   p.spec=spec;
  }
