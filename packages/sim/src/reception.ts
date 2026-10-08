@@ -8,8 +8,8 @@ import type {GameState,Product} from './types';
 export type Review=NonNullable<Product['review']>;
 const clamp=(v:number,lo=0,hi=100)=>Math.max(lo,Math.min(hi,v));
 
-/** Fixed at launch: compares against every launched product of the same kind, own earlier models included. */
-export function computeReview(s:GameState,p:Product):Review{
+/** Deterministic review axes and score (no outlet noise); used for the launch review and design-time forecasts. */
+export function estimateReview(s:GameState,p:Pick<Product,'id'|'kind'|'performance'|'price'|'unitCost'|'reliability'|'spec'|'visual'>):{score:number,axes:Record<ReviewAxis,number>}{
  const reference=productCatalog[p.kind].reference;
  const others=[...s.products.filter(o=>o.id!==p.id&&o.launched&&o.kind===p.kind),...s.rivals.flatMap(r=>r.products.filter(o=>o.kind===p.kind&&o.remaining===0))];
  const best=Math.max(reference,...others.map(o=>o.performance));
@@ -22,7 +22,11 @@ export function computeReview(s:GameState,p:Product):Review{
  const previous=s.products.filter(o=>o.id!==p.id&&o.launched&&o.kind===p.kind);
  const innovation=previous.length?clamp(b.innovationBase+(p.performance/Math.max(...previous.map(o=>o.performance))-1)*b.innovationScale,b.innovationMin):b.innovationFirst;
  const axes:Record<ReviewAxis,number>={performance,value,quality,design,innovation};
- const score=Math.round(reviewAxes.reduce((n,a)=>n+axes[a]*b.weights[a],0));
+ return {score:Math.round(reviewAxes.reduce((n,a)=>n+axes[a]*b.weights[a],0)),axes};
+}
+/** Fixed at launch: compares against every launched product of the same kind, own earlier models included. */
+export function computeReview(s:GameState,p:Product):Review{
+ const {score,axes}=estimateReview(s,p);
  const ranked=[...reviewAxes].sort((x,y)=>axes[y]-axes[x]);
  const outlets=reviewOutlets.map(o=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;

@@ -39,6 +39,19 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
   {Array.from({length:4},(_,n)=><path key={n} d={`M${151+n*58} ${163-n*14}l32 -9l22 8l-32 10Z`} fill="#162938" stroke="#92b9ba" strokeWidth="3"/>)}
   {tier>=2&&<path d="M107 170L351 111L425 133" stroke={metal} strokeWidth="9" fill="none"/>}
   {tier>=4&&<path d="M112 184L179 205L432 139" stroke={accent} strokeWidth="5" fill="none"/>}</>
+ :kind==='psu'?<><path d="M120 150L300 92L430 140L250 200Z" fill={primary} stroke={metal} strokeWidth="5"/>
+  <path d="M120 150L250 200V262L120 210Z" fill="#20334b" stroke="#809caf" strokeWidth="3"/>
+  <path d="M250 200L430 140V200L250 262Z" fill="#1d3144" stroke="#6f90a6" strokeWidth="3"/>
+  <g transform="translate(275 146) scale(1 .55)">{fan(0,0,42,0)}</g>
+  {Array.from({length:5},(_,n)=><path key={n} d={`M${140+n*20} ${172+n*7}v34`} stroke="#5d7d93" strokeWidth="5"/>)}
+  {(tier>=1||spec?.modular==='full'||spec?.modular==='semi')&&<path d="M262 236q40 30 90 -10M272 244q50 34 110 -6" stroke={accent} strokeWidth="5" fill="none"/>}
+  {tier>=4&&<path d="M126 158L250 206L426 146" stroke="#5cf1d0" strokeWidth="4" fill="none"/>}</>
+ :kind==='os'?<><path d="M110 70H413V222H110Z" fill="#172d42" stroke={metal} strokeWidth="10"/>
+  <path d="M122 82H401V196H122Z" fill={({blue:'#2b5fb8',orange:'#c4621c',violet:'#6a42c2'} as Record<string,string>)[String(spec?.theme)]??'#1d6d6b'}/>
+  <path d="M150 104H262V170H150Z" fill="#f4f8ff" opacity=".92"/><path d="M150 104H262V116H150Z" fill="#9fb4cc"/>
+  <path d="M280 104H372V150H280Z" fill="#f4f8ff" opacity=".7"/>
+  <path d="M122 196H401V210H122Z" fill="#0f1e30"/>{[0,1,2,3].map(n=><rect key={n} x={140+n*24} y="199" width="14" height="8" rx="2" fill={accent}/>)}
+  <path d="M250 222H273V250H250Z" fill={metal}/><path d="M210 250H317V262H210Z" fill={metal}/></>
  :kind==='pc'?<><path d="M152 78L322 109V252L152 220Z" fill={primary} stroke={metal} strokeWidth="5"/>
   <path d="M322 109L391 78V219L322 252Z" fill="#223b52" stroke={metal} strokeWidth="4"/>
   <path d="M152 78L224 46L391 78L322 109Z" fill="#7592a5" stroke={metal} strokeWidth="4"/>
@@ -61,6 +74,6 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
  {tier>=1&&<><circle cx="63" cy="61" r="19" fill="#172a3a" stroke={accent} strokeWidth="3"/><text x="63" y="67" textAnchor="middle" fill={accent} fontWeight="bold" fontSize="17">{tier}</text></>}
  {tier>=5&&<path d="M417 51l6 12 12 5 -12 4 -6 13 -6 -13 -12 -4 12 -5Z" fill="#ffcf75"/>}
  <text x="25" y="299" fill="#a6d6d5" fontSize="12" letterSpacing="3">{kind.toUpperCase()} / VISUAL STUDIO</text>
- <text x="491" y="299" fill="#a6d6d5" textAnchor="end" fontSize="11">{spec?.vram??spec?.cores??''}</text>
+ <text x="491" y="299" fill="#a6d6d5" textAnchor="end" fontSize="11">{spec?.vram??spec?.cores??spec?.wattage??''}</text>
  </svg>;
 }
