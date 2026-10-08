@@ -22,3 +22,18 @@ it('own GPU transfers stock once and retains its asset value for operating cost'
  s=cmd(s,{type:'design',kind:'gpu',name:'Own GPU',spec:{units:16,clock:1,vram:8,bandwidth:256},price:450});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:100});s=cmd(s,{type:'advance',days:1});
  const n=cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});expect(n.products[0].inventory).toBe(s.products[0].inventory-1);expect(n.clusters[0].purchaseCost).toBe(2000+s.products[0].unitCost);expect(n.finance.capital).toBe(2000);
 });
+
+it('assigns a server built from own and generic components together with an own GPU to AI cluster',()=>{
+ let s=ownGPUReady();
+ s.research.completed.push('pc-compute-1');
+ s=cmd(s,{type:'assemble',kind:'pc',name:'In-house server',parts:{cpu:'v-cpu',gpu:'p-1',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'server',appearance:'graphite',price:3000});
+ s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:3});
+ s=cmd(s,{type:'advance',days:2});
+ expect(s.products[1].inventory).toBeGreaterThan(0);
+ expect(s.products[0].inventory).toBeGreaterThan(0);
+ const ownGPUStock=s.products[0].inventory,serverStock=s.products[1].inventory;
+ const n=cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'p-2',gpus:1,network:.8,cooling:.9});
+ expect(n.clusters[0].serverId).toBe('p-2');
+ expect(n.products[0].inventory).toBe(ownGPUStock-1);
+ expect(n.products[1].inventory).toBe(serverStock-1);
+});
