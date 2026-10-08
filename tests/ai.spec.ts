@@ -23,6 +23,7 @@ test('AI Lab requires manufactured player GPU before model training and deployme
  await page.getByRole('button',{name:'発売する'}).click();
  await page.getByRole('button',{name:'生産開始'}).click();
  await page.getByRole('button',{name:'1日進める'}).click();
+ await page.getByRole('button',{name:'1日進める'}).click(); // first day may be weekly sale; next day restores physical inventory
  await page.getByRole('button',{name:'AI Lab'}).click();
  await page.getByRole('button',{name:'クラスタを購入'}).click();
  await page.getByRole('tab',{name:'モデル開発'}).click();
