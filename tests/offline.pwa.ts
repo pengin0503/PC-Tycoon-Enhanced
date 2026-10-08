@@ -14,6 +14,7 @@ test('production shell starts saves and transfers games offline on mobile',async
  await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('status')).toContainText('保存');
  await page.reload();await expect(page.getByRole('heading',{name:'オフライン企業'})).toBeVisible();await expect(page.getByTestId('day')).toHaveText('30');
  const fonts=await page.evaluate(async()=>{await document.fonts.ready;return Array.from(document.fonts).some(f=>f.family.includes('Noto Sans JP')&&f.status==='loaded')});expect(fonts).toBe(true);
+ await page.getByRole('button',{name:'セーブ・設定'}).click();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'JSON書き出し'}).click();const file=await download;const path=await file.path();expect(path).toBeTruthy();
  await page.getByRole('button',{name:'1日進める'}).click();await expect(page.getByTestId('day')).toHaveText('31');
  await page.getByLabel('JSON読み込み').setInputFiles(path!);await expect(page.getByTestId('day')).toHaveText('30');
