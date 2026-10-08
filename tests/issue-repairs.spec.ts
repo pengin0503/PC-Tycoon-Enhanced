@@ -5,7 +5,7 @@ test('notification inbox categorizes and acknowledges durable notices',async({pa
  await page.getByRole('button',{name:'研究',exact:true}).click();
  await page.getByRole('button',{name:'CPU 基盤技術 1 を研究'}).click();
  await page.getByRole('button',{name:'30日進める'}).click();
- const bell=page.getByRole('button',{name:/通知センター/});
+ const bell=page.getByRole('button',{name:/^通知センター（未読/});
  await expect(bell).toHaveText(/♧ [1-9][0-9]*/);
  await bell.click();
  const center=page.getByRole('region',{name:'通知センター'});
@@ -15,5 +15,5 @@ test('notification inbox categorizes and acknowledges durable notices',async({pa
  await center.getByRole('button',{name:'すべて既読'}).click();
  await expect(bell).toContainText('0');
  await page.reload();
- await expect(page.getByRole('button',{name:/通知センター/})).toContainText('0');
+ await expect(page.getByRole('button',{name:/^通知センター（未読/})).toContainText('0');
 });
