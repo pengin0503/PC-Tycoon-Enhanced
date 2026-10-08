@@ -2,7 +2,7 @@
 import re
 
 def preference_is_false(xml: str, name: str) -> bool:
-    for block in re.split(r'\bE:\s+preference\b', xml)[1:]:
+    for block in re.split(r'\bE:\s+(?:[^:\s()]*:)?preference\b', xml)[1:]:
         block = block.split('E:', 1)[0]
         if not re.search(r'\bname[^=\n]*=[^\n]*"' + re.escape(name) + r'"', block):
             continue
