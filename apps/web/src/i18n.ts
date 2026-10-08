@@ -5,6 +5,7 @@ export const ja={
   daily:'日次更新',weekly:'週次更新',monthly:'月次決算',insolvency:'支払不足・債務発生',expense:'支出',
   researchStarted:'研究開始',researchComplete:'研究完了',designStarted:'設計開始',designComplete:'設計完了',launched:'発売',sales:'製品販売',
   officeUpgrade:'オフィス拡張',hired:'採用',marketingStopped:'広告停止',acquired:'企業買収',
+  clusterPurchased:'クラスタ購入',trainingStarted:'学習開始',trainingComplete:'モデル評価完了',trainingFailed:'学習失敗',serviceStopped:'AIサービス停止',
 } as const;
 export function eventLabel(kind:string){return kind in ja ? ja[kind as keyof typeof ja]:kind;}
 export function yen(n:number){return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n);}

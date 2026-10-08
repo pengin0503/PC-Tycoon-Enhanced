@@ -32,4 +32,10 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - Balance regression: autonomous competition made the default CPU 180-day cash fixture fall to 494160. Increasing fictional CPU demand 60→70 restored this playable profitable path; same test RED→GREEN, whole suite passed.
 - Fixed schema declaration order caught by suite (rival schema referenced money before initialization).
 
-Next: F4 plan (LLM simulation, shared compute, training, inference and business). F4–F6 unimplemented.
+## F4
+- Complete: Dense/MoE and geometry validation, FLOP/time/cost models, total-weight/KV/reserved memory, quantization quality/speed, stock-backed own GPU/server or vendor clusters.
+- Training completes/fails deterministically with bounded fictional math/code/knowledge/reasoning/multilingual scores. Preparation shares founder work with research/products; roles remain finite.
+- API tokens and subscribers are capacity bounded; power/operations/depreciation, fees/refunds, monthly subscriptions and open-weight brand effects are implemented. Hosted service and training exclusively reserve compute.
+- Verified: 75 unit tests and 7 browser tests, strict typecheck/build. Self-review fixes RED→GREEN: private models no longer boost hardware demand; transferred own GPU/server value is included in cluster depreciation while only purchases debit cash.
+
+Next: F5 (3000 meaningful research nodes, research effects, events, balance/analysis, visuals and feature acceptance). F5–F6 unimplemented. F6 environment inspection found no Java/Gradle/adb/Android SDK on PATH; Android build must be attempted and unverified items kept explicit.

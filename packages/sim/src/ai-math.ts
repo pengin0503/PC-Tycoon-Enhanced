@@ -15,3 +15,10 @@ export function estimateInference(input:LLMDesign,hardware:ComputeCluster,bits:4
  const tokensPerSecond=c.peakFlops*b.efficiency*c.network*c.cooling*b.inferenceUtilization/(2*d.active*(1+context/8192*b.attentionOverhead))*b.quantSpeed[bits]*Math.min(2,Math.sqrt(batch));
  return{weightBytes,kvBytes,reservedBytes,memoryBytes:weightBytes+kvBytes+reservedBytes,tokensPerSecond,qualityPenalty:b.quantPenalty[bits]};
 }
+export function benchmarks(d:LLMDesign,tech=0){
+ designSchema.parse(d);const depth=Math.min(1.2,Math.log2(d.layers+1)/Math.log2(25));
+ const compute=(d.active/1e9)**.25*(d.tokens/1e9)**.25*d.quality*(.5+.5*d.diversity)*(1+Math.min(.5,tech))*depth*(d.attention==='grouped'?.99:1);
+ const base=b.benchmarkCeiling*(1-Math.exp(-compute));const breadth=Math.min(1.12,1+Math.log2(d.total/d.active)*.03);
+ const clamp=(n:number)=>Math.max(0,Math.min(b.benchmarkCeiling,Math.round(n)));
+ return{math:clamp(base*.95),coding:clamp(base*(.7+.3*d.quality)),knowledge:clamp(base*breadth),reasoning:clamp(base*(d.architecture==='moe'?.94:1)),multilingual:clamp(base*(.5+.5*d.diversity)*breadth)};
+}

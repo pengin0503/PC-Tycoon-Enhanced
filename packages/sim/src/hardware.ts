@@ -6,6 +6,7 @@ import {productCatalog} from '../../content/src/devices';
 import {offices,managementBalance} from '../../content/src/management';
 import {workBonus} from './management';
 import {competitorPressure} from './rivals';
+import {aiHardwareBoost,founderProjects} from './ai';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -66,15 +67,15 @@ export function sellProducts(s:GameState){
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(2,p.performance/def.reference)*((p.kind==='os'?50:p.unitCost*2)/p.price)**1.5;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
   const units=Math.min(p.kind==='os'?500:p.inventory,Math.max(0,demand));
   if(units){if(p.kind!=='os')p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);}
  }
 }
 export function researchAndDevelopment(s:GameState){
- for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek+workBonus(s,'research'))/s.research.active.length);
+ for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek/founderProjects(s)+workBonus(s,'research'))/s.research.active.length);
  for(const r of s.research.active.filter(r=>r.remaining===0)){s.research.completed.push(r.id);logEvent(s,'researchComplete',techById.get(r.id)?.label??r.id);}
  s.research.active=s.research.active.filter(r=>r.remaining>0);
  const developing=s.products.filter(p=>p.remaining>0);
- for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
+ for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
 }
