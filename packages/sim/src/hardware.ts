@@ -15,7 +15,7 @@ export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[])
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);}
-  else if(typeof v!=='number'||!Number.isFinite(v)||v<field.min!||v>field.max!||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
+  else if(typeof v!=='number'||!Number.isFinite(v)||v<field.min!||v>field.max!*(1+(['cores','units','vram','slots','capacity','resolution'].includes(key)?techEffect(completed,kind,'capacity'):0))||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
  }
  const n=(k:string)=>Number(spec[k]);let performance=0,power=0,unitCost=0;
  switch(kind){
@@ -27,7 +27,8 @@ export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[])
   case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*.02;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
  performance*=1+Math.max(0,techEffect(completed,kind,'compute')-.08);
- return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost))};
+ performance*=1+techEffect(completed,kind,'compatibility');power*=Math.exp(-techEffect(completed,kind,'power'));unitCost*=Math.exp(-techEffect(completed,kind,'cost')*.2);
+ return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost)),reliability:.9+.1*(1-Math.exp(-techEffect(completed,kind,'reliability')))};
 }
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='research'){
@@ -39,7 +40,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  }
  if(c.type==='design'){
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];const result=evaluateHardware(c.kind,c.spec,s.research.completed);
-  expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:c.spec,...result,remaining:def.work,price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
+  expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:c.spec,...result,remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
  if(c.type==='launch'||c.type==='line'||c.type==='price'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
@@ -52,7 +53,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
 }
 export function manufacture(s:GameState){
  if(s.company.debt>0)return;
- const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=b.baseFactoryCapacity*s.factoryLevel;
+ const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=Math.floor(b.baseFactoryCapacity*s.factoryLevel*s.modifiers.production);
  for(let i=0;i<lines.length;i++){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
   const own=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
@@ -67,7 +68,7 @@ export function sellProducts(s:GameState){
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(2,p.performance/def.reference)*((p.kind==='os'?50:p.unitCost*2)/p.price)**1.5;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/.9)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
   const units=Math.min(p.kind==='os'?500:p.inventory,Math.max(0,demand));
   if(units){if(p.kind!=='os')p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);}
  }

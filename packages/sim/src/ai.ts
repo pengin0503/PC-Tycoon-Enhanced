@@ -1,9 +1,10 @@
 import {aiGPUs,aiBalance as b} from '../../content/src/ai';
 import {expense,income,logEvent} from './finance';
-import {estimateLLM,estimateInference,benchmarks,clusterCost} from './ai-math';
+import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects} from './ai-math';
 import {workBonus} from './management';
 import {techEffect} from '../../content/src/research';
 import {nextRandom} from './random';
+export function aiEffects(s:GameState):AIResearchEffects{return Object.fromEntries(['compute','architecture','quantization','data','context','economics'].map(axis=>[axis,techEffect(s.research.completed,'ai',axis)]));}
 import type {GameState,GameCommand} from './types';
 export function aiCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='buyCluster'){
@@ -20,13 +21,13 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='trainModel'){
   if(!s.research.completed.includes('ai-compute-1')||c.design.architecture==='moe'&&!s.research.completed.includes('ai-architecture-1'))throw new Error('AI設計の研究が必要です');
   const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!cluster)throw new Error('クラスタが存在しません');if(clusterBusy(s,c.clusterId))throw new Error('クラスタは使用中です');
-  if(s.models.length>=100)throw new Error('モデル数の上限です');const e=estimateLLM(c.design,cluster);if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
+  if(s.models.length>=100)throw new Error('モデル数の上限です');const e=estimateLLM(c.design,cluster,aiEffects(s));if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
   expense(s,e.cost);s.models.push({id:`m-${s.models.length+1}`,name:c.name,design:c.design,clusterId:c.clusterId,status:'training',remainingSeconds:e.seconds,initialSeconds:e.seconds,preparationRemaining:b.preparationDays,trainingCost:e.cost,scores:{math:0,coding:0,knowledge:0,reasoning:0,multilingual:0},service:null});logEvent(s,'trainingStarted',c.name);return true;
  }
  if(c.type==='deployModel'){
   const m=s.models.find(m=>m.id===c.id);const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!m||m.status!=='ready'||!cluster)throw new Error('評価済みモデルとクラスタが必要です');
   if(c.bits!==16&&!s.research.completed.includes('ai-quantization-1'))throw new Error('量子化の研究が必要です');if(c.mode!=='open'&&clusterBusy(s,c.clusterId,m.id))throw new Error('クラスタは使用中です');
-  const e=estimateInference(m.design,cluster,c.bits,c.context,c.batch);if(c.mode!=='open'&&e.memoryBytes>cluster.vramBytes)throw new Error('推論VRAMが不足しています');
+  const e=estimateInference(m.design,cluster,c.bits,c.context,c.batch,aiEffects(s));if(c.mode!=='open'&&e.memoryBytes>cluster.vramBytes)throw new Error('推論VRAMが不足しています');
   const old=m.service;m.service={enabled:true,clusterId:c.clusterId,bits:c.bits,context:c.context,batch:c.batch,mode:c.mode,apiPrice:c.apiPrice,subscriptionPrice:c.subscriptionPrice,tokens:old?.tokens??0,users:0,revenue:old?.revenue??0,cost:old?.cost??0,speed:e.tokensPerSecond,memoryBytes:e.memoryBytes,qualityPenalty:e.qualityPenalty};return true;
  }
  if(c.type==='retireModel'){const m=s.models.find(m=>m.id===c.id);if(!m?.service)throw new Error('運用モデルが存在しません');m.service.enabled=false;m.service.users=0;return true;}
@@ -37,7 +38,7 @@ export function founderProjects(s:GameState){return Math.max(1,Number(s.research
 export function aiWeekly(s:GameState){
  const jobs=s.models.filter(m=>m.status==='training');const founder=1/founderProjects(s);const bonus=workBonus(s,'ai');
  for(const m of jobs){m.remainingSeconds=Math.max(0,m.remainingSeconds-7*86400*(1+bonus/100));m.preparationRemaining=Math.max(0,m.preparationRemaining-7*(founder+bonus/10)/jobs.length);
-  if(m.remainingSeconds===0&&m.preparationRemaining===0){const [rand,seed]=nextRandom(s.seed);s.seed=seed;const failure=Math.max(0,b.failureThreshold-m.design.quality)*b.failureCoefficient/(1+bonus/10);m.status=rand<failure?'failed':'ready';if(m.status==='ready')m.scores=benchmarks(m.design,techEffect(s.research.completed,'ai','compute'));logEvent(s,m.status==='ready'?'trainingComplete':'trainingFailed',m.name);}
+  if(m.remainingSeconds===0&&m.preparationRemaining===0){const [rand,seed]=nextRandom(s.seed);s.seed=seed;const failure=Math.max(0,b.failureThreshold-m.design.quality)*b.failureCoefficient/(1+bonus/10);m.status=rand<failure?'failed':'ready';if(m.status==='ready')m.scores=benchmarks({...m.design,quality:m.design.quality+(1-m.design.quality)*(1-Math.exp(-techEffect(s.research.completed,'ai','data')))},techEffect(s.research.completed,'ai','compute')+techEffect(s.research.completed,'ai','architecture')*.1);logEvent(s,m.status==='ready'?'trainingComplete':'trainingFailed',m.name);}
  }
 }
 export function aiMarketQuote(s:GameState){const level=Math.max(0,...s.rivals.filter(r=>!r.acquired).map(r=>r.researchLevel));const playerPrices=s.models.flatMap(m=>m.service?.enabled&&m.service.mode==='api'?[m.service.apiPrice]:[]);return {price:Math.max(200,Math.round(Math.min(b.marketBasePrice/(1+level*.02),...playerPrices.map(p=>p*.98)))),quality:Math.min(85,25+level*3)};}
@@ -53,7 +54,7 @@ export function aiDaily(s:GameState){
   else{service.users=Math.min(Math.floor(capacity/(b.tokensPerSubscriberMonth/30)),Math.floor(b.subscriptionDemand*score*brand*(100/service.subscriptionPrice)**.8));tokens=Math.floor(service.users*b.tokensPerSubscriberMonth/30);}
   const gross=service.mode==='api'?Math.round(tokens/1e6*service.apiPrice*(1-b.fee-b.refund)):0;
   if(gross){income(s,gross);service.revenue+=gross;}
-  const cost=Math.ceil(clusterCost(c,86400,Math.min(1,tokens/Math.max(1,capacity))));expense(s,cost,true);service.cost+=cost;service.tokens+=tokens;
+  const cost=Math.ceil(clusterCost(c,86400,Math.min(1,tokens/Math.max(1,capacity)))*Math.exp(-techEffect(s.research.completed,'ai','economics')));expense(s,cost,true);service.cost+=cost;service.tokens+=tokens;
   if(s.company.debt>0){service.enabled=false;service.users=0;logEvent(s,'serviceStopped',m.name);}
  }
 }

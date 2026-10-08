@@ -5,6 +5,7 @@ import {deviceCommand} from './devices';
 import {newRivals,rivalCommand,rivalDaily,rivalWeekly,rivalMonthly,marketShare} from './rivals';
 import {managementCommand,marketingWeek,monthlyCosts,monthlyHistory} from './management';
 import {aiCommand,aiDaily,aiWeekly,aiMonthly} from './ai';
+import {marketDaily,marketMonthly} from './events';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
 export type { GameState, GameCommand, NewGameOptions } from './types';
@@ -25,9 +26,9 @@ export function command(state: GameState, input: GameCommand): GameState {
   aiCommand(s,c);
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
-    s.day++; manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
+    s.day++; marketDaily(s);manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
     if(s.day%7===0) {aiWeekly(s);researchAndDevelopment(s);marketingWeek(s);sellProducts(s);rivalWeekly(s);logEvent(s,'weekly');}
-    if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');}
+    if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);marketMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');}
   }
   return gameSchema.parse(s);
 }
