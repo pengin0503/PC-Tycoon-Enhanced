@@ -6,7 +6,7 @@ import {techEffect} from '../../content/src/research';
 import {validateVisual,visualFinishCost} from './visual';
 import {assertProductPrice} from './pricing';
 import {osRequirements,meetsOSRequirements} from './os';
-import {osBalance} from '../../content/src/os';
+import {osBalance,osFeatureResearch,osFeatureLabels} from '../../content/src/os';
 /** Production overhead is fixed at design time, excluding separately sourced components. */
 export function assemblyOverhead(s:GameState,p:Product):number{
  if(typeof p.spec.assemblyOverhead==='number')return Number(p.spec.assemblyOverhead);
@@ -59,9 +59,11 @@ export function deviceCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='developOS'){
   if(!s.research.completed.includes('os-compute-1'))throw new Error('OS基盤研究が必要です');
   if(s.products.some(p=>p.kind==='os'&&p.name===c.name&&Number(p.spec.version)>=c.version))throw new Error('新しいバージョン番号が必要です');
+  for(const f of c.features){const need=osFeatureResearch[f];if(need&&!s.research.completed.includes(need))throw new Error(`${osFeatureLabels[f]}には研究「${need}」が必要です`);}
+  const extra=c.features.filter(f=>!['files','calculator','browser'].includes(f)).length;
   const e=(axis:string)=>techEffect(s.research.completed,'os',axis);
   expense(s,Math.round(Math.exp(-e('cost'))*b.os.designCost*(b.os.designQualityFloor+c.quality*b.os.designQualityWeight)*(b.os.designCompatibilityFloor+c.compatibility*b.os.designCompatibilityWeight)));
-  const result={name:c.name,kind:'os' as const,price:c.price,spec:{version:c.version,features:c.features.join(','),quality:c.quality+(1-c.quality)*(1-Math.exp(-e('reliability'))),compatibility:c.compatibility+(1-c.compatibility)*(1-Math.exp(-e('compatibility'))),support:c.support},reliability:hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability'))),performance:Math.round(c.quality*c.compatibility*(b.os.supportFloor+b.os.supportWeight*c.support)*b.scoreScale*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('capacity')*b.os.capacityScore+e('power')*b.os.powerScore)),power:0,unitCost:Math.max(1,Math.round(b.os.licenseCost*Math.exp(-e('power')*b.os.powerCostScale-e('cost')*b.os.costScale)))};assertProductPrice(c.price,result);appendProduct(s,result,b.os.work);return true;
+  const result={name:c.name,kind:'os' as const,price:c.price,spec:{version:c.version,features:c.features.join(','),lockScreen:c.lockScreen??'aurora',theme:c.theme??'teal',quality:c.quality+(1-c.quality)*(1-Math.exp(-e('reliability'))),compatibility:c.compatibility+(1-c.compatibility)*(1-Math.exp(-e('compatibility'))),support:c.support},reliability:hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability'))),performance:Math.round(c.quality*c.compatibility*(b.os.supportFloor+b.os.supportWeight*c.support)*b.scoreScale*(1+osBalance.featureDemand*extra)*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('capacity')*b.os.capacityScore+e('power')*b.os.powerScore)),power:0,unitCost:Math.max(1,Math.round(b.os.licenseCost*Math.exp(-e('power')*b.os.powerCostScale-e('cost')*b.os.costScale)))};assertProductPrice(c.price,result);appendProduct(s,result,b.os.work);return true;
  }
  return false;
 }

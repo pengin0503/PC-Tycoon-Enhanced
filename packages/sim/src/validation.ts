@@ -20,6 +20,9 @@ export function validateGame(value:unknown):GameState{
   if(notice.id<=prevNotice||notice.id>s.notificationSeq||notice.day>s.day)fail('通知履歴の順序が不正です');
   prevNotice=notice.id;
  }
+ if(s.pendingAttack&&!s.products.some(p=>p.id===s.pendingAttack!.osId&&p.kind==='os'))fail('攻撃対象のOSが見つかりません');
+ for(const o of s.offers)if(!s.products.some(p=>p.id===o.productId))fail('取引対象の製品が見つかりません');
+ unique(s.offers.map(o=>String(o.id)),'取引');unique(s.candidates.map(k=>k.id),'候補者');
  for(const p of s.products)if(p.inventoryValue!==undefined&&p.inventory===0&&p.inventoryValue!==0)fail('空在庫に原価が残っています');
  let previous=0;for(const h of s.history){if(h.day>s.day||h.day<=previous)fail('決算履歴の日付が不正です');previous=h.day;}
  for(const p of s.products){if(p.launched&&p.remaining>0)fail('開発中の製品が発売されています');if(!p.launched&&(p.inventory>0||p.line))fail('発売前製品の生産状態が不正です');if(p.releaseDay>s.day)fail('発売日が未来です');

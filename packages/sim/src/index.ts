@@ -7,6 +7,7 @@ import {managementCommand,marketingWeek,monthlyCosts,monthlyHistory} from './man
 import {aiCommand,aiDaily,aiWeekly,aiMonthly} from './ai';
 import {marketDaily,marketMonthly,eventCommand} from './events';
 import {validateGame} from './validation';
+import {osCommand,attackDaily,attackMonthly} from './os';
 import {businessCommand,businessWeekly,businessMonthly,expireOffers,generateCandidates} from './business';
 import {researchPointBalance} from '../../content/src/management';
 export {validateGame} from './validation';
@@ -29,15 +30,16 @@ export function command(state: GameState, input: GameCommand): GameState {
   deviceCommand(s,c);
   managementCommand(s,c);
   businessCommand(s,c);
+  osCommand(s,c);
   rivalCommand(s,c);
   aiCommand(s,c);
   eventCommand(s,c);
   if(c.type==='markNotificationsRead')s.notificationReadId=Math.max(s.notificationReadId,Math.min(s.notificationSeq,c.id));
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
-    s.day++; expireOffers(s); marketDaily(s);manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
+    s.day++; expireOffers(s); attackDaily(s); marketDaily(s);manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
     if(s.day%7===0) {aiWeekly(s);researchAndDevelopment(s);marketingWeek(s);sellProducts(s);businessWeekly(s);rivalWeekly(s);logEvent(s,'weekly');}
-    if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);marketMonthly(s);businessMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');}
+    if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);marketMonthly(s);businessMonthly(s);attackMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');}
   }
   return validateGame(s);
 }
@@ -47,7 +49,7 @@ export function advanceInteractive(state:GameState,days:number):GameState{
  if(!Number.isInteger(days)||days<0||days>31)throw new Error('時間操作の指定が不正です');
  let result=state;
  for(let i=0;i<days;i++){
-  if(result.pendingDecision)break;
+  if(result.pendingDecision||result.pendingAttack)break;
   result=command(result,{type:'advance',days:1});
  }
  return result;
