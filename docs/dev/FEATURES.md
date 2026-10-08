@@ -34,4 +34,4 @@
 
 `packages/` prefixes apply to `sim/src/…`; tests are under `tests/`. UI is under `apps/web/src/`. F5 gates: 87 unit tests, 10 browser tests, strict typecheck and production build. Desktop1440px/mobile390px screenshots reviewed; Japanese font is bundled. 320px horizontal overflow, keyboard and hidden-page timing are browser-tested. Browser emulation is not Android hardware verification.
 
-Remaining distribution acceptance: recovery CI/Capacitor APK build; physical Android launch, touch/WebView/storage and JSON transfer between APK/browser must be reported separately.
+F6 software gates accepted: production offline/update browser tests and signed debug APK with133 byte-exact web assets, manifest and native pause preference verification. Latest suite:94 Vitest/6 inspector/11 browser/2 PWA tests, typecheck/build. Physical Android launch, touch/WebView/storage/background/picker and APK↔browser JSON transfer remain unverified. CI evidence is in STATUS.md.
