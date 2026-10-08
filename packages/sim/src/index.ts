@@ -4,6 +4,7 @@ import {hardwareCommand,researchAndDevelopment,manufacture,sellProducts} from '.
 import {deviceCommand} from './devices';
 import {newRivals,rivalCommand,rivalDaily,rivalWeekly,rivalMonthly,marketShare} from './rivals';
 import {managementCommand,marketingWeek,monthlyCosts,monthlyHistory} from './management';
+import {aiCommand} from './ai';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
 export type { GameState, GameCommand, NewGameOptions } from './types';
@@ -21,6 +22,7 @@ export function command(state: GameState, input: GameCommand): GameState {
   deviceCommand(s,c);
   managementCommand(s,c);
   rivalCommand(s,c);
+  aiCommand(s,c);
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
     s.day++; manufacture(s);rivalDaily(s);logEvent(s,'daily');
