@@ -1,0 +1,63 @@
+name: Android release APK
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PCT_ANDROID_KEYSTORE_BASE64: ${{ secrets.PCT_ANDROID_KEYSTORE_BASE64 }}
+      PCT_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.PCT_ANDROID_KEYSTORE_PASSWORD }}
+      PCT_ANDROID_KEY_ALIAS: ${{ secrets.PCT_ANDROID_KEY_ALIAS }}
+      PCT_ANDROID_KEY_PASSWORD: ${{ secrets.PCT_ANDROID_KEY_PASSWORD }}
+      PCT_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/pct-release.jks
+      PCT_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          cmdline-tools-version: '13114758'
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Validate signing credentials
+        shell: bash
+        run: |
+          for key in PCT_ANDROID_KEYSTORE_BASE64 PCT_ANDROID_KEYSTORE_PASSWORD PCT_ANDROID_KEY_ALIAS PCT_ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then echo "Missing required release signing secret: $key"; exit 1; fi
+          done
+      - name: Decode signing keystore securely
+        shell: bash
+        run: |
+          umask 077
+          printf '%s' "$PCT_ANDROID_KEYSTORE_BASE64" | base64 --decode > "$PCT_ANDROID_KEYSTORE_FILE"
+          test -s "$PCT_ANDROID_KEYSTORE_FILE"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run android:sync
+      - name: Build signed release APK
+        working-directory: apps/android/android
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Verify APK contents and signing
+        run: |
+          PCT_VERIFY_APK=apps/android/android/app/build/outputs/apk/release/app-release.apk python3 tools/verify_apk.py
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs apps/android/android/app/build/outputs/apk/release/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pc-tycoon-signed-release-apk
+          path: apps/android/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+      - name: Erase temporary keystore
+        if: always()
+        shell: bash
+        run: rm -f "$PCT_ANDROID_KEYSTORE_FILE"
