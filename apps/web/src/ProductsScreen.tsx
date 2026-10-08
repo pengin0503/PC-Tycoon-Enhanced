@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {Fragment,useState} from 'react';
+import {specRows} from './spec-format';
 import {productCatalog,productKinds} from '../../../packages/content/src/devices';
 import {reviewAxes,reviewAxisLabels,benchmarkPresets} from '../../../packages/content/src/market';
 import {benchmarkDevice} from '../../../packages/sim/src/benchmark';
@@ -53,12 +54,16 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
  const [desktop,setDesktop]=useState(false);
  const device=p.kind==='pc'||p.kind==='laptop';
  const bench=device&&p.remaining===0?benchmarkDevice(state,p):null;
- const labels=['概要','レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[])];
+ const specs=specRows(p);
+ const labels=['概要',...(specs.length?['仕様']:[]),'レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[])];
  const sender=send as (c:GameCommand)=>void;
+ const cooling=typeof p.spec.cooling==='number'?p.spec.cooling:undefined;
  return <Modal title={p.name} onClose={close} wide>
   <PanelPages labels={labels}>
    <div className="detail-overview"><ProductVisual product={p}/>
-    <dl className="stat-grid"><dt>カテゴリ</dt><dd>{productCatalog[p.kind].label}</dd><dt>性能</dt><dd>{p.performance.toLocaleString('ja-JP')}</dd><dt>製造原価</dt><dd>{yen(p.unitCost)}</dd><dt>販売価格</dt><dd>{yen(p.price)}</dd>
+    <dl className="stat-grid"><dt>カテゴリ</dt><dd>{productCatalog[p.kind].label}</dd><dt>性能スコア</dt><dd>{p.performance.toLocaleString('ja-JP')}</dd>
+     {p.kind!=='os'&&<><dt>消費電力</dt><dd>{p.power.toLocaleString('ja-JP')}W</dd></>}{cooling!==undefined&&<><dt>冷却性能</dt><dd>{cooling.toLocaleString('ja-JP')}W</dd></>}
+     <dt>製造原価</dt><dd>{yen(p.unitCost)}</dd><dt>販売価格</dt><dd>{yen(p.price)}</dd>
      <dt>販売数</dt><dd>{p.sold.toLocaleString('ja-JP')}</dd><dt>在庫</dt><dd>{p.inventory}</dd><dt>売上</dt><dd>{yen(p.revenue)}</dd><dt>利益</dt><dd className={p.profit<0?'bad':''}>{yen(p.profit)}</dd>
      {p.hype?<><dt>話題性</dt><dd>+{p.hype.toFixed(0)}%</dd></>:null}{p.review&&<><dt>レビューによる需要</dt><dd>×{reviewDemandFactor(p).toFixed(2)}</dd></>}</dl>
     <div className="detail-actions">
@@ -68,6 +73,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
      {p.launched&&<PriceEditor product={p} send={sender}/>}
     </div>
    </div>
+   {specs.length>0&&<div key="spec"><dl className="stat-grid spec-grid">{specs.map(r=><Fragment key={r.key}><dt>{r.label}</dt><dd>{r.value}</dd></Fragment>)}</dl></div>}
    <div>{p.review?<><div className="review-hero"><Stars value={p.review.stars} size="lg"/><p className="score"><b>{p.review.score}</b> / 100</p></div>
     <ul className="axis-list">{reviewAxes.map(a=><li key={a}><span>{reviewAxisLabels[a]}</span><Meter value={p.review!.axes[a]} label={reviewAxisLabels[a]}/><b>{p.review!.axes[a]}</b></li>)}</ul>
     <div className="outlets">{p.review.outlets.map(o=><article key={o.name}><header><strong>{o.name}</strong><span>{o.score}点</span></header><p>{o.comment}</p></article>)}</div></>

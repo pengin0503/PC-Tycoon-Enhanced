@@ -33,6 +33,35 @@ test('technical definitions are disclosed on demand without editing hardware val
  const button=page.getByRole('button',{name:'IPC相当の解説'});
  await button.click();await expect(page.getByRole('note')).toContainText('1クロック');
  await expect(page.getByRole('slider',{name:'IPC相当'})).toHaveValue('1');
+ // The definition never lingers: any other interaction closes it.
+ await page.getByRole('heading',{level:2}).first().click();await expect(page.getByRole('note')).toHaveCount(0);
+ await button.click();await expect(page.getByRole('note')).toBeVisible();
+ await page.getByRole('slider',{name:'クロック'}).focus();await page.keyboard.press('ArrowLeft');await expect(page.getByRole('note')).toHaveCount(0);
+ await button.click();await expect(page.getByRole('note')).toBeVisible();
+ await page.getByRole('tab',{name:'デザイン'}).click();await expect(page.getByRole('note')).toHaveCount(0);
+ await page.getByRole('tab',{name:'仕様'}).click();
+ await button.click();await button.click();await expect(page.getByRole('note')).toHaveCount(0);
+});
+test('the game behaves as an app: no text selection, context menu or page zoom outside text fields',async({page})=>{
+ await startCompany(page);
+ expect(await page.evaluate(()=>getComputedStyle(document.body).userSelect)).toBe('none');
+ const blocked=await page.evaluate(()=>{
+  const fire=(target:EventTarget,e:Event)=>{target.dispatchEvent(e);return e.defaultPrevented;};
+  const heading=document.querySelector('h2')!;
+  return{
+   wheelZoom:fire(heading,new WheelEvent('wheel',{ctrlKey:true,deltaY:-100,bubbles:true,cancelable:true})),
+   plainWheel:fire(heading,new WheelEvent('wheel',{deltaY:100,bubbles:true,cancelable:true})),
+   keyZoom:fire(document.body,new KeyboardEvent('keydown',{key:'+',ctrlKey:true,bubbles:true,cancelable:true})),
+   menu:fire(heading,new MouseEvent('contextmenu',{bubbles:true,cancelable:true})),
+   select:fire(heading,new Event('selectstart',{bubbles:true,cancelable:true})),
+  };
+ });
+ expect(blocked).toEqual({wheelZoom:true,plainWheel:false,keyZoom:true,menu:true,select:true});
+ expect(await page.locator('meta[name=viewport]').getAttribute('content')).toContain('user-scalable=no');
+ await page.getByRole('button',{name:'セーブ・設定'}).click();
+ const field=page.getByRole('textbox').first();
+ expect(await field.evaluate(e=>getComputedStyle(e).userSelect)).toBe('text');
+ expect(await field.evaluate(e=>{const ev=new Event('selectstart',{bubbles:true,cancelable:true});e.dispatchEvent(ev);return ev.defaultPrevented;})).toBe(false);
 });
 test('choice event uses full-screen modal and selected action changes company cash',async({page})=>{
  const s=createGame({id:'choice-ui',name:'イベント社',year:2026,difficulty:'normal',seed:7});

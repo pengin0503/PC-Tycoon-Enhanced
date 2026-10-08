@@ -5,7 +5,7 @@ import {companyStats,yearRevenue} from '../packages/sim/src/progress';
 import {researchPointCost} from '../packages/sim/src/business';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(mode?:'standard'|'tycoon'|'long'|'sandbox',difficulty:'normal'|'hard'='normal')=>createGame({id:'g5',name:'進行社',year:2026,difficulty,seed:5,...(mode?{mode}:{})});
-const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,socket:'Atlas'};
+const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'};
 
 it('game modes change research cost, rival speed and demand',()=>{
  expect(start().mode).toBe('standard');

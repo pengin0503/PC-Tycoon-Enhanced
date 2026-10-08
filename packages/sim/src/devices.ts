@@ -1,12 +1,13 @@
-import {vendorParts,deviceSlots,deviceBalance as b} from '../../content/src/devices';
+import {vendorParts,deviceSlots,deviceBalance as b,deviceCooling,deviceCoolingCost} from '../../content/src/devices';
 import type {GameState,GameCommand,Product} from './types';
 import {expense,logEvent} from './finance';
-import {hardwareBalance} from '../../content/src/hardware';
+import {hardwareBalance,coolingReliability} from '../../content/src/hardware';
+import {unlockedRange} from '../../content/src/unlocks';
 import {techEffect} from '../../content/src/research';
 import {validateVisual,visualFinishCost} from './visual';
 import {assertProductPrice} from './pricing';
 import {osRequirements,meetsOSRequirements} from './os';
-import {osBalance,osFeatureResearch,osFeatureLabels,type OSFeature} from '../../content/src/os';
+import {osBalance,osFeatureResearch,osFeatureLabels,osSliders,type OSFeature,type OSSlider} from '../../content/src/os';
 /** Production overhead is fixed at design time, excluding separately sourced components. */
 export function assemblyOverhead(s:GameState,p:Product):number{
  if(typeof p.spec.assemblyOverhead==='number')return Number(p.spec.assemblyOverhead);
@@ -25,7 +26,20 @@ export function findPart(s:GameState,id:string|undefined,allowLegacy=false){
 export function deviceParts(spec:Record<string,string|number>):Partial<Record<typeof deviceSlots[number],string>>{
  return Object.fromEntries(deviceSlots.filter(k=>spec[k]!==undefined).map(k=>[k,String(spec[k])]));
 }
-export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,purpose:'gaming'|'office'|'server',kind:'pc'|'laptop',osId?:string,allowLegacy=false){
+/** Why a case cooling choice cannot be built (research range or insufficient for the power draw), or '' when it can. */
+export function deviceCoolingProblem(s:GameState,kind:'pc'|'laptop',power:number,cooling:number|undefined){
+ if(cooling===undefined)return '冷却性能を指定してください';
+ const range=unlockedRange(deviceCooling[kind],kind,s.research.completed);
+ if(!Number.isInteger(cooling)||cooling<range.min||cooling>range.max)return `冷却性能は現在の研究では${range.min}～${range.max}Wの範囲で設計できます`;
+ if(power>cooling)return `冷却性能が不足しています（消費電力 ${power}W / 冷却性能 ${cooling}W）`;
+ return '';
+}
+/**
+ * Metrics of a PC/laptop build. `cooling` (W) must cover the parts' power draw and stay inside the research-unlocked
+ * range; it may be omitted only for stored (`allowLegacy`) products designed before cooling existed.
+ * `previewOnly` returns metrics without the cooling check so the designer can show why a draft is blocked.
+ */
+export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,purpose:'gaming'|'office'|'server',kind:'pc'|'laptop',osId?:string,allowLegacy=false,cooling?:number,previewOnly=false){
  const rivals=s.rivals.flatMap(r=>r.products.map(p=>({part:p,owner:r})));
  const resolve=(k:string)=>{const p=findPart(s,parts[k],allowLegacy);
   if(!p||p.kind!==k||('remaining'in p&&p.remaining>0))throw new Error('利用可能な部品を選択してください');return p;};
@@ -43,7 +57,11 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
  const unmet=os&&!meetsOSRequirements(s,parts as Record<string,string>,osRequirements(os))?osBalance.unmetPerformance:1;
  const osFactor=os?(b.os.baseCompatibility+Number(os.spec.compatibility)*b.os.compatibilityWeight)*(b.os.qualityFloor+Number(os.spec.quality)*b.os.qualityWeight)*unmet:b.os.withoutOS;
  const e=(axis:string)=>techEffect(s.research.completed,kind,axis);
- return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability),performance:Math.round(score*osFactor*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('compatibility'))*(kind==='laptop'?b.laptopCooling:1)),power:Math.round(resolved.reduce((n,p)=>n+p.power,0)*Math.exp(-e('power'))),unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round((b.caseCost+(kind==='laptop'?b.laptopPackaging:0))*Math.exp(-e('cost')*b.packagingResearchScale))+(os?os.unitCost:0)};
+ // Compute/compatibility research widen the cooling range instead of multiplying performance.
+ const power=Math.round(draw*Math.exp(-e('power')));
+ if(!allowLegacy&&!previewOnly){const problem=deviceCoolingProblem(s,kind,power,cooling);if(problem)throw new Error(problem);}
+ const coolingCost=cooling===undefined?0:Math.round(cooling*deviceCoolingCost[kind]);
+ return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability+(cooling?coolingReliability(power,cooling):0)),performance:Math.round(score*osFactor*(kind==='laptop'?b.laptopCooling:1)),power,unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round((b.caseCost+(kind==='laptop'?b.laptopPackaging:0))*Math.exp(-e('cost')*b.packagingResearchScale))+coolingCost+(os?os.unitCost:0)};
 }
 export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'|'price'|'performance'|'power'|'unitCost'> & {reliability?:number,visual?:Product['visual']},work:number){
  if(s.products.length>=500)throw new Error('製品数の上限です');
@@ -52,9 +70,10 @@ export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'
 export function deviceCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='assemble'){
   if(!s.research.completed.includes(`${c.kind}-compute-1`))throw new Error('端末の基盤研究が必要です');
-  const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId);const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  const cooling=c.cooling??deviceCooling[c.kind].default;
+  const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId,false,cooling);const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual});expense(s,b.designCost);
-  appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,procurementCost:Object.values(c.parts).reduce((n,id)=>n+s.rivals.reduce((total,r)=>total+(r.products.find(p=>p.id===id)?.price??0),0),0),...(c.osId?{osId:c.osId}:{})},...result,unitCost:result.unitCost+visualFinishCost(tier),...(c.visual?{visual:c.visual}:{})},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
+  appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,cooling,procurementCost:Object.values(c.parts).reduce((n,id)=>n+s.rivals.reduce((total,r)=>total+(r.products.find(p=>p.id===id)?.price??0),0),0),...(c.osId?{osId:c.osId}:{})},...result,unitCost:result.unitCost+visualFinishCost(tier),...(c.visual?{visual:c.visual}:{})},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
  }
  if(c.type==='developOS'){
   if(s.products.some(p=>p.kind==='os'&&p.name===c.name&&Number(p.spec.version)>=c.version))throw new Error('新しいバージョン番号が必要です');
@@ -68,10 +87,15 @@ export type OSDesign={name:string,version:number,features:OSFeature[],quality:nu
 export function evaluateOS(s:GameState,c:OSDesign){
  if(!s.research.completed.includes('os-compute-1'))throw new Error('OS基盤研究が必要です');
  for(const f of c.features){const need=osFeatureResearch[f];if(need&&!s.research.completed.includes(need))throw new Error(`${osFeatureLabels[f]}には研究「${need}」が必要です`);}
+ for(const key of Object.keys(osSliders) as OSSlider[]){
+  const v=c[key],range=unlockedRange(osSliders[key],'os',s.research.completed);
+  if(!Number.isFinite(v)||v<range.min-1e-9||v>range.max+1e-9)throw new Error(`${osSliders[key].label}は現在の研究では${Math.round(range.min*100)}～${Math.round(range.max*100)}%の範囲で設計できます`);
+ }
  const extra=c.features.filter(f=>!['files','calculator','browser'].includes(f)).length;
  const e=(axis:string)=>techEffect(s.research.completed,'os',axis);
+ // Research widens the quality/compatibility/support sliders; the chosen values are stored as designed.
  return {designCost:Math.round(Math.exp(-e('cost'))*b.os.designCost*(b.os.designQualityFloor+c.quality*b.os.designQualityWeight)*(b.os.designCompatibilityFloor+c.compatibility*b.os.designCompatibilityWeight)),
-  name:c.name,kind:'os' as const,price:c.price,spec:{version:c.version,features:c.features.join(','),lockScreen:c.lockScreen??'aurora',theme:c.theme??'teal',quality:c.quality+(1-c.quality)*(1-Math.exp(-e('reliability'))),compatibility:c.compatibility+(1-c.compatibility)*(1-Math.exp(-e('compatibility'))),support:c.support},reliability:hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability'))),performance:Math.round(c.quality*c.compatibility*(b.os.supportFloor+b.os.supportWeight*c.support)*b.scoreScale*(1+osBalance.featureDemand*extra)*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('capacity')*b.os.capacityScore+e('power')*b.os.powerScore)),power:0,unitCost:Math.max(1,Math.round(b.os.licenseCost*Math.exp(-e('power')*b.os.powerCostScale-e('cost')*b.os.costScale)))};
+  name:c.name,kind:'os' as const,price:c.price,spec:{version:c.version,features:c.features.join(','),lockScreen:c.lockScreen??'aurora',theme:c.theme??'teal',quality:c.quality,compatibility:c.compatibility,support:c.support},reliability:hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability'))),performance:Math.round(c.quality*c.compatibility*(b.os.supportFloor+b.os.supportWeight*c.support)*b.scoreScale*(1+osBalance.featureDemand*extra)),power:0,unitCost:Math.max(1,Math.round(b.os.licenseCost*Math.exp(-e('power')*b.os.powerCostScale-e('cost')*b.os.costScale)))};
 }
 export function osApps(product:Product):string[]{
  if(product.kind!=='os'||product.remaining>0)return[];

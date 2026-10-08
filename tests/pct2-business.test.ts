@@ -6,7 +6,7 @@ import {valuation} from '../packages/sim/src/rivals';
 import {monthlyCosts} from '../packages/sim/src/management';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(difficulty:'normal'|'hard'='normal',seed=11)=>createGame({id:'g3',name:'経営社',year:2026,difficulty,seed});
-const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,socket:'Atlas'};
+const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'};
 
 it('research point costs scale with level and difficulty; points accrue weekly with staff and office',()=>{
  const s=start();expect(researchPointCost(s,'cpu-compute-1')).toBe(100);

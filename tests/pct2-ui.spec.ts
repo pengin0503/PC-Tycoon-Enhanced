@@ -6,12 +6,12 @@ const cmd=(s:GameState,c:any)=>command(s,c);
 async function load(page:Page,s:GameState){await page.goto('/');await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});}
 function withOS(){
  let s=createGame({id:'ui-os',name:'OS社',year:2026,difficulty:'normal',seed:9});s.research.completed.push('os-compute-1');
- s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.9,compatibility:.9,support:.8,price:50});
+ s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50});
  s=cmd(s,{type:'advance',days:21});return cmd(s,{type:'launch',id:'p-1'});
 }
 function withCPU(){
  let s=createGame({id:'ui-cpu',name:'部品社',year:2026,difficulty:'normal',seed:9});s.research.completed.push('cpu-compute-1');
- s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:4,clock:3,ipc:1,process:14,cache:8,socket:'Atlas'},price:400});
+ s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'},price:400});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:50});return cmd(s,{type:'advance',days:2});
 }
 

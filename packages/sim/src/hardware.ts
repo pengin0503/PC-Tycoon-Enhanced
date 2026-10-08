@@ -1,4 +1,4 @@
-import {hardwareCatalog,hardwareBalance as b,capacityScaledFields,normalizeSpec,type Spec} from '../../content/src/hardware';
+import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,coolingReliability,type Spec} from '../../content/src/hardware';
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,income,logEvent} from './finance';
 import {nextRandom} from './random';
@@ -14,14 +14,26 @@ import {researchPointCost,weeklyResearchPoints,distributionDemand} from './busin
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import type {GameState,GameCommand} from './types';
-export function evaluateHardware(kind:HardwareKind,input:Spec,completed:string[]){
+/**
+ * Metrics of a component design. New designs must stay inside the research-unlocked slider ranges and need
+ * cooling at least equal to their power draw. `stored` re-checks an already designed (possibly older) product:
+ * its values were accepted under the rules of its time, so research ranges and cooling are not re-applied.
+ */
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
+ if(!stored&&'cooling' in def.fields&&input.cooling===undefined)throw new Error('冷却性能を指定してください');
  const spec=normalizeSpec(kind,input);
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
-  if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);}
-  else if(typeof v!=='number'||!Number.isFinite(v)||v<field.min!||v>field.max!*(1+(capacityScaledFields.includes(key)?techEffect(completed,kind,'capacity'):0))||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
+  if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);continue;}
+  if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
+  if(stored)continue;
+  const range=fieldRange(kind,key,completed);
+  if(v<range.min||v>range.max){
+   const unit=field.unit??'';
+   throw new Error(v<Number(field.min)||v>Number(field.max)?`${field.label}が不正です`:`${field.label}は現在の研究では${range.min}～${range.max}${unit}の範囲で設計できます`);
+  }
  }
  const n=(k:string)=>Number(spec[k]);let performance=0,power=0,unitCost=0;
  switch(kind){
@@ -33,9 +45,15 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:string[]
   case'psu':{const m=String(spec.modular) as 'none'|'semi'|'full';performance=n('wattage')*n('efficiency')/100*b.psu.modularScore[m];power=n('wattage')*(1-n('efficiency')/100)*b.psu.lossCoefficient;unitCost=n('wattage')*b.psu.wattageCost+(n('efficiency')-b.psu.efficiencyBase)*b.psu.efficiencyCost+b.psu.modularCost[m];break;}
   case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*b.monitor.powerCoefficient;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
- performance*=1+Math.max(0,techEffect(completed,kind,'compute')-b.rootComputeBonus);
- performance*=1+techEffect(completed,kind,'compatibility');power*=Math.exp(-techEffect(completed,kind,'power'));unitCost*=Math.exp(-techEffect(completed,kind,'cost')*b.costResearchScale);
- return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost)),reliability:b.reliabilityBase+b.reliabilityGain*(1-Math.exp(-techEffect(completed,kind,'reliability')))};
+ // Compute/compatibility/capacity research widen the slider ranges above instead of multiplying performance.
+ power*=Math.exp(-techEffect(completed,kind,'power'));
+ const cooling='cooling' in def.fields?n('cooling'):undefined;
+ if(cooling!==undefined)unitCost+=cooling*(b.cooling.cost[kind]??0);
+ unitCost*=Math.exp(-techEffect(completed,kind,'cost')*b.costResearchScale);
+ power=Math.round(power);
+ if(cooling!==undefined&&!stored&&power>cooling)throw new Error(`冷却性能が不足しています（消費電力 ${power}W / 冷却性能 ${cooling}W）`);
+ const reliability=b.reliabilityBase+b.reliabilityGain*(1-Math.exp(-techEffect(completed,kind,'reliability')))+(cooling?coolingReliability(power,cooling):0);
+ return{performance:Math.round(performance),power,unitCost:Math.max(1,Math.round(unitCost)),reliability:Math.min(1,reliability)};
 }
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='research'){

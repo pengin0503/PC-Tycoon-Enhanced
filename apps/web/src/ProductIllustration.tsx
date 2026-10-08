@@ -58,6 +58,14 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
   <path d="M166 104L310 131V236L166 210Z" fill="#152c42" stroke="#83c1bc" strokeWidth="3"/>
   {fan(240,169,tier>=2?33:25,0)}{tier>=2&&<path d="M333 131L382 110V192L333 212Z" fill="#306575" stroke={metal} strokeWidth="3"/>}
   {tier>=4&&<path d="M169 105L308 130V231" stroke={accent} strokeWidth="5" fill="none"/>}</>
+ :kind==='ai-cluster'?<>{[0,1,2].map(n=><g key={n} transform={`translate(${n*112} ${-n*14})`}>
+   <path d="M118 92L196 74L232 88V238L154 256L118 242Z" fill="#1b3044" stroke={metal} strokeWidth="3"/>
+   <path d="M118 92L154 106V256L118 242Z" fill={primary}/>
+   {Array.from({length:6},(_,i)=><g key={i}><path d={`M160 ${116+i*22}L226 ${100+i*22}`} stroke="#7392ab" strokeWidth="9"/><circle cx={218} cy={102+i*22} r="3" fill={i%2?accent:'#5cf1d0'}/></g>)}
+  </g>)}</>
+ :kind==='ai-model'?<><path d="M150 96L262 52L374 96V214L262 258L150 214Z" fill="#162a40" stroke={metal} strokeWidth="4"/>
+  {[[196,112],[196,160],[196,208],[262,96],[262,152],[262,208],[328,112],[328,160],[328,208]].flatMap(([x,y],i,all)=>all.filter(([nx])=>nx===x+66).map(([nx,ny],j)=><path key={`${i}-${j}`} d={`M${x} ${y}L${nx} ${ny}`} stroke={accent} strokeWidth="2" opacity=".55"/>))}
+  {[[196,112],[196,160],[196,208],[262,96],[262,152],[262,208],[328,112],[328,160],[328,208]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="11" fill={i%3===1?'#5cf1d0':primary} stroke="#e0ebec" strokeWidth="3"/>)}</>
  :<><path d="M110 77H413V224H110Z" fill="#172d42" stroke={primary} strokeWidth="13"/>
   <path d="M129 95H393V210H129Z" fill="#1b4657"/>
   <path d="M129 190L220 117L282 164L349 109L393 157V210H129Z" fill="#31756f"/>

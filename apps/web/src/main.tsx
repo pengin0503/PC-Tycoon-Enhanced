@@ -3,6 +3,8 @@ import '@fontsource-variable/noto-sans-jp';
 import {createRoot} from 'react-dom/client';
 import {registerPWA} from './pwa';
 import App from './App';
+import {installAppGestures} from './app-gestures';
+installAppGestures();
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
 
 void registerPWA();

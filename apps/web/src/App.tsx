@@ -127,7 +127,7 @@ export default function App(){
     {tab==='upgrades'&&<UpgradesScreen state={state} send={send}/>}
     {tab==='staff'&&<StaffScreen state={state} send={send}/>}
     {tab==='companies'&&<CompaniesScreen state={state} send={send}/>}
-    {tab==='ai'&&<section className="screen"><AIPanel state={state} send={send}/></section>}
+    {tab==='ai'&&<AIPanel state={state} send={send}/>}
     {tab==='stats'&&<FinancePanel state={state}/>}
     {tab==='settings'&&<SettingsScreen state={state} send={send} uiScale={uiScale} setUIScale={setUIScale} list={()=>void list()} slots={slots} load={id=>void load(id)} download={()=>void download()} readFile={f=>void readFile(f)} newGame={newGame}/>}
    </>}
