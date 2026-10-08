@@ -59,6 +59,11 @@ test('notification inbox categorizes and acknowledges durable notices',async({pa
 
 test('hacker defense counts active foreground time only across native and visibility pauses',async({page})=>{
  await page.clock.install();
+ await page.addInitScript(()=>{
+  let state:DocumentVisibilityState='visible';
+  Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>state});
+  Object.defineProperty(window,'__setTestVisibility',{configurable:true,value:(value:DocumentVisibilityState)=>{state=value;}});
+ });
  const modal=await loadHackerDefense(page);
  await page.evaluate(()=>document.dispatchEvent(new Event('pause')));
  await page.clock.fastForward(10_000);
@@ -69,7 +74,7 @@ test('hacker defense counts active foreground time only across native and visibi
  await page.clock.fastForward(800);
  await expect(modal.locator('.intrusion.active')).toHaveCount(1);
  const hiddenState=await page.evaluate(()=>{
-  Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});
+  (window as unknown as {__setTestVisibility:(value:DocumentVisibilityState)=>void}).__setTestVisibility('hidden');
   document.dispatchEvent(new Event('visibilitychange'));
   return document.visibilityState;
  });
@@ -78,7 +83,7 @@ test('hacker defense counts active foreground time only across native and visibi
  expect(await page.evaluate(()=>document.visibilityState)).toBe('hidden');
  await expect(modal.locator('.intrusion.breached')).toHaveCount(0);
  await page.evaluate(()=>{
-  Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'visible'});
+  (window as unknown as {__setTestVisibility:(value:DocumentVisibilityState)=>void}).__setTestVisibility('visible');
   document.dispatchEvent(new Event('visibilitychange'));
  });
  await page.clock.fastForward(100);
