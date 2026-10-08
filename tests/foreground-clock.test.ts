@@ -12,3 +12,14 @@ it('excludes native pause and hidden time while retaining active elapsed time',(
  clock.pause();clock.resume();now=22_250;clock.resume();now=22_500;
  expect(clock.elapsed()).toBe(2500);
 });
+
+it('checks visibility before accruing time when a visibility event is delayed',()=>{
+ let now=0;let visible=true;
+ const clock=createForegroundClock(()=>now,()=>visible);
+ visible=false;now=10_000;
+ expect(clock.elapsed()).toBe(0);
+ visible=true;now=20_000;
+ expect(clock.elapsed()).toBe(0);
+ now=20_500;
+ expect(clock.elapsed()).toBe(500);
+});
