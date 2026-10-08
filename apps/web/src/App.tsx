@@ -18,6 +18,7 @@ import { monthlyCosts } from '../../../packages/sim/src/management';
 import {useOfflineStatus} from './pwa';
 import {downloadGame} from './save-export';
 import {screens,screenFromHash,type Screen} from './navigation';
+import {ScreenIcon} from './ScreenIcon';
 export default function App() {
     const offlineStatus=useOfflineStatus();
     const [state, setState] = useState<GameState | null>(null);
@@ -120,7 +121,7 @@ export default function App() {
         report(e);
     } }
     return <div className="app-shell"><main id="game-main" className="game-main">
- <header><div><p className="eyebrow">BUILD YOUR NEXT GENERATION</p><h1>{state?.company.name ?? uiText("ui_b468eb328323")}</h1></div>{state && <span className="date">{state.year + Math.floor(state.day / 360)}{uiText("ui_6d332ee4da56")}{ja.day} <b data-testid="day">{state.day}</b> / {ja[state.difficulty]}</span>}</header>
+ <header><div><p className="eyebrow">PC TYCOON ENHANCED · BUILD YOUR NEXT GENERATION</p><h1>{state?.company.name ?? uiText("ui_b468eb328323")}</h1></div>{state && <span className="date">{state.year + Math.floor(state.day / 360)}{uiText("ui_6d332ee4da56")}{ja.day} <b data-testid="day">{state.day}</b> / {ja[state.difficulty]}</span>}</header>
  {offlineStatus && <p className="offline-status">{ja[offlineStatus]}</p>}
  {error && <div role="alert" className="error">{error}</div>}<div role="status" className="notice">{notice}</div>
  {loading ? <p>{uiText("ui_54d9d6c50126")}</p> : !state ? <section className="card start-card"><h2>{uiText("ui_28aa4eb4f421")}</h2><p>{uiText("ui_686c00bd7eca")}</p><div className="form-grid"><label>{ja.name}<input value={name} maxLength={80} onChange={e => setName(e.target.value)}/></label><label>{ja.year}<input type="number" min={1970} max={2200} value={year} onChange={e => setYear(Number(e.target.value))}/></label><label>{ja.seed}<input type="number" min={0} max={4294967295} value={seed} onChange={e => setSeed(Number(e.target.value))}/></label><label>{ja.difficulty}<select value={difficulty} onChange={e => setDifficulty(e.target.value as 'normal' | 'hard')}><option value="normal">{ja.normal}</option><option value="hard">{ja.hard}</option></select></label></div><button className="primary" onClick={start}>{ja.start}</button><label className="file-label">{ja.import}<input type="file" accept="application/json,.json" onChange={e => void readFile(e.target.files?.[0])}/></label></section> : <><div className="game-hud">
@@ -130,5 +131,5 @@ export default function App() {
  {tab === 'company' && <div className="dashboard-grid"><section className="card"><p className="eyebrow">OPERATIONS</p><h2>稼働状況</h2><OfficeScene state={state}/><p>{uiText("ui_a2b84be82c3a")}{yen(monthlyCosts(state))}{uiText("ui_b7305ca20932")}</p><dl><dt>{uiText("ui_f3b4a72770ee")}</dt><dd>{state.company.awareness.toFixed(0)} / 100</dd><dt>{uiText("ui_f92b36134b35")}</dt><dd>{state.company.reputation.toFixed(0)} / 100</dd><dt>{uiText("ui_2494f99ade6c")}</dt><dd>{yen(state.finance.capital)}</dd></dl></section><section className="card"><p className="eyebrow">ACTIVITY</p><h2>{uiText("ui_f56d9a9a2060")}</h2><ul className="events">{state.events.filter(e => e.kind !== 'daily').slice(-10).reverse().map((e, i) => <li key={`${e.day}-${i}`}><span>{e.day}{uiText("ui_15917f3b3261")}</span>{eventLabel(e.kind)}{e.detail && <small>{e.detail}</small>}</li>)}{!state.events.length && <li>{uiText("ui_498a5b386911")}</li>}</ul></section></div>}
  {tab === 'save' && <section className="card"><h2>{uiText("ui_afca5a836652")}</h2><div className="button-row"><button onClick={() => void list()}>{ja.load}</button><button onClick={download}>{ja.export}</button><button onClick={() => { setState(null); setSpeed(0); }}>{ja.newGame}</button></div><label className="file-label">{ja.import}<input type="file" accept="application/json,.json" onChange={e => { void readFile(e.target.files?.[0]); e.target.value = ''; }}/></label>{slots.map(s => <div className="slot" key={s.id}><span>{s.name} · {s.day}{uiText("ui_15917f3b3261")}</span><button onClick={() => void load(s.id)}>{uiText("ui_cde3eb972d17")}</button></div>)}</section>}
  </>}
- </main><nav className="screen-nav" aria-label="ゲームメニュー">{screens.map(screen=><button key={screen.id} disabled={!state} className={tab===screen.id?"selected":""} aria-current={tab===screen.id?"page":undefined} onClick={()=>navigate(screen.id)}>{screen.label}</button>)}</nav></div>;
+ </main><nav className="screen-nav" aria-label="ゲームメニュー">{screens.map(screen=><button key={screen.id} disabled={!state} className={tab===screen.id?"selected":""} aria-current={tab===screen.id?"page":undefined} onClick={()=>navigate(screen.id)}><ScreenIcon id={screen.id}/><span>{screen.label}</span></button>)}</nav></div>;
 }
