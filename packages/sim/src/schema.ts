@@ -33,6 +33,9 @@ export const gameSchema = z.object({
   staff:z.array(z.object({id:z.string(),role:z.enum(['research','engineering','marketing','ai']),skill:z.number().int().min(20).max(100),salary:money}).strict()).max(40).default([]),
   history:z.array(z.object({day:z.number().int(),cash:money,debt:money,loan:money,revenue:money,expenses:money,capital:money,share:z.number().min(0).max(1)}).strict()).max(240).default([]),
   pendingDecision:z.object({id:z.enum(['supply-boost','demand-campaign']),title:z.string().min(1).max(80),description:z.string().min(1).max(200),cost:z.number().int().min(0).max(1000000)}).strict().nullable().default(null),
+  notificationSeq:z.number().int().min(0).default(0),
+  notificationReadId:z.number().int().min(0).default(0),
+  notifications:z.array(z.object({id:z.number().int().min(1),day:z.number().int().min(0),kind:z.string().min(1).max(40),detail:z.string().max(200),category:z.enum(['release','research','finance','event'])}).strict()).max(200).default(()=>[]),
   events: z.array(z.object({day:z.number().int().min(0),kind:z.string().min(1).max(40),detail:z.string().max(200)}).strict()).max(balance.eventLimit),
 }).strict();
 export const baseCommandSchema = z.discriminatedUnion('type',[
@@ -43,6 +46,7 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  ...baseCommandSchema.options,
  z.object({type:z.literal('research'),id:z.string().min(1)}).strict(),
  z.object({type:z.literal('eventDecision'),choice:z.enum(['invest','ignore'])}).strict(),
+ z.object({type:z.literal('markNotificationsRead'),id:z.number().int().min(0)}).strict(),
  z.object({type:z.literal('design'),kind:z.enum(hardwareKinds),name:z.string().trim().min(1).max(80),spec:specSchema,visual:visualSchema.optional(),price:z.number().int().min(1).max(1000000)}).strict(),
  z.object({type:z.literal('launch'),id:z.string().min(1)}).strict(),
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(100000)}).strict(),
