@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame,command,advanceInteractive} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
 import {evaluateHardware,manufacture} from '../packages/sim/src/hardware';
 import {priceRange} from '../packages/sim/src/pricing';
@@ -66,4 +66,19 @@ it('competitor launches notify once on completion; choices change simulation and
  expect(invested.pendingDecision).toBeNull();
  expect(invested.company.cash).toBe(skipped.company.cash-2500);
  expect(invested.modifiers.production).toBeGreaterThan(skipped.modifiers.production);
+});
+
+it('interactive advancement stops before an unresolved decision and resumes after choice',()=>{
+ const s=fresh();
+ s.pendingDecision={id:'demand-campaign',title:'購入促進',description:'新規契約',cost:3000};
+ expect(advanceInteractive(s,30).day).toBe(0);
+ const resolved=cmd(s,{type:'eventDecision',choice:'ignore'});
+ expect(advanceInteractive(resolved,1).day).toBe(1);
+});
+it('historical vendor accelerator clusters remain importable, but new vendor purchases are rejected',()=>{
+ const s=fresh();
+ s.clusters.push({id:'c-1',gpuId:'v-ai-workstation',serverId:'vendor',gpus:1,peakFlops:2e14,vramBytes:48e9,powerWatts:350,network:.8,cooling:.9,purchaseCost:20000});
+ const restored=importSave(exportSave(s));expect(restored.clusters[0].gpuId).toBe('v-ai-workstation');
+ restored.research.completed=['ai-compute-1'];
+ expect(()=>cmd(restored,{type:'buyCluster',gpuId:'v-ai-workstation',serverId:'vendor',gpus:1,network:.8,cooling:.9})).toThrow(/自社GPU/);
 });

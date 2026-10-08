@@ -1,6 +1,6 @@
 import { t as uiText } from './i18n';
 import { useEffect, useRef, useState } from 'react';
-import { command, createGame, type GameState, type GameCommand } from '../../../packages/sim/src/index';
+import { command, createGame, advanceInteractive, type GameState, type GameCommand } from '../../../packages/sim/src/index';
 import { importSave } from '../../../packages/save/src/index';
 import { SaveRepository } from '../../../packages/save/src/repository';
 import { ja, eventLabel, yen } from './i18n';
@@ -64,7 +64,7 @@ export default function App() {
     useEffect(() => { if (!speed)
         return; const id = setInterval(() => { if (document.visibilityState === 'visible' && !nativePaused.current && current.current) {
         try {
-            const before=current.current;const after=command(before, { type: 'advance', days: speed });notifyUpdates(before,after);setState(after);
+            const before=current.current;const after=advanceInteractive(before,speed);notifyUpdates(before,after);setState(after);
         }
         catch (e) {
             report(e);
@@ -80,7 +80,7 @@ export default function App() {
     function send(c: GameCommand) { if (!state)
         return; try {
         setError('');
-        const next=command(state,c);notifyUpdates(state,next);setState(next);
+        const next=c.type==='advance'?advanceInteractive(state,c.days):command(state,c);notifyUpdates(state,next);setState(next);
     }
     catch (e) {
         report(e);

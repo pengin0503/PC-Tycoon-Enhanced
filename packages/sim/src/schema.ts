@@ -23,7 +23,7 @@ export const gameSchema = z.object({
   difficulty: z.enum(['normal','hard']),
   company: z.object({name:z.string().trim().min(1).max(80),cash:money,debt:money,loan:money.default(0),reputation:z.number().min(0).max(100),awareness:z.number().min(0).max(100)}).strict(),
   finance: z.object({revenue:money,expenses:money,capital:money}).strict(),
-  research:z.object({completed:z.array(z.string()).max(5000),active:z.array(z.object({id:z.string(),remaining:z.number().nonnegative()}).strict()).max(20)}).default({completed:[],active:[]}),
+  research:z.object({completed:z.array(z.string()).max(5000),active:z.array(z.object({id:z.string(),remaining:z.number().nonnegative()}).strict()).max(20)}).default(()=>({completed:[],active:[]})),
   products:z.array(productSchema).max(500).default([]),
   rivals:z.array(rivalSchema).max(10).default([]),
   clusters:z.array(clusterSchema).max(20).default([]),
