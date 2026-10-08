@@ -120,3 +120,15 @@ html{overflow:hidden}
 .game-main[data-native-scene="true"] .research-scene>.button-row button{min-height:26px;padding:1px 7px;font-size:11px}
 .game-main[data-native-scene="true"] .research-results{flex:1 1 auto;min-height:35px;position:relative}
 @media(max-width:599px){.game-main[data-native-scene="true"] .research-scene>.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Choice-bearing event IS its own full-screen game scene, not a small toast/dialog. */
+.decision-overlay{padding:0;background:#0d1d2f}
+.decision-modal{
+ display:flex;flex-direction:column;justify-content:center;align-items:stretch;
+ width:100%;height:100%;max-height:none;overflow-y:auto;
+ padding:clamp(14px,3vw,44px) clamp(18px,9vw,150px);
+ border:0;border-radius:0;box-shadow:none;background:linear-gradient(125deg,#12253a,#1a3943);
+}
+.decision-modal h2{font-size:clamp(20px,3vw,36px)}
+.decision-modal p{font-size:clamp(12px,1.5vw,18px)}
+.decision-modal .button-row{margin-top:12px}
