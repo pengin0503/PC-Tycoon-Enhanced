@@ -8,7 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PCT_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/pct-release.jks
       PCT_VERSION_CODE: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +24,8 @@ jobs:
           packages: 'platform-tools'
           cmdline-tools-version: '13114758'
       - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Select isolated runner keystore path
+        run: echo "PCT_ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/pct-release.jks" >> "$GITHUB_ENV"
       - name: Validate signing credentials
         shell: bash
         env:
