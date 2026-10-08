@@ -1,5 +1,6 @@
 import {aiBalance as b} from '../../content/src/ai';
 import {expense,income,logEvent} from './finance';
+import {removeStock} from './inventory';
 import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects} from './ai-math';
 import {workBonus} from './management';
 import {techEffect} from '../../content/src/research';
@@ -16,8 +17,8 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   const server=c.serverId==='vendor'?undefined:s.products.find(p=>p.id===c.serverId&&p.kind==='pc'&&p.spec.purpose==='server'&&p.launched);
   if(c.serverId!=='vendor'&&(!server||server.inventory<1))throw new Error('自社サーバー在庫が必要です');
   const cost=server?0:b.serverCost;expense(s,cost,false,true);
-  own.inventory-=c.gpus;if(server)server.inventory--;
-  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:own.performance*b.ownGpuFlopsPerScore*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+own.unitCost*c.gpus+(server?server.unitCost:0)});
+  const ownGpuValue=removeStock(own,c.gpus);const ownServerValue=server?removeStock(server,1):0;
+  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:own.performance*b.ownGpuFlopsPerScore*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue});
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){

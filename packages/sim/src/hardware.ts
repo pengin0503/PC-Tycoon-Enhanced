@@ -2,7 +2,9 @@ import {hardwareCatalog,hardwareBalance as b,type Spec} from '../../content/src/
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,income,logEvent} from './finance';
 import {nextRandom} from './random';
-import {productCatalog} from '../../content/src/devices';
+import {productCatalog,vendorParts} from '../../content/src/devices';
+import {assemblyOverhead} from './devices';
+import {addStock,removeStock} from './inventory';
 import {offices,managementBalance} from '../../content/src/management';
 import {workBonus} from './management';
 import {competitorPressure,settleProcurement} from './rivals';
@@ -61,11 +63,18 @@ export function manufacture(s:GameState){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
   const own=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
   const sourced=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x):[];
-  const invalidSupplier=(p.kind==='pc'||p.kind==='laptop')&&s.rivals.some(r=>r.products.some(part=>part.id===p.spec.cpu||part.id===p.spec.gpu||part.id===p.spec.motherboard||part.id===p.spec.ram||part.id===p.spec.storage)&&r.acquired);
-  const currentSourcing=sourced.reduce((n,x)=>n+x.part.price,0);
-  const cashCost=Math.max(1,p.unitCost-own.reduce((n,part)=>n+part.unitCost,0)-Number(p.spec.procurementCost??0)+currentSourcing);
-  const units=invalidSupplier?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
-  if(units>0){expense(s,units*cashCost);own.forEach(part=>part.inventory-=units);for(const x of sourced)settleProcurement(x.owner,x.part,units);p.inventory+=units;capacity-=units;}
+  const device=p.kind==='pc'||p.kind==='laptop';
+  const keys=['cpu','gpu','motherboard','ram','storage'];
+  const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
+  const generic=device?keys.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0):0;
+  const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
+  const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
+  if(units>0){
+   expense(s,units*cashCost);
+   const transfers=own.reduce((n,part)=>n+removeStock(part,units),0);
+   for(const x of sourced)settleProcurement(x.owner,x.part,units);
+   addStock(p,units,units*cashCost+transfers);capacity-=units;
+  }
  }
 }
 export function sellProducts(s:GameState){
@@ -77,10 +86,10 @@ export function sellProducts(s:GameState){
   const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
   const units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,Math.max(0,demand));
   if(units){
-   if(p.kind!=='os')p.inventory-=units;p.sold+=units;
+   const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);p.sold+=units;
    const bundled=p.spec.osId?s.products.find(os=>os.id===p.spec.osId&&os.kind==='os'):undefined;
    const license=bundled?Math.min(p.price,bundled.price):0;
-   p.revenue+=units*(p.price-license);p.profit+=units*(p.price-license-p.unitCost+(bundled?.unitCost??0));
+   p.revenue+=units*(p.price-license);p.profit+=units*(p.price-license+(bundled?.unitCost??0))-actualCost;
    if(bundled){bundled.sold+=units;bundled.revenue+=units*license;bundled.profit+=units*(license-bundled.unitCost);}
    income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
   }

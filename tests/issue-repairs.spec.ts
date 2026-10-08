@@ -1,0 +1,22 @@
+import {test,expect} from '@playwright/test';
+test('notification inbox categorizes and acknowledges durable notices',async({page})=>{
+ await page.setViewportSize({width:844,height:390});
+ await page.goto('/');await page.getByRole('button',{name:'会社を設立'}).click();
+ await page.getByRole('button',{name:'研究',exact:true}).click();
+ await page.getByRole('button',{name:'CPU 基盤技術 1 を研究'}).click();
+ await page.getByRole('button',{name:'30日進める'}).click();
+ const bell=page.getByRole('button',{name:/^通知センター（未読/});
+ await expect(bell).toHaveText(/♧ [1-9][0-9]*/);
+ await bell.click();
+ const center=page.getByRole('region',{name:'通知センター'});
+ await expect(center).toBeVisible();
+ await center.getByRole('button',{name:'研究',exact:true}).click();
+ await expect(center).toContainText('CPU');
+ await center.getByRole('button',{name:'すべて既読'}).click();
+ await expect(bell).toContainText('0');
+ await center.getByRole('button',{name:'通知センターを閉じる'}).click();
+ await page.getByRole('button',{name:'保存',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('保存しました');
+ await page.reload();
+ await expect(page.getByRole('button',{name:/^通知センター（未読/})).toContainText('0');
+});

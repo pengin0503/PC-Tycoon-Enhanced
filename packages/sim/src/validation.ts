@@ -14,6 +14,13 @@ export function validateGame(value:unknown):GameState{
  for(const r of s.research.active){const t=techById.get(r.id);if(!t||s.research.completed.includes(r.id)||t.prerequisites.some(id=>!s.research.completed.includes(id)))fail('進行中研究が不正です');}
  const office=offices[s.officeLevel-1];if(s.staff.length>office.staffCapacity||s.research.active.length>office.researchSlots)fail('施設の枠を超えています');
  for(const e of s.events)if(e.day>s.day)fail('未来のイベントが保存されています');
+ if(s.notificationReadId>s.notificationSeq)fail('通知既読位置が不正です');
+ let prevNotice=0;
+ for(const notice of s.notifications){
+  if(notice.id<=prevNotice||notice.id>s.notificationSeq||notice.day>s.day)fail('通知履歴の順序が不正です');
+  prevNotice=notice.id;
+ }
+ for(const p of s.products)if(p.inventoryValue!==undefined&&p.inventory===0&&p.inventoryValue!==0)fail('空在庫に原価が残っています');
  let previous=0;for(const h of s.history){if(h.day>s.day||h.day<=previous)fail('決算履歴の日付が不正です');previous=h.day;}
  for(const p of s.products){if(p.launched&&p.remaining>0)fail('開発中の製品が発売されています');if(!p.launched&&(p.inventory>0||p.line))fail('発売前製品の生産状態が不正です');if(p.releaseDay>s.day)fail('発売日が未来です');
   if((hardwareKinds as readonly string[]).includes(p.kind))evaluateHardware(p.kind as HardwareKind,p.spec,s.research.completed);
