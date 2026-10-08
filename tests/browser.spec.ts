@@ -6,6 +6,7 @@ test('company shell saves resumes and imports safely',async({page})=>{
  await page.getByRole('button',{name:'30日進める'}).click();await expect(page.getByTestId('day')).toHaveText('30');await expect(page.getByTestId('cash')).toHaveText('￥488,000');
  await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('status')).toContainText('保存しました');
  await page.reload();await expect(page.getByTestId('day')).toHaveText('30');
+ await page.getByRole('button',{name:'セーブ・設定'}).click();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'JSON書き出し'}).click();const exported=await download;expect(exported.suggestedFilename()).toContain('.json');
  const buffer=await readFile((await exported.path())!);await page.getByRole('button',{name:'1日進める'}).click();
  await page.getByLabel('JSON読み込み').setInputFiles({name:'good.json',mimeType:'application/json',buffer});await expect(page.getByTestId('day')).toHaveText('30');
