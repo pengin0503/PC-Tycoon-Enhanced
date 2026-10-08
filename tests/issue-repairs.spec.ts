@@ -68,11 +68,14 @@ test('hacker defense counts active foreground time only across native and visibi
  await page.evaluate(()=>document.dispatchEvent(new Event('resume')));
  await page.clock.fastForward(800);
  await expect(modal.locator('.intrusion.active')).toHaveCount(1);
- await page.evaluate(()=>{
+ const hiddenState=await page.evaluate(()=>{
   Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});
   document.dispatchEvent(new Event('visibilitychange'));
+  return document.visibilityState;
  });
+ expect(hiddenState).toBe('hidden');
  await page.clock.fastForward(10_000);
+ expect(await page.evaluate(()=>document.visibilityState)).toBe('hidden');
  await expect(modal.locator('.intrusion.breached')).toHaveCount(0);
  await page.evaluate(()=>{
   Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'visible'});
