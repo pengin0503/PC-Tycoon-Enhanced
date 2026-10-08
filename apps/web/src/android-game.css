@@ -92,3 +92,8 @@ html{overflow:hidden}
  .game-main[data-native-scene="true"] .game-hud .button-row{flex-wrap:wrap}
  .screen-nav{padding-bottom:max(5px,env(safe-area-inset-bottom))}
 }
+
+/* Research cards need intrinsic row heights within the independently scrolling viewport. */
+.research-results{grid-auto-rows:max-content;align-items:start}
+.research-results>.card{position:relative;align-self:start}
+.research-results>.card button{position:relative;z-index:1}
