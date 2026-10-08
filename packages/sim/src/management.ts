@@ -3,6 +3,8 @@ import {expense,logEvent} from './finance';
 import {fanBalance} from '../../content/src/market';
 import {osMonthlyCost} from './devices';
 import {traitWork,marketingStrength,salaryFor,distributionMonthly} from './business';
+import {inventoryValue} from './inventory';
+import {aiBalance} from '../../content/src/ai';
 import type {GameState,GameCommand} from './types';
 export function workBonus(s:GameState,role:'research'|'engineering'|'ai'){return traitWork(s,role);}
 export function managementCommand(s:GameState,c:GameCommand):boolean{
@@ -22,4 +24,9 @@ export function marketingWeek(s:GameState){
 }
 export function monthlyCosts(s:GameState){return offices[s.officeLevel-1].monthlyCost+(s.factoryLevel-1)*b.factoryMonthly+s.staff.reduce((n,e)=>n+e.salary,0)+osMonthlyCost(s)+distributionMonthly(s)+Math.round(s.company.loan*(s.difficulty==='hard'?b.hardInterest:b.normalInterest));}
 export function monthlyHistory(s:GameState,share=0){s.history.push({day:s.day,cash:s.company.cash,debt:s.company.debt,loan:s.company.loan,...s.finance,share});s.history=s.history.slice(-b.historyLimit);}
-export function companyValue(s:GameState){return Math.max(0,Math.round(s.company.cash-s.company.debt-s.company.loan+s.products.reduce((n,p)=>n+p.inventory*p.unitCost,0)+s.officeLevel*b.officeValue+s.company.reputation*b.reputationValue+s.finance.revenue*b.revenueValue));}
+export function companyValue(s:GameState){
+ const stock=s.products.reduce((n,p)=>n+inventoryValue(p),0);
+ const compute=s.clusters.reduce((n,c)=>n+Math.round(c.purchaseCost*Math.max(0,1-(s.day-c.purchaseDay)*86400/aiBalance.lifetimeSeconds)),0);
+ return Math.max(0,Math.round(s.company.cash-s.company.debt-s.company.loan+stock+compute+s.officeLevel*b.officeValue+s.company.reputation*b.reputationValue+s.finance.revenue*b.revenueValue));
+}
+

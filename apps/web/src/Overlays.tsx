@@ -1,9 +1,10 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useState} from 'react';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {attackDamage} from '../../../packages/sim/src/os';
 import {companyStats} from '../../../packages/sim/src/progress';
 import {Modal,compact} from './ui';
 import {yen} from './i18n';
+import {createForegroundClock} from './foreground-clock';
 
 type Node='idle'|'active'|'blocked'|'breached';
 const appearEvery=700,window_=2600;
@@ -12,11 +13,13 @@ export function HackerDefense({state,send}:{state:GameState,send:(c:GameCommand)
  const attack=state.pendingAttack!;const os=state.products.find(p=>p.id===attack.osId);
  const [phase,setPhase]=useState<'intro'|'running'|'done'>('intro');
  const [nodes,setNodes]=useState<Node[]>(()=>Array(attack.targets).fill('idle'));
- const started=useRef(0);
- useEffect(()=>{if(phase!=='running')return;started.current=performance.now();
-  const id=setInterval(()=>{const t=performance.now()-started.current;
+ useEffect(()=>{if(phase!=='running')return;
+  const clock=createForegroundClock(()=>performance.now(),()=>document.visibilityState==='visible');
+  const pause=()=>clock.pause(),resume=()=>clock.resume(),visibility=()=>clock.visibilityChanged();
+  document.addEventListener('pause',pause);document.addEventListener('resume',resume);document.addEventListener('visibilitychange',visibility);
+  const id=setInterval(()=>{const t=clock.elapsed();
    setNodes(prev=>prev.map((n,i)=>n==='idle'&&t>=i*appearEvery?'active':n==='active'&&t>=i*appearEvery+window_?'breached':n));},100);
-  return()=>clearInterval(id);},[phase]);
+  return()=>{clearInterval(id);document.removeEventListener('pause',pause);document.removeEventListener('resume',resume);document.removeEventListener('visibilitychange',visibility);};},[phase]);
  useEffect(()=>{if(phase==='running'&&nodes.every(n=>n==='blocked'||n==='breached'))setPhase('done');},[phase,nodes]);
  const blocked=nodes.filter(n=>n==='blocked').length;
  const block=(i:number)=>setNodes(prev=>prev.map((n,k)=>k===i&&n==='active'?'blocked':n));
@@ -46,3 +49,4 @@ export function DecisionModal({state,send}:{state:GameState,send:(c:GameCommand)
   <div className="button-row end"><button onClick={()=>send({type:'eventDecision',choice:'ignore'})}>見送る</button><button className="primary" disabled={state.company.cash<d.cost||state.company.debt>0} onClick={()=>send({type:'eventDecision',choice:'invest'})}>投資する</button></div>
  </Modal>;
 }
+

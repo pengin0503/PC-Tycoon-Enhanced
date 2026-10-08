@@ -13,6 +13,7 @@ import {ActionBar,lockFor} from './DevelopScreen';
 import {describeWithResearch} from './research-hints';
 import {Meter,Empty,Chip} from './ui';
 import {yen} from './i18n';
+import {useBackHandler} from './app-gestures';
 
 type Send=(c:GameCommand)=>boolean;
 type View={kind:'home'}|{kind:'cluster'}|{kind:'model'}|{kind:'deploy',id:string};
@@ -29,6 +30,7 @@ const initial:LLMDesign={architecture:'dense',total:1e9,active:1e9,layers:24,hid
 export function AIPanel({state,send}:{state:GameState,send:Send}){
  const [view,setView]=useState<View>({kind:'home'});
  const home=()=>setView({kind:'home'});
+ useBackHandler(()=>{home();return true;},view.kind!=='home',70);
  const back=<button className="back-button" onClick={home}>← AI Lab</button>;
  if(view.kind==='cluster')return <ClusterDesigner state={state} send={send} back={back} done={home}/>;
  if(view.kind==='model')return <ModelDesigner state={state} send={send} back={back} done={home}/>;
@@ -243,3 +245,4 @@ function DeployDesigner({state,model:m,send,back,done}:{state:GameState,model:Mo
   <ActionBar back={back} costLabel="運用費/日（最大）" cost={daily} label={m.service?.enabled?'サービスを更新':'サービスを開始'} disabled={!!problem} onClick={submit}/>
  </section>;
 }
+

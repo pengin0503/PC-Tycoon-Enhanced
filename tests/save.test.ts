@@ -36,3 +36,49 @@ it('rejects write after close and retains persisted state',async()=>{
  await expect(repo.save({...s,day:9})).rejects.toThrow();
  const reopened=new repository.SaveRepository(indexedDB,'test-close');expect((await reopened.load('slot')).day).toBe(0);reopened.close();
 });
+it('lists valid save rows when other rows are corrupt and preserves the corrupt rows',async()=>{
+ const name='test-corrupt-list';const repo=new repository.SaveRepository(indexedDB,name);
+ await repo.save(s);await repo.save({...s,id:'second',day:7,company:{...s.company,name:'二番目'}});
+ const db=await new Promise<IDBDatabase>((resolve,reject)=>{
+  const req=indexedDB.open(name,1);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction('saves','readwrite');const store=tx.objectStore('saves');
+  store.put({id:'broken-json',json:'{',order:10});
+  store.put({id:'broken-state',json:JSON.stringify({...s,company:{...s.company,cash:-1}}),order:11});
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+ });
+ db.close();
+ expect(await repo.list()).toEqual([
+  {id:'second',day:7,name:'二番目'},
+  {id:'slot',day:0,name:'テスト'},
+ ]);
+ expect(repo.warnings).toHaveLength(2);
+ expect(await repo.load('second')).toMatchObject({id:'second',day:7});
+ const reopened=await new Promise<IDBDatabase>((resolve,reject)=>{
+  const req=indexedDB.open(name,1);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ const rows=await new Promise<any[]>((resolve,reject)=>{
+  const req=reopened.transaction('saves','readonly').objectStore('saves').getAll();
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ expect(rows.map((row:any)=>row.id)).toContain('broken-json');
+ expect(rows.map((row:any)=>row.id)).toContain('broken-state');
+ reopened.close();repo.close();
+});
+it('reports when every save row is corrupt without deleting any row',async()=>{
+ const name='test-all-corrupt';const repo=new repository.SaveRepository(indexedDB,name);await repo.save(s);
+ const db=await new Promise<IDBDatabase>((resolve,reject)=>{
+  const req=indexedDB.open(name,1);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ });
+ await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction('saves','readwrite');tx.objectStore('saves').put({id:'slot',json:'{',order:1});
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+ });
+ db.close();
+ await expect(repo.list()).rejects.toThrow('有効なセーブがありません');
+ expect(repo.warnings).toEqual(['破損セーブ slot をスキップしました']);
+ expect(await repo.rows()).toEqual([{id:'slot',json:'{',order:1}]);
+ repo.close();
+});
+

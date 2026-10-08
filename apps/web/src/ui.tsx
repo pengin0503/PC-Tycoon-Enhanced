@@ -1,8 +1,10 @@
 import {useEffect,useId,useRef,type ReactNode} from 'react';
+import {useBackHandler} from './app-gestures';
 
 /** Accessible modal dialog: labelled, focus moves inside on open, Escape closes when allowed. */
-export function Modal({title,children,onClose,wide=false,className=''}:{title:string,children:ReactNode,onClose?:()=>void,wide?:boolean,className?:string}){
+export function Modal({title,children,onClose,onBack,wide=false,className=''}:{title:string,children:ReactNode,onClose?:()=>void,onBack?:()=>boolean,wide?:boolean,className?:string}){
  const id=useId().replace(/:/g,'');const ref=useRef<HTMLElement>(null);
+ useBackHandler(()=>{if(onBack)return onBack();if(onClose)onClose();return true;},true,100);
  useEffect(()=>{ref.current?.focus();},[]);
  useEffect(()=>{if(!onClose)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[onClose]);
  return <div className="modal-overlay"><section ref={ref} tabIndex={-1} className={`modal ${wide?'wide':''} ${className}`} role="dialog" aria-modal="true" aria-labelledby={id+'-title'}>
@@ -36,3 +38,4 @@ export function compact(n:number){
 export function gameDate(startYear:number,day:number){
  return {year:startYear+Math.floor(day/360),month:Math.floor(day%360/30)+1,date:day%30+1};
 }
+

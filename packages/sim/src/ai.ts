@@ -17,6 +17,13 @@ export function assertAIDesignUnlocked(d:LLMDesign,completed:readonly string[]){
 }
 export function aiEffects(s:GameState):AIResearchEffects{return Object.fromEntries(['compute','architecture','quantization','data','context','economics'].map(axis=>[axis,techEffect(s.research.completed,'ai',axis)]));}
 import type {GameState,GameCommand} from './types';
+function settleSubscription(s:GameState,service:NonNullable<GameState['models'][number]['service']>){
+ const userDays=service.subscriptionUserDays;
+ if(service.mode!=='subscription'||userDays===0)return;
+ const amount=Math.round(userDays*service.subscriptionPrice/30*(1-b.fee-b.refund));
+ if(amount){income(s,amount);service.revenue+=amount;}
+ service.subscriptionUserDays=0;
+}
 export function aiCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='buyCluster'){
   if(!s.research.completed.includes('ai-compute-1'))throw new Error('AI基盤研究が必要です');if(s.clusters.length>=20)throw new Error('クラスタ数の上限です');
@@ -28,7 +35,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   if(c.serverId!=='vendor'&&(!server||server.inventory<1))throw new Error('自社サーバー在庫が必要です');
   const cost=server?0:b.serverCost;expense(s,cost,false,true);
   const ownGpuValue=removeStock(own,c.gpus);const ownServerValue=server?removeStock(server,1):0;
-  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:own.performance*b.ownGpuFlopsPerScore*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue});
+  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:own.performance*b.ownGpuFlopsPerScore*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){
@@ -41,9 +48,11 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   const m=s.models.find(m=>m.id===c.id);const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!m||m.status!=='ready'||!cluster)throw new Error('評価済みモデルとクラスタが必要です');
   if(c.bits!==16&&!s.research.completed.includes('ai-quantization-1'))throw new Error('量子化の研究が必要です');if(c.mode!=='open'&&clusterBusy(s,c.clusterId,m.id))throw new Error('クラスタは使用中です');
   const e=estimateInference(m.design,cluster,c.bits,c.context,c.batch,aiEffects(s));if(c.mode!=='open'&&e.memoryBytes>cluster.vramBytes)throw new Error('推論VRAMが不足しています');
-  const old=m.service;m.service={enabled:true,clusterId:c.clusterId,bits:c.bits,context:c.context,batch:c.batch,mode:c.mode,apiPrice:c.apiPrice,subscriptionPrice:c.subscriptionPrice,tokens:old?.tokens??0,users:0,revenue:old?.revenue??0,cost:old?.cost??0,speed:e.tokensPerSecond,memoryBytes:e.memoryBytes,qualityPenalty:e.qualityPenalty};return true;
+  const old=m.service;
+  if(old?.mode==='subscription'&&(c.mode!=='subscription'||c.subscriptionPrice!==old.subscriptionPrice))settleSubscription(s,old);
+  m.service={enabled:true,clusterId:c.clusterId,bits:c.bits,context:c.context,batch:c.batch,mode:c.mode,apiPrice:c.apiPrice,subscriptionPrice:c.subscriptionPrice,subscriptionUserDays:c.mode==='subscription'?(old?.subscriptionUserDays??0):0,tokens:old?.tokens??0,users:0,revenue:old?.revenue??0,cost:old?.cost??0,speed:e.tokensPerSecond,memoryBytes:e.memoryBytes,qualityPenalty:e.qualityPenalty};return true;
  }
- if(c.type==='retireModel'){const m=s.models.find(m=>m.id===c.id);if(!m?.service)throw new Error('運用モデルが存在しません');m.service.enabled=false;m.service.users=0;return true;}
+ if(c.type==='retireModel'){const m=s.models.find(m=>m.id===c.id);if(!m?.service)throw new Error('運用モデルが存在しません');settleSubscription(s,m.service);m.service.enabled=false;m.service.users=0;return true;}
  return false;
 }
 export function clusterBusy(s:GameState,id:string,except=''){return s.models.some(m=>m.id!==except&&(m.status==='training'&&m.clusterId===id||m.service?.enabled&&m.service.mode!=='open'&&m.service.clusterId===id));}
@@ -64,12 +73,14 @@ export function aiDaily(s:GameState){
   const capacity=Math.floor(service.speed*86400*b.serviceCapacityUtilization);const competition=1/(1+quote.quality/Math.max(1,score*100)*service.apiPrice/quote.price*b.competition);
   let tokens=0;
   if(service.mode==='api')tokens=Math.min(capacity,Math.floor(b.apiWeeklyDemand/7*score*brand*competition*(b.marketBasePrice/service.apiPrice)**b.priceElasticity*(b.demandFloor+rand*b.demandVariance)));
-  else{service.users=Math.min(Math.floor(capacity/(b.tokensPerSubscriberMonth/30)),Math.floor(b.subscriptionDemand*score*brand*(b.subscriptionReferencePrice/service.subscriptionPrice)**b.priceElasticity));tokens=Math.floor(service.users*b.tokensPerSubscriberMonth/30);}
+  else{service.users=Math.min(Math.floor(capacity/(b.tokensPerSubscriberMonth/30)),Math.floor(b.subscriptionDemand*score*brand*(b.subscriptionReferencePrice/service.subscriptionPrice)**b.priceElasticity));tokens=Math.floor(service.users*b.tokensPerSubscriberMonth/30);
+   service.subscriptionUserDays=Math.min(Number.MAX_SAFE_INTEGER,service.subscriptionUserDays+service.users);}
   const gross=service.mode==='api'?Math.round(tokens/1e6*service.apiPrice*(1-b.fee-b.refund)):0;
   if(gross){income(s,gross);service.revenue+=gross;}
   const cost=Math.ceil(clusterCost(c,86400,Math.min(1,tokens/Math.max(1,capacity)))*Math.exp(-techEffect(s.research.completed,'ai','economics')));expense(s,cost,true);service.cost+=cost;service.tokens+=tokens;
-  if(s.company.debt>0){service.enabled=false;service.users=0;logEvent(s,'serviceStopped',m.name);}
+  if(s.company.debt>0){settleSubscription(s,service);service.enabled=false;service.users=0;logEvent(s,'serviceStopped',m.name);}
  }
 }
-export function aiMonthly(s:GameState){for(const m of s.models){const v=m.service;if(v?.enabled&&v.mode==='subscription'){const amount=Math.round(v.users*v.subscriptionPrice*(1-b.fee-b.refund));income(s,amount);v.revenue+=amount;}}}
+export function aiMonthly(s:GameState){for(const m of s.models){const v=m.service;if(v)settleSubscription(s,v);}}
 export function aiHardwareBoost(s:GameState){return Math.max(0,...s.models.filter(m=>m.status==='ready'&&m.service?.enabled).map(m=>Object.values(m.scores).reduce((n,v)=>n+v,0)/500))*b.aiHardwareBoost;}
+

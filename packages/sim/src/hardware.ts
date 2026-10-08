@@ -1,6 +1,6 @@
 import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,coolingReliability,type Spec} from '../../content/src/hardware';
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
-import {expense,income,logEvent} from './finance';
+import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
 import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
 import {assemblyOverhead} from './devices';
@@ -13,6 +13,7 @@ import {osIncidentFactor} from './os';
 import {researchPointCost,weeklyResearchPoints,distributionDemand} from './business';
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
+import {recordProductSale} from './sales';
 import type {GameState,GameCommand} from './types';
 /**
  * Metrics of a component design. New designs must stay inside the research-unlocked slider ranges and need
@@ -101,23 +102,32 @@ export function manufacture(s:GameState){
  }
 }
 export function sellProducts(s:GameState){
- for(const p of s.products.filter(p=>p.launched)){
+ const candidates=s.products.filter(p=>p.launched).map(p=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(b.valueCeiling,p.performance/def.reference)*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
   const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*(p.kind==='os'?osIncidentFactor(s):1)*distributionDemand(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1)*(s.mode==='tycoon'?b.tycoonDemand:1));
-  const units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,Math.max(0,demand));
-  if(units){
-   const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);p.sold+=units;
-   const bundled=p.spec.osId?s.products.find(os=>os.id===p.spec.osId&&os.kind==='os'):undefined;
-   const license=bundled?Math.min(p.price,bundled.price):0;
-   p.revenue+=units*(p.price-license);p.profit+=units*(p.price-license+(bundled?.unitCost??0))-actualCost;
-   if(bundled){bundled.sold+=units;bundled.revenue+=units*license;bundled.profit+=units*(license-bundled.unitCost);}
-   income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
-   weeklyFans(s,p,units);
+  return {p,demand:Math.max(0,demand)};
+ });
+ const pools=new Map<string,typeof candidates>();
+ for(const candidate of candidates){const pool=pools.get(candidate.p.kind)??[];pool.push(candidate);pools.set(candidate.p.kind,pool);}
+ for(const pool of pools.values()){
+  const budget=Math.max(...pool.map(x=>x.demand)),total=pool.reduce((sum,x)=>sum+x.demand,0);
+  const allocations=pool.map(x=>total?Math.floor(x.demand*budget/total):0);
+  let unallocated=budget-allocations.reduce((sum,n)=>sum+n,0);
+  const priority=pool.map((x,i)=>({i,remainder:total?x.demand*budget/total-allocations[i]:0})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i);
+  for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
+  for(let i=0;i<pool.length;i++){
+   const p=pool[i].p,units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,allocations[i]);
+   if(units){
+    const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);
+    recordProductSale(s,p,units,p.price,actualCost);
+    if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
+    weeklyFans(s,p,units);
+   }
+   decayHype(p);
   }
-  decayHype(p);
  }
 }
 export function researchAndDevelopment(s:GameState){
@@ -128,3 +138,4 @@ export function researchAndDevelopment(s:GameState){
  const developing=s.products.filter(p=>p.remaining>0);
  for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
 }
+

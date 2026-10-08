@@ -34,7 +34,15 @@ export class SaveRepository {
     });
   }
   async list():Promise<{id:string,day:number,name:string}[]> {
-    return (await this.rows()).sort((a,b)=>b.order-a.order).map(r=>{const s=importSave(r.json);return {id:s.id,day:s.day,name:s.company.name};});
+    this.warnings=[];
+    const rows=(await this.rows()).sort((a,b)=>b.order-a.order);
+    const slots:{id:string,day:number,name:string}[]=[];
+    for(const row of rows){
+      try{const s=importSave(row.json);slots.push({id:s.id,day:s.day,name:s.company.name});}
+      catch{this.warnings.push(`破損セーブ ${row.id??'不明'} をスキップしました`);}
+    }
+    if(rows.length&&!slots.length)throw new Error('有効なセーブがありません。JSONから復元してください');
+    return slots;
   }
   async load(id:string):Promise<GameState|null> {const row=(await this.rows()).find(r=>r.id===id);return row?importSave(row.json):null;}
   async latest():Promise<GameState|null> {
@@ -52,3 +60,4 @@ export class SaveRepository {
   }
   close(){this.closed=true;void this.db?.then(db=>db.close());}
 }
+

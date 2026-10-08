@@ -1,9 +1,11 @@
 import {useState} from 'react';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {eventLabel} from './i18n';
+import {useBackHandler} from './app-gestures';
 type Category='all'|'release'|'research'|'finance'|'event';
 const filters:[Category,string][]=[['all','すべて'],['release','製品発売'],['research','研究'],['finance','経営'],['event','イベント']];
 export function NotificationCenter({state,send,close}:{state:GameState,send:(cmd:GameCommand)=>void,close:()=>void}){
+ useBackHandler(()=>{close();return true;},true,90);
  const [category,setCategory]=useState<Category>('all');
  const unread=state.notifications.filter(n=>n.id>state.notificationReadId).length;
  const items=state.notifications.filter(n=>category==='all'||n.category===category).slice().reverse();
@@ -18,3 +20,4 @@ export function NotificationCenter({state,send,close}:{state:GameState,send:(cmd
   {items.length===0&&<p>表示する通知はありません。</p>}
  </aside>;
 }
+
