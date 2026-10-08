@@ -1,5 +1,6 @@
 import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
+import {companyValue} from '../packages/sim/src/management';
 const start=(difficulty:any='normal')=>createGame({id:'manage',name:'経営社',year:2026,difficulty,seed:42});const cmd=(s:any,c:any)=>command(s,c);
 it('upgrades facilities with actual costs and rejects skipped levels',()=>{
  const s=cmd(start(),{type:'office',level:2});expect(s.officeLevel).toBe(2);expect(s.company.cash).toBeLessThan(500000);expect(s.finance.capital).toBeGreaterThan(0);
@@ -27,3 +28,29 @@ it('staff slots skill caps and money boundaries are enforced',()=>{
  expect(()=>cmd(start(),{type:'hire',role:'engineering',skill:101})).toThrow();
  const none=start();none.company.cash=0;expect(()=>cmd(none,{type:'factory',level:2})).toThrow();expect(none.factoryLevel).toBe(1);
 });
+it('repairs missing or stale staff sequence numbers after layoffs for both hiring paths',()=>{
+ const legacy=cmd(cmd(start(),{type:'hire',role:'research',skill:80}),{type:'hire',role:'engineering',skill:70});
+ delete (legacy as any).staffSeq;
+ const laidOff=cmd(legacy,{type:'fire',id:'e-1'});
+ const directlyHired=cmd(laidOff,{type:'hire',role:'marketing',skill:60});
+ expect(directlyHired.staff.map((e:any)=>e.id)).toEqual(['e-2','e-3']);
+ expect(directlyHired.staffSeq).toBe(3);
+
+ const candidateLegacy=structuredClone(legacy);
+ candidateLegacy.staff[0]!.id='e-9';
+ candidateLegacy.staff[1]!.id='e-2';
+ candidateLegacy.staffSeq=1;
+ candidateLegacy.candidates=[{id:'k-1',role:'ai',skill:55}];
+ const candidateLaidOff=cmd(candidateLegacy,{type:'fire',id:'e-9'});
+ const candidateHired=cmd(candidateLaidOff,{type:'hireCandidate',id:'k-1'});
+ expect(candidateHired.staff.map((e:any)=>e.id)).toEqual(['e-2','e-10']);
+ expect(candidateHired.staffSeq).toBe(10);
+});
+it('values stock at its recorded moving-average cost rather than the design estimate',()=>{
+ const ready=start();ready.research.completed.push('cpu-compute-1');
+ const designed=cmd(ready,{type:'design',kind:'cpu',name:'Inventory CPU',spec:{cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'},price:900});
+ const empty=structuredClone(designed);const stocked=structuredClone(designed);
+ stocked.products[0].inventory=3;(stocked.products[0] as any).inventoryValue=2100;
+ expect(companyValue(stocked)-companyValue(empty)).toBe(2100);
+});
+

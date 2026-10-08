@@ -4,6 +4,7 @@ import {exportSave,importSave} from '../packages/save/src/index';
 import {researchPointCost,acquisitionChance,offerSuccessChance,distributionCost,salaryFor,traitWorkMultiplier} from '../packages/sim/src/business';
 import {valuation} from '../packages/sim/src/rivals';
 import {monthlyCosts} from '../packages/sim/src/management';
+import {derivedRandom} from '../packages/sim/src/random';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(difficulty:'normal'|'hard'='normal',seed=11)=>createGame({id:'g3',name:'経営社',year:2026,difficulty,seed});
 const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'};
@@ -40,6 +41,17 @@ function stocked(){
  s=cmd(s,{type:'advance',days:6});return s;
 }
 const withOffer=(s:GameState,quantity=10)=>{s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity,unitPrice:800,expiresDay:s.day+14}];return s;};
+function bundledOffer({price=2800,osPrice=50,includeOS=true}:{price?:number,osPrice?:number,includeOS?:boolean}={}){
+ let s=start();s.research.completed.push('os-compute-1','pc-compute-1');
+ s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50});
+ s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
+ s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:3000,...(includeOS?{osId:'p-1'}:{})});
+ s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});
+ const pc=s.products.find(p=>p.id==='p-2')!;pc.inventory=2;pc.inventoryValue=1800;
+ s.products.find(p=>p.id==='p-1')!.price=osPrice;
+ s.offerSeq=1;s.offers=[{id:1,productId:'p-2',buyer:'大型法人',quantity:2,unitPrice:price,expiresDay:s.day+14}];
+ return s;
+}
 
 it('bulk offers can be accepted, declined or countered with markup-dependent odds',()=>{
  const s=withOffer(stocked());const inv=s.products[0].inventory;
@@ -51,6 +63,35 @@ it('bulk offers can be accepted, declined or countered with markup-dependent odd
  expect(offerSuccessChance(0)).toBe(1);expect(offerSuccessChance(25)).toBe(0);expect(offerSuccessChance(10)).toBeCloseTo(.6);
  expect(()=>cmd(withOffer(stocked(),1_000),{type:'respondOffer',id:1,action:'accept'})).toThrow(/在庫/);
  expect(()=>cmd(s,{type:'respondOffer',id:9,action:'accept'})).toThrow();
+});
+it('bulk PC sales split bundled OS revenue and consume weighted inventory cost exactly once',()=>{
+ const s=bundledOffer();const pc=s.products.find(p=>p.id==='p-2')!;const os=s.products.find(p=>p.id==='p-1')!;
+ const before={cash:s.company.cash,pcRevenue:pc.revenue,pcProfit:pc.profit,osSold:os.sold,osRevenue:os.revenue,osProfit:os.profit,osCost:os.unitCost};
+ const sold=cmd(s,{type:'respondOffer',id:1,action:'accept'});
+ const soldPC=sold.products.find(p=>p.id==='p-2')!;const soldOS=sold.products.find(p=>p.id==='p-1')!;
+ expect(sold.company.cash-before.cash).toBe(5600);
+ expect(soldPC.revenue-before.pcRevenue).toBe(5500);
+ expect(soldOS.sold-before.osSold).toBe(2);
+ expect(soldOS.revenue-before.osRevenue).toBe(100);
+ expect((soldPC.profit-before.pcProfit)+(soldOS.profit-before.osProfit)).toBe(5600-1800);
+ expect(soldPC.inventory).toBe(0);expect(soldPC.inventoryValue).toBe(0);
+
+ const highLicense=bundledOffer({osPrice:4000});
+ const highLicenseOSRevenue=highLicense.products.find(p=>p.id==='p-1')!.revenue;
+ const highSold=cmd(highLicense,{type:'respondOffer',id:1,action:'accept'});
+ expect(highSold.products.find(p=>p.id==='p-2')!.revenue).toBe(0);
+ expect(highSold.products.find(p=>p.id==='p-1')!.revenue-highLicenseOSRevenue).toBe(5600);
+ const plain=bundledOffer({includeOS:false});
+ const plainOSSold=plain.products.find(p=>p.id==='p-1')!.sold;
+ const plainSold=cmd(plain,{type:'respondOffer',id:1,action:'accept'});
+ expect(plainSold.products.find(p=>p.id==='p-2')!.revenue).toBe(5600);
+ expect(plainSold.products.find(p=>p.id==='p-1')!.sold).toBe(plainOSSold);
+
+ const counter=bundledOffer();let seed=1;
+ while(derivedRandom(seed,counter.day,7001)>=offerSuccessChance(1))seed++;
+ counter.initialSeed=seed;
+ const countered=cmd(counter,{type:'respondOffer',id:1,action:'counter',markup:1});
+ expect(countered.company.cash-counter.company.cash).toBe(2*Math.round(2800*1.01));
 });
 
 it('offers arrive monthly for stocked products and expire',()=>{
@@ -95,3 +136,4 @@ it('firing pays severance and never reuses staff ids',()=>{
  const again=cmd(fired,{type:'hire',role:'marketing',skill:40});expect(again.staff.map(e=>e.id)).toEqual(['e-1','e-3']);
  expect(()=>cmd(s,{type:'fire',id:'e-9'})).toThrow();
 });
+

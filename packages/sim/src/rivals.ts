@@ -16,7 +16,13 @@ export function settleProcurement(r:Rival,p:Rival['products'][number],units:numb
 export function rivalDaily(s:GameState){
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
   const products=r.products.filter(p=>p.remaining===0);let available=b.capacity;
-  for(const p of products){const count=Math.min(Math.ceil(available/products.length),Math.max(0,b.inventoryTarget-p.inventory),Math.floor(r.cash/p.unitCost));if(count){cost(r,count*p.unitCost);p.inventory+=count;available-=count;}}
+  if(!products.length)continue;
+  const offset=s.day%products.length;
+  for(let i=0;i<products.length;i++){
+   const p=products[(i+offset)%products.length];
+   const count=Math.min(Math.ceil(available/(products.length-i)),Math.max(0,b.inventoryTarget-p.inventory),Math.floor(r.cash/p.unitCost));
+   if(count){cost(r,count*p.unitCost);p.inventory+=count;available-=count;}
+  }
  }
 }
 export function rivalWeekly(s:GameState){
@@ -66,3 +72,4 @@ export function rivalCommand(s:GameState,c:GameCommand):boolean{
  }
  logEvent(s,'acquired',r.name);return true;
 }
+

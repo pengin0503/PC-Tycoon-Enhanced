@@ -1,8 +1,9 @@
 import {distributionBalance as d,offerBalance as o,offerBuyers,acquisitionBalance as a,hrBalance as h,staffTraits,managementBalance,researchPointBalance as rp,offices,type StaffTrait} from '../../content/src/management';
 import {techById} from '../../content/src/research';
-import {expense,income,logEvent} from './finance';
+import {expense,logEvent} from './finance';
 import {derivedRandom} from './random';
 import {removeStock} from './inventory';
+import {recordProductSale} from './sales';
 import {weeklyFans} from './reception';
 import type {GameState,GameCommand} from './types';
 type Staff=GameState['staff'][number];
@@ -25,7 +26,11 @@ export function traitWorkMultiplier(trait:StaffTrait|undefined,role:Role){
 export function traitWork(s:GameState,role:'research'|'engineering'|'ai'){return s.staff.filter(e=>e.role===role).reduce((n,e)=>n+e.skill*managementBalance.workPerSkill*traitWorkMultiplier(e.trait,role),0);}
 export function marketingStrength(s:GameState){return s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill*(e.trait==='charismatic'?2:1),0);}
 export function salaryFor(skill:number,trait?:StaffTrait){return Math.round(skill*managementBalance.salaryPerSkill*(trait==='frugal'?h.frugalSalary:1));}
-function nextStaffId(s:GameState){s.staffSeq=Math.max(s.staffSeq,s.staff.length)+1;return `e-${s.staffSeq}`;}
+function nextStaffId(s:GameState){
+ const used=new Set(s.staff.map(employee=>employee.id));
+ do{s.staffSeq++;}while(used.has(`e-${s.staffSeq}`));
+ return `e-${s.staffSeq}`;
+}
 function addStaff(s:GameState,role:Role,skill:number,trait?:StaffTrait){
  if(s.staff.length>=offices[s.officeLevel-1].staffCapacity)throw new Error('オフィスの人員枠が不足しています');
  expense(s,skill*managementBalance.recruitPerSkill);
@@ -79,8 +84,8 @@ export function expireOffers(s:GameState){s.offers=s.offers.filter(x=>x.expiresD
 function fulfil(s:GameState,offer:GameState['offers'][number],unitPrice:number){
  const p=s.products.find(x=>x.id===offer.productId);if(!p)throw new Error('製品が存在しません');
  if(p.inventory<offer.quantity)throw new Error('在庫が不足しています');
- const cost=removeStock(p,offer.quantity);const revenue=offer.quantity*unitPrice;
- p.sold+=offer.quantity;p.revenue+=revenue;p.profit+=revenue-cost;income(s,revenue);weeklyFans(s,p,offer.quantity);
+ const cost=removeStock(p,offer.quantity);
+ recordProductSale(s,p,offer.quantity,unitPrice,cost);weeklyFans(s,p,offer.quantity);
  logEvent(s,'offerAccepted',`${offer.buyer}: ${p.name} ×${offer.quantity} @${unitPrice}`);
 }
 
@@ -115,3 +120,4 @@ export function businessCommand(s:GameState,c:GameCommand):boolean{
 }
 export function businessWeekly(s:GameState){if(s.distributionLevel)s.company.fans+=d.fansPerLevel*s.distributionLevel;}
 export function businessMonthly(s:GameState){offersMonthly(s);generateCandidates(s,'free');}
+

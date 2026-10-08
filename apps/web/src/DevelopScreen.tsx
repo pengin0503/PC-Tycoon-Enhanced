@@ -22,6 +22,7 @@ import {TermHelp,hardwareExplanations} from './HardwareTerms';
 import {Stars,Meter,Chip} from './ui';
 import {yen} from './i18n';
 import {describeWithResearch,researchHint} from './research-hints';
+import {useBackHandler} from './app-gestures';
 
 type Send=(c:GameCommand)=>boolean;
 /** Lock marker for a slider whose absolute bound still needs research. */
@@ -46,6 +47,7 @@ export function ActionBar({cost,disabled,label,onClick,note,back,costLabel='開�
 
 export function DevelopScreen({state,send,go}:{state:GameState,send:Send,go:(screen:'products')=>void}){
  const [category,setCategory]=useState<Category|null>(null);
+ useBackHandler(()=>{setCategory(null);return true;},category!==null,70);
  const done=()=>{setCategory(null);go('products');};
  if(category===null)return <section className="screen develop-home"><header className="screen-title"><h2>新製品を開発</h2><p>カテゴリを選んで仕様とデザインを決めます。未解放のカテゴリは研究ポイントで解放できます。</p></header>
   <div className="category-grid">{categories.map(k=>{
@@ -225,3 +227,4 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
   <ActionBar back={back} cost={result?.designCost??0} label="OS開発を開始" disabled={!result||!name.trim()||state.company.cash<(result?.designCost??0)} onClick={submit}/>
  </section>;
 }
+

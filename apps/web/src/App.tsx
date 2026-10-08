@@ -23,6 +23,7 @@ import {navScreens,screenFromHash,type Screen} from './navigation';
 import {ScreenIcon} from './ScreenIcon';
 import {Logo,logoIds} from './Logo';
 import {compact,gameDate} from './ui';
+import {dispatchBack} from './app-gestures';
 
 const announced=new Set(['rivalLaunch','marketEvent','researchComplete','designComplete','reviewPublished','offerReceived','hackerAttack','achievement','acquisitionRejected','offerAccepted','offerRejected','gameOver']);
 type Mode=GameState['mode'];
@@ -65,7 +66,8 @@ export default function App(){
   try{const before=current.current;const after=advanceInteractive(before,speed);notifyUpdates(before,after);setState(after);}catch(e){report(e);setSpeed(0);}}},1000);return()=>clearInterval(id);},[speed]);
  useEffect(()=>{const sync=()=>{setTab(screenFromHash());document.getElementById('game-main')?.scrollTo({top:0});};window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync);},[]);
  function navigate(screen:Screen){setTab(screen);const hash='#/'+screen;if(window.location.hash!==hash)window.location.hash=hash;document.getElementById('game-main')?.scrollTo({top:0});}
- useEffect(()=>{const back=()=>{const el=document.activeElement;if(el instanceof HTMLInputElement||el instanceof HTMLTextAreaElement){el.blur();return;}
+ useEffect(()=>{const back=()=>{const el=document.activeElement;if(el instanceof HTMLInputElement||el instanceof HTMLTextAreaElement||el instanceof HTMLSelectElement){el.blur();return;}
+  if(dispatchBack())return;
   if(screenFromHash()!=='home'){if(window.history.length>1)window.history.back();else window.location.hash='#/home';}};
   window.addEventListener('pct:back',back);return()=>window.removeEventListener('pct:back',back);},[]);
  function notifyUpdates(before:GameState,after:GameState){
@@ -82,7 +84,7 @@ export default function App(){
  function start(){try{let s=createGame({id:crypto.randomUUID(),name,year,difficulty,seed,mode});if(logo)s=command(s,{type:'logo',logo});setState(s);setSpeed(0);setError('');setSlots([]);navigate('home');}catch(e){report(e);}}
  async function readFile(file?:File){if(!file)return;try{if(file.size>5*1024*1024)throw new Error('セーブは5 MiB以内にしてください');const s=importSave(await file.text());setState(s);setSpeed(0);setError('');setNotice('JSONを読み込みました');}catch(e){report(e);}}
  async function download(){if(!state)return;try{await downloadGame(state);setNotice(ja.exported);}catch(e){report(e);}}
- async function list(){try{await writer.current;setSlots(await repo.current.list());}catch(e){report(e);}}
+ async function list(){try{await writer.current;setSlots(await repo.current.list());if(repo.current.warnings.length)setNotice(repo.current.warnings.join(' / '));}catch(e){report(e);if(repo.current.warnings.length)setNotice(repo.current.warnings.join(' / '));}}
  async function load(id:string){try{await writer.current;const s=await repo.current.load(id);if(s){setState(s);setSpeed(0);setSlots([]);setError('');}}catch(e){report(e);}}
  const newGame=()=>{setState(null);setSpeed(0);};
  const badges:Partial<Record<Screen,number>>=state?{products:state.products.filter(p=>p.remaining===0&&!p.launched).length,companies:state.offers.length}:{};
@@ -137,3 +139,4 @@ export default function App(){
   {state&&<nav className="screen-nav" aria-label="ゲームメニュー">{navScreens.map(screen=><button key={screen.id} className={tab===screen.id?'selected':''} aria-current={tab===screen.id?'page':undefined} onClick={()=>navigate(screen.id)}><ScreenIcon id={screen.id}/><span>{screen.label}</span>{(badges[screen.id]??0)>0&&<i className="badge" aria-hidden="true">{badges[screen.id]}</i>}</button>)}</nav>}
  </div>;
 }
+

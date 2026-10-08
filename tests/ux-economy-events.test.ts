@@ -77,8 +77,9 @@ it('interactive advancement stops before an unresolved decision and resumes afte
 });
 it('historical vendor accelerator clusters remain importable, but new vendor purchases are rejected',()=>{
  const s=fresh();
- s.clusters.push({id:'c-1',gpuId:'v-ai-workstation',serverId:'vendor',gpus:1,peakFlops:2e14,vramBytes:48e9,powerWatts:350,network:.8,cooling:.9,purchaseCost:20000});
+ s.clusters.push({id:'c-1',gpuId:'v-ai-workstation',serverId:'vendor',gpus:1,peakFlops:2e14,vramBytes:48e9,powerWatts:350,network:.8,cooling:.9,purchaseCost:20000,purchaseDay:s.day});
  const restored=importSave(exportSave(s));expect(restored.clusters[0].gpuId).toBe('v-ai-workstation');
  restored.research.completed=['ai-compute-1'];
  expect(()=>cmd(restored,{type:'buyCluster',gpuId:'v-ai-workstation',serverId:'vendor',gpus:1,network:.8,cooling:.9})).toThrow(/自社GPU/);
 });
+

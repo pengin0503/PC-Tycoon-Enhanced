@@ -33,7 +33,7 @@ export function LaunchFlow({state,product,send,close}:{state:GameState,product:P
    <div key="1" className="slide"><ProductVisual product={product}/><h3>{product.name}</h3><p>{productCatalog[product.kind].label}</p></div>,
    <div key="2" className="slide"><h3>性能 {product.performance.toLocaleString('ja-JP')}</h3><p>品質 {Math.round(product.reliability*100)}% · 外観グレード {product.visual?.tier??0}</p><p className="price-tag">{yen(product.price)}</p></div>,
   ];
-  return <Modal title={`${presentations[kind].label}：${product.name}`} wide className="presentation">
+  return <Modal title={`${presentations[kind].label}：${product.name}`} onBack={()=>{setStage('review');return true;}} wide className="presentation">
    <div className="slide-stage" aria-live="polite">{slides[Math.min(slide,2)]}</div>
    <div className="slide-dots">{slides.map((_,i)=><span key={i} className={i===Math.min(slide,2)?'on':''}/>)}</div>
    <div className="button-row end"><button onClick={()=>setStage('review')}>スキップ</button></div>
@@ -48,3 +48,4 @@ export function LaunchFlow({state,product,send,close}:{state:GameState,product:P
   <div className="button-row end"><button className="primary" onClick={close}>閉じる</button></div>
  </Modal>;
 }
+

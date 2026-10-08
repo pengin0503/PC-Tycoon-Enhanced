@@ -58,7 +58,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
  const labels=['概要',...(specs.length?['仕様']:[]),'レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[])];
  const sender=send as (c:GameCommand)=>void;
  const cooling=typeof p.spec.cooling==='number'?p.spec.cooling:undefined;
- return <Modal title={p.name} onClose={close} wide>
+ return <Modal title={p.name} onClose={close} onBack={desktop?()=>{setDesktop(false);return true;}:undefined} wide>
   <PanelPages labels={labels}>
    <div className="detail-overview"><ProductVisual product={p}/>
     <dl className="stat-grid"><dt>カテゴリ</dt><dd>{productCatalog[p.kind].label}</dd><dt>性能スコア</dt><dd>{p.performance.toLocaleString('ja-JP')}</dd>
@@ -88,3 +88,4 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
   </PanelPages>
  </Modal>;
 }
+

@@ -2,6 +2,8 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
 import {unlockBranch} from './research-helpers';
+import {exportSave,importSave} from '../packages/save/src/index';
+import {companyValue} from '../packages/sim/src/management';
 const cmd=(s:any,c:any)=>command(s,c);
 function ownGPUReady(){
  let s=createGame({id:'own',name:'AI社',year:2026,difficulty:'normal',seed:1});
@@ -38,3 +40,25 @@ it('assigns a server built from own and generic components together with an own 
  expect(n.products[0].inventory).toBe(ownGPUStock-1);
  expect(n.products[1].inventory).toBe(serverStock-1);
 });
+it('accepts effective network below the 0.1 build-input floor and round trips it',()=>{
+ let s=ownGPUReady();s.research.completed.push('pc-compute-1');
+ s=cmd(s,{type:'assemble',kind:'pc',name:'In-house server',parts:{cpu:'v-cpu',gpu:'p-1',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'server',appearance:'graphite',price:3000});
+ s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:3});s=cmd(s,{type:'advance',days:2});
+ s.products.find(p=>p.id==='p-2')!.performance=801;
+ const cluster=cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'p-2',gpus:1,network:.1,cooling:.9});
+ expect(cluster.clusters[0].network).toBeCloseTo(.0801);
+ expect(importSave(exportSave(cluster))).toEqual(cluster);
+});
+it('preserves cluster asset value at purchase, depreciates it, and migrates legacy age safely',()=>{
+ const s=ownGPUReady();const before=companyValue(s);
+ const purchased=cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
+ const cost=purchased.clusters[0].purchaseCost;
+ expect(companyValue(purchased)).toBe(before);
+ const oneYear=structuredClone(purchased);oneYear.day+=365;
+ expect(companyValue(oneYear)).toBe(before-Math.round(cost/3));
+ const legacy:any=JSON.parse(exportSave(purchased));legacy.day=5000;delete legacy.clusters[0].purchaseDay;
+ const restored=importSave(JSON.stringify(legacy));
+ expect(restored.clusters[0].purchaseDay).toBe(5000);
+ expect(companyValue(restored)).toBe(companyValue({...restored,day:restored.clusters[0].purchaseDay}));
+});
+
