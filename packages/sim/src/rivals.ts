@@ -9,7 +9,7 @@ import {nextRandom} from './random';
 import {negotiateAcquisition} from './business';
 import type {GameState,GameCommand} from './types';
 type Rival=GameState['rivals'][number];
-export function newRivals(seed:number,difficulty:'normal'|'hard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:difficulty==='hard'?b.hardEfficiency:1,researchLevel:0,researchRemaining:0,products:[],acquired:false}));}
+export function newRivals(seed:number,difficulty:'normal'|'hard',mode:GameState['mode']='standard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:(difficulty==='hard'?b.hardEfficiency:1)*(mode==='long'?b.longEfficiency:1),researchLevel:0,researchRemaining:0,products:[],acquired:false}));}
 function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cash)return false;const paid=Math.min(r.cash,amount);r.cash-=paid;r.debt+=amount-paid;return true;}
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
 export function settleProcurement(r:Rival,p:Rival['products'][number],units:number){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}

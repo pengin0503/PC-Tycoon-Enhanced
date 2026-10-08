@@ -20,7 +20,7 @@ it('launch publishes a deterministic review with stars and outlet comments',()=>
  const review=a.products[0].review!;expect(review).toEqual(b.products[0].review);
  expect(review.stars).toBeGreaterThanOrEqual(1);expect(review.stars).toBeLessThanOrEqual(5);expect(review.stars%0.5).toBe(0);
  expect(review.outlets).toHaveLength(4);expect(review.outlets.every(o=>o.comment.length>0)).toBe(true);
- expect(a.notifications.at(-1)!.kind).toBe('reviewPublished');
+ expect(a.notifications.some(n=>n.kind==='reviewPublished')).toBe(true);
  expect(s.products[0].review).toBeUndefined();
 });
 

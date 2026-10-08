@@ -13,7 +13,7 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
  monitor:{label:'モニター',designCost:3000,work:20,demand:45,reference:600,fields:{resolution:{label:'解像度相当',min:720,max:4320,step:1,default:1080},refresh:{label:'リフレッシュレート',min:30,max:360,step:1,default:60},gamut:{label:'色域スコア',min:50,max:100,step:1,default:90},appearance:{label:'外観',options:['graphite','silver','teal'],default:'silver'}}},
 };
 export const hardwareBalance={baseFactoryCapacity:20,developmentPerWeek:10,researchPerWeek:10,maxInventory:100000,maxPrice:1000000,
- rootComputeBonus:.08,reliabilityBase:.9,reliabilityGain:.1,costResearchScale:.2,valueCeiling:2,priceCostMultiple:2,priceElasticity:1.5,osReferencePrice:50,osWeeklyLimit:500,hardDemand:.8,
+ rootComputeBonus:.08,reliabilityBase:.9,reliabilityGain:.1,costResearchScale:.2,valueCeiling:2,priceCostMultiple:2,priceElasticity:1.5,osReferencePrice:50,osWeeklyLimit:500,hardDemand:.8,tycoonDemand:1.2,
  psu:{wattageCost:.12,efficiencyCost:6,efficiencyBase:80,modularCost:{none:0,semi:15,full:30},modularScore:{none:1,semi:1.05,full:1.1},lossCoefficient:.2,headroom:1.2,reliabilityPerEfficiency:.002},
  cpu:{referenceProcess:14,cacheReference:8,cacheExponent:.15,cacheCost:3,coreCost:20,clockCost:10,ipcCost:60,powerCoefficient:.6,scoreCoefficient:100},
  gpu:{unitCost:8,vramCost:10,bandwidthCost:.05,powerCoefficient:3,scoreCoefficient:100,referenceBandwidth:256},
