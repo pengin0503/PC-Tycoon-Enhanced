@@ -132,3 +132,20 @@ html{overflow:hidden}
 .decision-modal h2{font-size:clamp(20px,3vw,36px)}
 .decision-modal p{font-size:clamp(12px,1.5vw,18px)}
 .decision-modal .button-row{margin-top:12px}
+
+/* Persistent, nonblocking notification inbox. Only choice events own the full screen. */
+.notification-center{
+ position:fixed;right:10px;top:8px;bottom:calc(55px + env(safe-area-inset-bottom));
+ z-index:60;width:min(470px,95vw);display:flex;flex-direction:column;
+ padding:11px;background:#15283b;border:1px solid #64bcb0;border-radius:12px;
+ box-shadow:0 15px 40px #000a;min-height:0;
+}
+.notification-center .notification-header{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}
+.notification-center .notification-header h2{margin:0;font-size:16px}
+.notification-center button{min-height:32px;padding:4px 9px;font-size:12px}
+.notification-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.notification-filters button[aria-pressed=true]{background:#1d6660;border-color:#81ebd4}
+.notification-list{list-style:none;padding:0;margin:7px 0 0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;min-height:0}
+.notification-list li{padding:8px;border-bottom:1px solid #335268;font-size:12px}
+.notification-list p{margin:2px 0;color:#e1eaf5;line-height:1.4}
+.unread-tag{color:#7cead8;margin-left:6px;font-size:11px}
