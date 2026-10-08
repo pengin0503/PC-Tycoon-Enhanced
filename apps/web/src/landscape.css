@@ -46,3 +46,13 @@
 /* Every menu destination stays visible even on narrow landscape/portrait viewports. */
 @media(max-width:950px){.screen-nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:2px;width:100%;overflow:visible;justify-content:stretch}.screen-nav button{min-width:0;padding:6px 2px;white-space:normal;line-height:1.2;font-size:clamp(9px,1.1vw,12px)}}
 @media(max-width:600px){.screen-nav{grid-template-columns:repeat(5,minmax(0,1fr))}.screen-nav button{font-size:11px;min-height:32px;padding:5px 2px}}
+
+/* Icon-led game navigation with a distinct selected state. */
+.screen-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.screen-nav button svg{flex-shrink:0;width:18px;height:18px}
+.screen-nav button span{font-weight:600}
+.game-main{background:radial-gradient(ellipse at 52% -12%,#1e3c4d 0,transparent 52%),#0c1220}
+.product-stage{background:linear-gradient(150deg,#1a3546,#122236 66%,#1b2d45);border-color:#446274}
+.design-controls{background:linear-gradient(150deg,#192e43,#111d30);border-color:#345168}
+.game-main>header .eyebrow{letter-spacing:2px;color:#78dec8}
+@media(max-width:950px){.screen-nav button svg{width:17px;height:17px}.screen-nav button{gap:2px}}
