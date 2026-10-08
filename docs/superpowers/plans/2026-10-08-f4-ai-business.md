@@ -19,18 +19,18 @@
 ### Task 1: Engineering and clusters
 **Files:** packages/content/src/{ai,research}.ts; packages/sim/src/{ai-math,ai,schema,index}.ts; tests/ai-math.test.ts.
 **Interfaces:** LLMDesign{architecture,total,active,layers,hidden,attention,context,tokens,quality,diversity}; estimateLLM(design,cluster)→trainingFlops/seconds/cost/trainingMemory; estimateInference(design,cluster,bits,context,batch)→weights/KV/reserve/memory/tokensPerSecond/qualityPenalty. buyCluster{gpuId,serverId,gpus,network,cooling}. Vendor GPU references or own product IDs.
-- [ ] Tests literal 1B active×1B tokens gives6e18FLOP,1B 16-bit weights2e9bytes,KV805306368bytes for24layers×2048hidden×4096context; MoE8B/1B same rawFLOP and larger total memory; monotonic bits/VRAM/speed; bad geometry/Dense/MoE reject; finite positive costs and budget-fit cluster purchase.
-- [ ] `npm test -- tests/ai-math.test.ts` → RED.
-- [ ] Implement content coefficients, numeric validators, bounded/saturating metrics and finite hardware purchasing.
-- [ ] `npm test && npm run typecheck` → PASS.
-- [ ] Commit `feat: add LLM engineering and compute clusters`.
+- [x] Tests literal 1B active×1B tokens gives6e18FLOP,1B 16-bit weights2e9bytes,KV805306368bytes for24layers×2048hidden×4096context; MoE8B/1B same rawFLOP and larger total memory; monotonic bits/VRAM/speed; bad geometry/Dense/MoE reject; finite positive costs and budget-fit cluster purchase.
+- [x] `npm test -- tests/ai-math.test.ts` → RED.
+- [x] Implement content coefficients, numeric validators, bounded/saturating metrics and finite hardware purchasing.
+- [x] `npm test && npm run typecheck` → PASS.
+- [x] Commit `feat: add LLM engineering and compute clusters`.
 ### Task 2: Training serving and AI Lab
 **Files:** packages/sim/src/{ai,ai-math,index,schema,hardware}.ts; apps/web/src/AIPanel.tsx; App.tsx; tests/ai-business.test.ts; tests/ai.spec.ts; STATUS.
 **Interfaces:** trainModel{name,design,clusterId,budget}; deployModel{id,clusterId,bits,context,batch,mode:api|subscription|open,apiPrice,subscriptionPrice}; retireModel{id}; model training/ready/failed with five benchmark scores and real progress. Training expenses include data/power/operations/depreciation and founder/staff work. Daily hosted service charges limited token demand; monthly subscriptions charge active users; fees/refunds included. AI market quote and own GPU/server demand coupling.
-- [ ] Tests researched training completes, budget/VRAM/busy clusters reject without expense, scores0..99 and data quality has effects, low-quality failure seeded, quantization research gate, API and subscription revenues/costs, open reputation without hosting income, deterministic round trip and own-hardware coupling.
-- [ ] Unit and browser (build cluster→train→evaluate→API sales on mobile) commands → RED.
-- [ ] Implement actual tick lifecycle and responsive full-parameter Lab, cost/time/memory estimates, fictional benchmark tables and serving modes.
-- [ ] Full unit/typecheck/build/browser gates → PASS; self-review.
-- [ ] Commit `feat: add training and AI service business`; STATUS and nonforced phase push.
+- [x] Tests researched training completes, budget/VRAM/busy clusters reject without expense, scores0..99 and data quality has effects, low-quality failure seeded, quantization research gate, API and subscription revenues/costs, open reputation without hosting income, deterministic round trip and own-hardware coupling.
+- [x] Unit and browser (build cluster→train→evaluate→API sales on mobile) commands → RED.
+- [x] Implement actual tick lifecycle and responsive full-parameter Lab, cost/time/memory estimates, fictional benchmark tables and serving modes.
+- [x] Full unit/typecheck/build/browser gates → PASS; self-review.
+- [x] Commit `feat: add training and AI service business`; STATUS and nonforced phase push.
 ## Self-review
 All AI-01–07 have callable engine paths and UI controls; parameters are absolute counts internally and billions in UI. Minimum one research week models team preparation even when raw compute is short. No network/model dependencies. Real-model predictive accuracy is not claimed.

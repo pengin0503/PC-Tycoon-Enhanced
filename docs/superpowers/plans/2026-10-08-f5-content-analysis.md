@@ -19,26 +19,26 @@
 ### Task 1: Applied research catalog
 **Files:** packages/content/src/{research,hardware,ai,devices,events}.ts; packages/sim/src/{hardware,devices,ai,ai-math,events,schema,index}.ts; tests/content.test.ts.
 **Interfaces:** Tech adds generation; techEffect completed/category/axis continues. Hardware/device/OS branches compute/power/cost/reliability/capacity/compatibility; AI branches compute/architecture/quantization/data/context/economics. Optional AIEffects arguments keep existing literal math tests intact. Monthly original market events create expiring demand/production modifiers.
-- [ ] Tests count3000, unique ids, DFS reachable acyclic dependencies, each category has6 effect-bearing axes, every hardware/device/OS branch changes a consumer metric or development work; AI branches improve their stated estimate/score/cost. Coefficients finite and event expiry works. 365-day economic replay remains bounded/deterministic.
-- [ ] `npm test -- tests/content.test.ts` → RED.
-- [ ] Implement staged catalog and branch consumers, defaulted reliability/modifiers, events and document coefficient meaning.
-- [ ] `npm test && npm run typecheck` → PASS.
-- [ ] Commit `feat: add 3000 applied research technologies and market events`.
+- [x] Tests count3000, unique ids, DFS reachable acyclic dependencies, each category has6 effect-bearing axes, every hardware/device/OS branch changes a consumer metric or development work; AI branches improve their stated estimate/score/cost. Coefficients finite and event expiry works. 365-day economic replay remains bounded/deterministic.
+- [x] `npm test -- tests/content.test.ts` → RED.
+- [x] Implement staged catalog and branch consumers, defaulted reliability/modifiers, events and document coefficient meaning.
+- [x] `npm test && npm run typecheck` → PASS.
+- [x] Commit `feat: add 3000 applied research technologies and market events`.
 ### Task 2: Save integrity audit
 **Files:** packages/sim/src/validation.ts; index.ts; packages/save/src/{index,repository}.ts; tests/integrity.test.ts; App.tsx.
 **Interfaces:** validateGame(unknown): GameState validates shape and references, unique ids, office capacity, product state, exclusive hosting/training; SaveRepository.warnings reports latest-slot fallback.
-- [ ] Tests malformed saved references/duplicate ids/overbooked clusters and future histories reject, old snapshots migrate with defaults and equal continuation, corrupt newest IndexedDB row recovers prior row with warning; failed imports preserve previous UI game.
-- [ ] `npm test -- tests/integrity.test.ts` → RED.
-- [ ] Implement semantic parsing on engine/save boundaries and recovery notice.
-- [ ] Full unit/typecheck gates → PASS.
-- [ ] Commit `fix: validate saved references and report recovery`.
+- [x] Tests malformed saved references/duplicate ids/overbooked clusters and future histories reject, old snapshots migrate with defaults and equal continuation, corrupt newest IndexedDB row recovers prior row with warning; failed imports preserve previous UI game.
+- [x] `npm test -- tests/integrity.test.ts` → RED.
+- [x] Implement semantic parsing on engine/save boundaries and recovery notice.
+- [x] Full unit/typecheck gates → PASS.
+- [x] Commit `fix: validate saved references and report recovery`.
 ### Task 3: Analysis navigation and visual acceptance
 **Files:** apps/web/src/{ResearchPanel,FinancePanel,OfficeScene,ProductVisual,App,i18n,strings.generated}.tsx/ts; tools/localize-ui.mjs; tests/content.spec.ts; docs/dev/{FEATURES,BALANCE,STATUS}.md.
 **Interfaces:** Research category/axis/search and60-node pages; monthly cash/flow charts and product/rival comparison; SVG original office/product shapes; t(key) resolves Japanese UI text centrally.
-- [ ] Browser tests expose count3000, filter/search/paginate to late research, show actual financial chart/history, mobile320px fits and keyboard works.
-- [ ] `npm run test:e2e -- tests/content.spec.ts` → RED.
-- [ ] Implement bounded research rendering, analysis, SVG visuals and key-based Japanese UI; feature map ties PC-01–20/AI-01–07 to source/test evidence.
-- [ ] Full unit/typecheck/build/browser gates → PASS; visual screenshots and phase self-review.
-- [ ] Commit `feat: add research navigation and business analysis`; STATUS and nonforced phase push.
+- [x] Browser tests expose count3000, filter/search/paginate to late research, show actual financial chart/history, mobile320px fits and keyboard works.
+- [x] `npm run test:e2e -- tests/content.spec.ts` → RED.
+- [x] Implement bounded research rendering, analysis, SVG visuals and key-based Japanese UI; feature map ties PC-01–20/AI-01–07 to source/test evidence.
+- [x] Full unit/typecheck/build/browser gates → PASS; visual screenshots and phase self-review.
+- [x] Commit `feat: add research navigation and business analysis`; STATUS and nonforced phase push.
 ## Self-review
 Every technology branch has an assigned consumer (not only descriptive metadata). Existing root IDs/labels and first-tier costs/work preserved. Existing cached products remain stable across content growth. New reference validation does not compare old performance to today's formulas. F6 distribution/device gates remain explicit.

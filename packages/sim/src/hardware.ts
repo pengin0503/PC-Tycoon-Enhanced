@@ -19,16 +19,16 @@ export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[])
  }
  const n=(k:string)=>Number(spec[k]);let performance=0,power=0,unitCost=0;
  switch(kind){
-  case'cpu':performance=n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient;power=n('cores')*n('clock')**2*n('process')/14*b.cpu.powerCoefficient;unitCost=n('cores')*b.cpu.coreCost+n('clock')*b.cpu.clockCost+n('ipc')*b.cpu.ipcCost;break;
-  case'gpu':performance=n('units')*n('clock')*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/256);power=n('units')*n('clock')**2*b.gpu.powerCoefficient;unitCost=n('units')*b.gpu.unitCost+n('vram')*b.gpu.vramCost+n('bandwidth')*b.gpu.bandwidthCost;break;
-  case'motherboard':performance=n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore;power=10+n('features');unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost;break;
-  case'ram':performance=n('capacity')*n('speed')/b.ram.scoreDivisor;power=n('capacity')*.2;unitCost=n('capacity')*b.ram.capacityCost+n('speed')*b.ram.speedCost;break;
-  case'storage':performance=n('capacity')*b.storage.capacityScore+n('speed')*b.storage.speedScore;power=n('speed')*.005;unitCost=n('capacity')*b.storage.capacityCost+n('speed')*b.storage.speedCost;break;
-  case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*.02;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
+  case'cpu':performance=n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient;power=n('cores')*n('clock')**2*n('process')/b.cpu.referenceProcess*b.cpu.powerCoefficient;unitCost=n('cores')*b.cpu.coreCost+n('clock')*b.cpu.clockCost+n('ipc')*b.cpu.ipcCost;break;
+  case'gpu':performance=n('units')*n('clock')*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/b.gpu.referenceBandwidth);power=n('units')*n('clock')**2*b.gpu.powerCoefficient;unitCost=n('units')*b.gpu.unitCost+n('vram')*b.gpu.vramCost+n('bandwidth')*b.gpu.bandwidthCost;break;
+  case'motherboard':performance=n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore;power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost;break;
+  case'ram':performance=n('capacity')*n('speed')/b.ram.scoreDivisor;power=n('capacity')*b.ram.powerCoefficient;unitCost=n('capacity')*b.ram.capacityCost+n('speed')*b.ram.speedCost;break;
+  case'storage':performance=n('capacity')*b.storage.capacityScore+n('speed')*b.storage.speedScore;power=n('speed')*b.storage.powerCoefficient;unitCost=n('capacity')*b.storage.capacityCost+n('speed')*b.storage.speedCost;break;
+  case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*b.monitor.powerCoefficient;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
- performance*=1+Math.max(0,techEffect(completed,kind,'compute')-.08);
- performance*=1+techEffect(completed,kind,'compatibility');power*=Math.exp(-techEffect(completed,kind,'power'));unitCost*=Math.exp(-techEffect(completed,kind,'cost')*.2);
- return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost)),reliability:.9+.1*(1-Math.exp(-techEffect(completed,kind,'reliability')))};
+ performance*=1+Math.max(0,techEffect(completed,kind,'compute')-b.rootComputeBonus);
+ performance*=1+techEffect(completed,kind,'compatibility');power*=Math.exp(-techEffect(completed,kind,'power'));unitCost*=Math.exp(-techEffect(completed,kind,'cost')*b.costResearchScale);
+ return{performance:Math.round(performance),power:Math.round(power),unitCost:Math.max(1,Math.round(unitCost)),reliability:b.reliabilityBase+b.reliabilityGain*(1-Math.exp(-techEffect(completed,kind,'reliability')))};
 }
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='research'){
@@ -66,11 +66,18 @@ export function sellProducts(s:GameState){
  for(const p of s.products.filter(p=>p.launched)){
   const [r,next]=nextRandom(s.seed);s.seed=next;const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
-  const value=Math.min(2,p.performance/def.reference)*((p.kind==='os'?50:p.unitCost*2)/p.price)**1.5;
+  const value=Math.min(b.valueCeiling,p.performance/def.reference)*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/.9)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?.8:1));
-  const units=Math.min(p.kind==='os'?500:p.inventory,Math.max(0,demand));
-  if(units){if(p.kind!=='os')p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);}
+  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
+  const units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,Math.max(0,demand));
+  if(units){
+   if(p.kind!=='os')p.inventory-=units;p.sold+=units;
+   const bundled=p.spec.osId?s.products.find(os=>os.id===p.spec.osId&&os.kind==='os'):undefined;
+   const license=bundled?Math.min(p.price,bundled.price):0;
+   p.revenue+=units*(p.price-license);p.profit+=units*(p.price-license-p.unitCost+(bundled?.unitCost??0));
+   if(bundled){bundled.sold+=units;bundled.revenue+=units*license;bundled.profit+=units*(license-bundled.unitCost);}
+   income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
+  }
  }
 }
 export function researchAndDevelopment(s:GameState){

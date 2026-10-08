@@ -38,4 +38,11 @@ F0 verified: 22 unit tests, 3 browser tests, strict typecheck and production bui
 - API tokens and subscribers are capacity bounded; power/operations/depreciation, fees/refunds, monthly subscriptions and open-weight brand effects are implemented. Hosted service and training exclusively reserve compute.
 - Verified: 75 unit tests and 7 browser tests, strict typecheck/build. Self-review fixes RED→GREEN: private models no longer boost hardware demand; transferred own GPU/server value is included in cluster depreciation while only purchases debit cash.
 
-Next: F5 (3000 meaningful research nodes, research effects, events, balance/analysis, visuals and feature acceptance). F5–F6 unimplemented. F6 environment inspection found no Java/Gradle/adb/Android SDK on PATH; Android build must be attempted and unverified items kept explicit.
+## F5
+- Complete: 3000 reachable technologies with six applied effects in ten domains, seeded expiring market events, bounded research search/filter/pages, financial cash/flow/product/rival analysis, original office/product SVGs and keyed Japanese UI.
+- Semantic save audit rejects broken references, duplicate ids, impossible chronology and compute overbooking; corrupt newest slot falls back with an explicit notice.
+- Verified: 87 unit tests, 10 browser tests, typecheck/build. Mobile320px behavior and1440px/390px visual screenshots reviewed. Japanese font bundled; empty price edits use an explicit apply action.
+- Self-review regressions RED→GREEN: bundled OS sales now allocate license revenue without double counting; OS power research changes responsiveness as well as license cost. Tunable simulation coefficients extracted into content data; existing numeric/replay tests still pass.
+- Feature acceptance and original coefficient rationale: FEATURES.md / BALANCE.md. No unpublished original-game equivalence claimed.
+
+Next: F6 (production PWA cache/offline gates, Capacitor Android packaging/build). Java17 is available; Gradle/adb/Android SDK were absent at initial inspection. Build will be attempted; physical Android verification requires a device and remains unverified.

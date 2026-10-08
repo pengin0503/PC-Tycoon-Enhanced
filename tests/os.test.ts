@@ -18,3 +18,8 @@ it('bundled OS quality and compatibility affect computer scores',()=>{
  const plain=cmd(s,build).products[1];const bundled=cmd(s,{...build,osId:'p-1'}).products[1];expect(bundled.performance).toBeGreaterThan(plain.performance);
  expect(()=>cmd(s,{...build,osId:'missing'})).toThrow();
 });
+it('bundled PCs allocate license revenue without double counting company income',()=>{
+ let s=cmd(ready(),os);s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s.research.completed.push('pc-compute-1');
+ s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:3000,osId:'p-1'});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:100});
+ const before=s.products[0].sold;const n=cmd(s,{type:'advance',days:7});const pc=n.products[1];expect(pc.sold).toBeGreaterThan(0);expect(pc.revenue).toBe(pc.sold*2950);expect(n.products[0].sold-before).toBeGreaterThanOrEqual(pc.sold);expect(n.finance.revenue).toBe(n.products.reduce((v,p)=>v+p.revenue,0));
+});

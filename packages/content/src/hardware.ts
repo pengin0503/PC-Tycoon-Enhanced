@@ -11,11 +11,12 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
  monitor:{label:'モニター',designCost:3000,work:20,demand:45,reference:600,fields:{resolution:{label:'解像度相当',min:720,max:4320,step:1,default:1080},refresh:{label:'リフレッシュレート',min:30,max:360,step:1,default:60},gamut:{label:'色域スコア',min:50,max:100,step:1,default:90},appearance:{label:'外観',options:['graphite','silver','teal'],default:'silver'}}},
 };
 export const hardwareBalance={baseFactoryCapacity:20,developmentPerWeek:10,researchPerWeek:10,maxInventory:100000,maxPrice:1000000,
- cpu:{coreCost:20,clockCost:10,ipcCost:60,powerCoefficient:.6,scoreCoefficient:100},
- gpu:{unitCost:8,vramCost:10,bandwidthCost:.05,powerCoefficient:3,scoreCoefficient:100},
- motherboard:{baseCost:30,slotCost:10,featureCost:8,slotScore:25,featureScore:50},
- ram:{capacityCost:3,speedCost:.005,scoreDivisor:160},storage:{capacityCost:.1,speedCost:.01,capacityScore:.1,speedScore:.1},
+ rootComputeBonus:.08,reliabilityBase:.9,reliabilityGain:.1,costResearchScale:.2,valueCeiling:2,priceCostMultiple:2,priceElasticity:1.5,osReferencePrice:50,osWeeklyLimit:500,hardDemand:.8,
+ cpu:{referenceProcess:14,coreCost:20,clockCost:10,ipcCost:60,powerCoefficient:.6,scoreCoefficient:100},
+ gpu:{unitCost:8,vramCost:10,bandwidthCost:.05,powerCoefficient:3,scoreCoefficient:100,referenceBandwidth:256},
+ motherboard:{baseCost:30,slotCost:10,featureCost:8,slotScore:25,featureScore:50,basePower:10,featurePower:1},
+ ram:{capacityCost:3,speedCost:.005,scoreDivisor:160,powerCoefficient:.2},storage:{capacityCost:.1,speedCost:.01,capacityScore:.1,speedScore:.1,powerCoefficient:.005},
  weeklyVariance:.2,awarenessFloor:.7,qualityFloor:.5,ageDecay:360,minimumAgeFactor:.25,
- monitor:{resolutionCost:.1,refreshCost:.8,gamutCost:1,scoreCoefficient:.001},
+ monitor:{resolutionCost:.1,refreshCost:.8,gamutCost:1,scoreCoefficient:.001,powerCoefficient:.02},
 } as const;
 export function defaultSpec(kind:HardwareKind):Spec{return Object.fromEntries(Object.entries(hardwareCatalog[kind].fields).map(([k,v])=>[k,v.default]));}

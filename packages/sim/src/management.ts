@@ -17,8 +17,8 @@ export function managementCommand(s:GameState,c:GameCommand):boolean{
 }
 export function marketingWeek(s:GameState){
  s.company.awareness*=b.awarenessDecay;
- if(s.advertising){if(s.company.cash<s.advertising||s.company.debt>0){s.advertising=0;logEvent(s,'marketingStopped');}else{expense(s,s.advertising);const staff=s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill,0);s.company.awareness=Math.min(100,s.company.awareness+Math.sqrt(s.advertising)/b.advertisingAwareness*(1+staff/100));s.company.reputation=Math.min(100,s.company.reputation+.1);}}
+ if(s.advertising){if(s.company.cash<s.advertising||s.company.debt>0){s.advertising=0;logEvent(s,'marketingStopped');}else{expense(s,s.advertising);const staff=s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill,0);s.company.awareness=Math.min(100,s.company.awareness+Math.sqrt(s.advertising)/b.advertisingAwareness*(1+staff/b.marketingSkillScale));s.company.reputation=Math.min(100,s.company.reputation+b.advertisingReputation);}}
 }
 export function monthlyCosts(s:GameState){return offices[s.officeLevel-1].monthlyCost+(s.factoryLevel-1)*b.factoryMonthly+s.staff.reduce((n,e)=>n+e.salary,0)+osMonthlyCost(s)+Math.round(s.company.loan*(s.difficulty==='hard'?b.hardInterest:b.normalInterest));}
 export function monthlyHistory(s:GameState,share=0){s.history.push({day:s.day,cash:s.company.cash,debt:s.company.debt,loan:s.company.loan,...s.finance,share});s.history=s.history.slice(-b.historyLimit);}
-export function companyValue(s:GameState){return Math.max(0,Math.round(s.company.cash-s.company.debt-s.company.loan+s.products.reduce((n,p)=>n+p.inventory*p.unitCost,0)+s.officeLevel*30000+s.company.reputation*2000+s.finance.revenue*.2));}
+export function companyValue(s:GameState){return Math.max(0,Math.round(s.company.cash-s.company.debt-s.company.loan+s.products.reduce((n,p)=>n+p.inventory*p.unitCost,0)+s.officeLevel*b.officeValue+s.company.reputation*b.reputationValue+s.finance.revenue*b.revenueValue));}

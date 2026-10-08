@@ -25,3 +25,7 @@ test('mobile forms fit and keyboard activates time controls',async({page})=>{
  await page.getByRole('button',{name:'1日進める'}).focus();await page.keyboard.press('Enter');await expect(page.getByTestId('day')).toHaveText('1');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+test('bundled Japanese fonts decode for offline-capable UI',async({page})=>{
+ await page.goto('/');await page.evaluate(()=>document.fonts.ready);
+ expect(await page.evaluate(()=>[...document.fonts].some(f=>f.family.includes('Noto Sans JP Variable')&&f.status==='loaded'))).toBe(true);
+});

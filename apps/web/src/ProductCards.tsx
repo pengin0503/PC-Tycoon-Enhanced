@@ -1,6 +1,13 @@
-import type {GameState,GameCommand} from '../../../packages/sim/src/index';
-import {productCatalog} from '../../../packages/content/src/devices';
-import {yen} from './i18n';
-export function ProductCards({state,send,kinds}:{state:GameState,send:(c:GameCommand)=>void,kinds:string[]}){
- return <div className="grid-list">{state.products.filter(p=>kinds.includes(p.kind)).map(p=><article className="card" key={p.id}><h3>{p.name} <span className="pill">{productCatalog[p.kind].label}</span></h3><div className={`product-visual ${String(p.spec.appearance??'graphite')}`} aria-label={`外観 ${p.spec.appearance??'graphite'}`}><span>{p.kind==='laptop'?'▱':p.kind==='monitor'?'▣':'▥'}</span></div><p>性能 {p.performance} / 原価 {yen(p.unitCost)} / 電力 {p.power}</p><p>開発残量 {p.remaining.toFixed(1)} · 在庫 {p.inventory} · 販売 {p.sold}</p><p>売上 {yen(p.revenue)} / 粗利益 {yen(p.profit)}</p>{p.remaining>0?<progress max={20} value={20-p.remaining}/>:!p.launched?<button onClick={()=>send({type:'launch',id:p.id})}>発売する</button>:p.kind!=='os'&&<button onClick={()=>send({type:'line',id:p.id,target:p.line?0:100})}>{p.line?'生産停止':'生産開始'}</button>}<label>販売価格<input type="number" min={1} value={p.price} onChange={e=>send({type:'price',id:p.id,price:Number(e.target.value)})}/></label></article>)}</div>;
+import {PriceEditor,ProductionEditor} from './ProductEditors';
+import { t as uiText } from './i18n';
+import type { GameState, GameCommand } from '../../../packages/sim/src/index';
+import { productCatalog } from '../../../packages/content/src/devices';
+import { yen } from './i18n';
+import { ProductVisual } from './ProductVisual';
+export function ProductCards({ state, send, kinds }: {
+    state: GameState;
+    send: (c: GameCommand) => void;
+    kinds: string[];
+}) {
+    return <div className="grid-list">{state.products.filter(p => kinds.includes(p.kind)).map(p => <article className="card" key={p.id}><h3>{p.name} <span className="pill">{productCatalog[p.kind].label}</span></h3><ProductVisual product={p}/><p>{uiText("ui_2fa6f4840362")}{p.performance}{uiText("ui_1820323a7ea3")}{yen(p.unitCost)}{uiText("ui_c5cdaef5d665")}{p.power}</p><p>{uiText("ui_658b13fe06be")}{p.remaining.toFixed(1)}{uiText("ui_8409c9c1e7b0")}{p.inventory}{uiText("ui_18dc417e0cbe")}<b data-testid={`sold-${p.id}`}>{p.sold}</b></p><p>{uiText("ui_dbe914179fc2")}{yen(p.revenue)}{uiText("ui_02aee73f5562")}{yen(p.profit)}</p>{p.remaining > 0 ? <progress max={20} value={20 - p.remaining}/> : !p.launched ? <button onClick={() => send({ type: 'launch', id: p.id })}>{uiText("ui_c336a7c01701")}</button> : p.kind !== 'os' && <ProductionEditor product={p} send={send}/>}<PriceEditor product={p} send={send}/></article>)}</div>;
 }

@@ -19,8 +19,8 @@ export function rivalWeekly(s:GameState){
   if(r.researchRemaining>0){r.researchRemaining=Math.max(0,r.researchRemaining-b.work*r.efficiency);if(r.researchRemaining===0)r.researchLevel++;}
   for(const p of r.products){p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);if(p.remaining>0)continue;
    const [rand,seed]=nextRandom(r.seed);r.seed=seed;const player=s.products.filter(v=>v.launched&&v.kind===p.kind).reduce((n,v)=>n+v.performance/v.price,0);
-   const competition=1/(1+player/(p.performance/p.price)*.2);
-   const count=Math.min(p.inventory,Math.floor(hardwareCatalog[r.focus].demand*r.efficiency*competition*(.9+rand*.2)*(p.unitCost*2/p.price)));
+   const competition=1/(1+player/(p.performance/p.price)*b.playerPressure);
+   const count=Math.min(p.inventory,Math.floor(hardwareCatalog[r.focus].demand*r.efficiency*competition*(b.demandFloor+rand*b.demandVariance)*(p.unitCost*b.priceCostMultiple/p.price)));
    if(count){p.inventory-=count;p.sold+=count;p.revenue+=count*p.price;p.profit+=count*(p.price-p.unitCost);revenue(r,count*p.price);}
   }
  }
@@ -30,10 +30,10 @@ export function rivalMonthly(s:GameState){
   cost(r,b.monthlyCost,true);if(r.debt>0)continue;
   if(r.researchRemaining===0&&r.researchLevel<b.maxResearch&&cost(r,b.researchCost*(r.researchLevel+1)))r.researchRemaining=b.work*(r.researchLevel+1);
   const latest=r.products.at(-1);if(r.researchLevel>0&&(!latest||Number(latest.spec.generation)<r.researchLevel)&&cost(r,b.designCost)){
-   const spec=defaultSpec(r.focus);const metrics=evaluateHardware(r.focus,spec,[`${r.focus}-compute-1`]);metrics.performance=Math.round(metrics.performance*(1+.08*r.researchLevel)*r.efficiency);
-   r.products.push({id:`${r.id}-p-${r.products.length+1}`,name:`${r.name} ${r.researchLevel}`,kind:r.focus,spec:{...spec,generation:r.researchLevel},...metrics,remaining:20,price:metrics.unitCost*2,inventory:0,target:100,line:true,launched:true,sold:0,revenue:0,profit:0,releaseDay:s.day});
+   const spec=defaultSpec(r.focus);const metrics=evaluateHardware(r.focus,spec,[`${r.focus}-compute-1`]);metrics.performance=Math.round(metrics.performance*(1+b.generationPerformance*r.researchLevel)*r.efficiency);
+   r.products.push({id:`${r.id}-p-${r.products.length+1}`,name:`${r.name} ${r.researchLevel}`,kind:r.focus,spec:{...spec,generation:r.researchLevel},...metrics,remaining:b.developmentWork,price:metrics.unitCost*b.priceCostMultiple,inventory:0,target:b.inventoryTarget,line:true,launched:true,sold:0,revenue:0,profit:0,releaseDay:s.day});
   }
-  for(const p of r.products){const alternatives=s.products.filter(v=>v.kind===p.kind&&v.launched);const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*.9:p.unitCost*2;p.price=Math.max(Math.ceil(p.unitCost*1.2),Math.round(price));}
+  for(const p of r.products){const alternatives=s.products.filter(v=>v.kind===p.kind&&v.launched);const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*b.priceUndercut:p.unitCost*b.priceCostMultiple;p.price=Math.max(Math.ceil(p.unitCost*b.minimumPriceCostMultiple),Math.round(price));}
  }
 }
 export function competitorPressure(s:GameState,kind:string){return 1/(1+s.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+r.products.filter(p=>p.kind===kind&&p.remaining===0&&p.inventory>0).length*b.pressure,0));}

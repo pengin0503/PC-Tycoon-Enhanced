@@ -15,7 +15,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   if(c.serverId!=='vendor'&&(!server||server.inventory<1))throw new Error('自社サーバー在庫が必要です');
   const cost=(vendor?vendor.cost*c.gpus:0)+(server?0:b.serverCost);expense(s,cost,false,true);
   if(own)own.inventory-=c.gpus;if(server)server.inventory--;
-  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:(vendor?.peakFlops??own!.performance*1e11)*c.gpus,vramBytes:(vendor?.vramBytes??Number(own!.spec.vram)*1e9)*c.gpus,powerWatts:(vendor?.powerWatts??own!.power)*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/1000:1),cooling:c.cooling,purchaseCost:cost+(own?own.unitCost*c.gpus:0)+(server?server.unitCost:0)});
+  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:(vendor?.peakFlops??own!.performance*b.ownGpuFlopsPerScore)*c.gpus,vramBytes:(vendor?.vramBytes??Number(own!.spec.vram)*1e9)*c.gpus,powerWatts:(vendor?.powerWatts??own!.power)*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+(own?own.unitCost*c.gpus:0)+(server?server.unitCost:0)});
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){
@@ -37,21 +37,21 @@ export function clusterBusy(s:GameState,id:string,except=''){return s.models.som
 export function founderProjects(s:GameState){return Math.max(1,Number(s.research.active.length>0)+Number(s.products.some(p=>p.remaining>0))+Number(s.models.some(m=>m.status==='training')));}
 export function aiWeekly(s:GameState){
  const jobs=s.models.filter(m=>m.status==='training');const founder=1/founderProjects(s);const bonus=workBonus(s,'ai');
- for(const m of jobs){m.remainingSeconds=Math.max(0,m.remainingSeconds-7*86400*(1+bonus/100));m.preparationRemaining=Math.max(0,m.preparationRemaining-7*(founder+bonus/10)/jobs.length);
-  if(m.remainingSeconds===0&&m.preparationRemaining===0){const [rand,seed]=nextRandom(s.seed);s.seed=seed;const failure=Math.max(0,b.failureThreshold-m.design.quality)*b.failureCoefficient/(1+bonus/10);m.status=rand<failure?'failed':'ready';if(m.status==='ready')m.scores=benchmarks({...m.design,quality:m.design.quality+(1-m.design.quality)*(1-Math.exp(-techEffect(s.research.completed,'ai','data')))},techEffect(s.research.completed,'ai','compute')+techEffect(s.research.completed,'ai','architecture')*.1);logEvent(s,m.status==='ready'?'trainingComplete':'trainingFailed',m.name);}
+ for(const m of jobs){m.remainingSeconds=Math.max(0,m.remainingSeconds-7*86400*(1+bonus/b.trainingStaffTimeScale));m.preparationRemaining=Math.max(0,m.preparationRemaining-7*(founder+bonus/b.preparationStaffScale)/jobs.length);
+  if(m.remainingSeconds===0&&m.preparationRemaining===0){const [rand,seed]=nextRandom(s.seed);s.seed=seed;const failure=Math.max(0,b.failureThreshold-m.design.quality)*b.failureCoefficient/(1+bonus/b.preparationStaffScale);m.status=rand<failure?'failed':'ready';if(m.status==='ready')m.scores=benchmarks({...m.design,quality:m.design.quality+(1-m.design.quality)*(1-Math.exp(-techEffect(s.research.completed,'ai','data')))},techEffect(s.research.completed,'ai','compute')+techEffect(s.research.completed,'ai','architecture')*b.architectureScore);logEvent(s,m.status==='ready'?'trainingComplete':'trainingFailed',m.name);}
  }
 }
-export function aiMarketQuote(s:GameState){const level=Math.max(0,...s.rivals.filter(r=>!r.acquired).map(r=>r.researchLevel));const playerPrices=s.models.flatMap(m=>m.service?.enabled&&m.service.mode==='api'?[m.service.apiPrice]:[]);return {price:Math.max(200,Math.round(Math.min(b.marketBasePrice/(1+level*.02),...playerPrices.map(p=>p*.98)))),quality:Math.min(85,25+level*3)};}
+export function aiMarketQuote(s:GameState){const level=Math.max(0,...s.rivals.filter(r=>!r.acquired).map(r=>r.researchLevel));const playerPrices=s.models.flatMap(m=>m.service?.enabled&&m.service.mode==='api'?[m.service.apiPrice]:[]);return {price:Math.max(b.marketPriceFloor,Math.round(Math.min(b.marketBasePrice/(1+level*b.competitorPriceDecay),...playerPrices.map(p=>p*b.priceUndercut)))),quality:Math.min(b.marketQualityCeiling,b.marketQualityBase+level*b.marketQualityPerTech)};}
 export function aiDaily(s:GameState){
  const quote=aiMarketQuote(s);
  for(const m of s.models){const service=m.service;if(!service?.enabled||m.status!=='ready')continue;
   if(service.mode==='open'){s.company.awareness=Math.min(100,s.company.awareness+b.publicAwarenessDaily);s.company.reputation=Math.min(100,s.company.reputation+b.publicReputationDaily);continue;}
   const c=s.clusters.find(c=>c.id===service.clusterId)!;const score=Object.values(m.scores).reduce((n,v)=>n+v,0)/500*(1-service.qualityPenalty);
-  const brand=(.4+s.company.awareness/100)*(.5+s.company.reputation/100);const [rand,seed]=nextRandom(s.seed);s.seed=seed;
-  const capacity=Math.floor(service.speed*86400*b.serviceCapacityUtilization);const competition=1/(1+quote.quality/Math.max(1,score*100)*service.apiPrice/quote.price*.2);
+  const brand=(b.brandAwarenessFloor+s.company.awareness/100)*(b.brandReputationFloor+s.company.reputation/100);const [rand,seed]=nextRandom(s.seed);s.seed=seed;
+  const capacity=Math.floor(service.speed*86400*b.serviceCapacityUtilization);const competition=1/(1+quote.quality/Math.max(1,score*100)*service.apiPrice/quote.price*b.competition);
   let tokens=0;
-  if(service.mode==='api')tokens=Math.min(capacity,Math.floor(b.apiWeeklyDemand/7*score*brand*competition*(b.marketBasePrice/service.apiPrice)**.8*(.9+rand*.2)));
-  else{service.users=Math.min(Math.floor(capacity/(b.tokensPerSubscriberMonth/30)),Math.floor(b.subscriptionDemand*score*brand*(100/service.subscriptionPrice)**.8));tokens=Math.floor(service.users*b.tokensPerSubscriberMonth/30);}
+  if(service.mode==='api')tokens=Math.min(capacity,Math.floor(b.apiWeeklyDemand/7*score*brand*competition*(b.marketBasePrice/service.apiPrice)**b.priceElasticity*(b.demandFloor+rand*b.demandVariance)));
+  else{service.users=Math.min(Math.floor(capacity/(b.tokensPerSubscriberMonth/30)),Math.floor(b.subscriptionDemand*score*brand*(b.subscriptionReferencePrice/service.subscriptionPrice)**b.priceElasticity));tokens=Math.floor(service.users*b.tokensPerSubscriberMonth/30);}
   const gross=service.mode==='api'?Math.round(tokens/1e6*service.apiPrice*(1-b.fee-b.refund)):0;
   if(gross){income(s,gross);service.revenue+=gross;}
   const cost=Math.ceil(clusterCost(c,86400,Math.min(1,tokens/Math.max(1,capacity)))*Math.exp(-techEffect(s.research.completed,'ai','economics')));expense(s,cost,true);service.cost+=cost;service.tokens+=tokens;

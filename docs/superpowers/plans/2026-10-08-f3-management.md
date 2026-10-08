@@ -18,18 +18,18 @@
 ### Task 1: Facilities staff and financing
 **Files:** packages/content/src/management.ts; packages/sim/src/{management,schema,hardware,index}.ts; tests/management.test.ts.
 **Interfaces:** office{level}, factory{level}, hire{role,skill}, train{id}, marketing{budget}, borrow{amount}, repay{amount}. officeLevel/factoryLevel/staff/advertising and company.loan default into older saves. Monthly bill = office + factory + payroll + OS support + loan interest; monthly history snapshots.
-- [ ] Tests all ten office capacities/costs are distinct, upgrade limit/affordability, worker slots, research speed and payroll effects, training cap, advertising budget consumption and demand recognition, loan cap/interest/repayment, saved difficulty.
-- [ ] `npm test -- tests/management.test.ts` → RED.
-- [ ] Implement content coefficients, commands and weekly/monthly work/expense hooks.
-- [ ] `npm test && npm run typecheck` → PASS.
-- [ ] Commit `feat: add staff facilities and company financing`.
+- [x] Tests all ten office capacities/costs are distinct, upgrade limit/affordability, worker slots, research speed and payroll effects, training cap, advertising budget consumption and demand recognition, loan cap/interest/repayment, saved difficulty.
+- [x] `npm test -- tests/management.test.ts` → RED.
+- [x] Implement content coefficients, commands and weekly/monthly work/expense hooks.
+- [x] `npm test && npm run typecheck` → PASS.
+- [x] Commit `feat: add staff facilities and company financing`.
 ### Task 2: Autonomous rivals acquisition and UI
 **Files:** packages/content/src/management.ts; packages/sim/src/{rivals,management,hardware,index,schema}.ts; apps/web/src/ManagementPanel.tsx; App.tsx; tests/rivals.test.ts; tests/management.spec.ts; STATUS.
 **Interfaces:** Rival cash/seed/researchLevel/researchRemaining/products/efficiency/acquired; daily produce, weekly research/develop/sell, monthly design/price; acquire{id}; valuation(state,id): number; companyValue(state): number; market share statistics.
-- [ ] Tests 180-day rivals research/design/produce/sell without negative finances, deterministic save continuation, hard rivals faster, player price affects competitor strategy/share, acquisition transfers cash/stock/technology exactly once, insufficient funds unchanged. Browser upgrades and hires/trains/markets on mobile.
-- [ ] Unit/browser test commands → RED.
-- [ ] Implement finite competitor strategies and valuation; responsive operations/market/finance panels with meaningful commands.
-- [ ] Full unit/typecheck/build/browser gates → PASS; self-review.
-- [ ] Commit `feat: add autonomous competition and acquisitions`; STATUS and nonforced push.
+- [x] Tests 180-day rivals research/design/produce/sell without negative finances, deterministic save continuation, hard rivals faster, player price affects competitor strategy/share, acquisition transfers cash/stock/technology exactly once, insufficient funds unchanged. Browser upgrades and hires/trains/markets on mobile.
+- [x] Unit/browser test commands → RED.
+- [x] Implement finite competitor strategies and valuation; responsive operations/market/finance panels with meaningful commands.
+- [x] Full unit/typecheck/build/browser gates → PASS; self-review.
+- [x] Commit `feat: add autonomous competition and acquisitions`; STATUS and nonforced push.
 ## Self-review
 Loans and overdue debt separated to keep authorized credit usable. New saves start three rivals; old saves default no rivals and remain deterministic. F4 shared AI roles prepared, without model functionality. Interface and all five failure classes covered.

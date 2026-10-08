@@ -42,3 +42,14 @@ it('seeded market events change real modifiers and expire',()=>{
  const s=createGame({id:'events',name:'市況社',year:2026,difficulty:'normal',seed:1});expect((events as any).marketMonthly).toBeTypeOf('function');(events as any).marketMonthly(s);expect((s as any).modifiers.demand).not.toBe(1);
  const after=cmd(s,{type:'advance',days:31});expect(after.modifiers.expiresDay===0||after.modifiers.expiresDay>after.day).toBe(true);
 });
+it('all OS research branches affect responsiveness costs or compatibility',()=>{
+ const base=createGame({id:'os-tech',name:'OS技術',year:2026,difficulty:'normal',seed:42});base.research.completed=['os-compute-1'];
+ const design={type:'developOS',name:'OS',version:1,features:['files'],quality:.8,compatibility:.8,support:.8,price:50};
+ const a=cmd(base,design);for(const axis of ['compute','power','cost','reliability','capacity','compatibility']){
+  const id=`os-${axis}-${axis==='compute'?2:1}`;const b=cmd({...base,research:{completed:[...base.research.completed,id],active:[]}},design);
+  if(axis==='cost')expect(b.company.cash).toBeGreaterThan(a.company.cash);
+  else if(axis==='reliability')expect(b.products[0].reliability).toBeGreaterThan(a.products[0].reliability);
+  else if(axis==='compatibility')expect(Number(b.products[0].spec.compatibility)).toBeGreaterThan(Number(a.products[0].spec.compatibility));
+  else expect(b.products[0].performance).toBeGreaterThan(a.products[0].performance);
+ }
+});
