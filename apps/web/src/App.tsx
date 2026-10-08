@@ -34,6 +34,7 @@ export default function App() {
     }[]>([]);
     const [tab, setTab] = useState('company');
     const [menuOpen, setMenu] = useState(false);
+    const nativePaused=useRef(false);
     const repo = useRef(new SaveRepository());
     const writer = useRef(Promise.resolve());
     const current = useRef(state);
@@ -53,8 +54,9 @@ export default function App() {
         setLoading(false); }); return () => { alive = false; }; }, []);
     useEffect(() => { if (state && !loading)
         void save(state); }, [state, loading]);
+    useEffect(()=>{const pause=()=>{nativePaused.current=true;};const resume=()=>{nativePaused.current=false;};document.addEventListener('pause',pause);document.addEventListener('resume',resume);return()=>{document.removeEventListener('pause',pause);document.removeEventListener('resume',resume);};},[]);
     useEffect(() => { if (!speed)
-        return; const id = setInterval(() => { if (document.visibilityState === 'visible' && current.current) {
+        return; const id = setInterval(() => { if (document.visibilityState === 'visible' && !nativePaused.current && current.current) {
         try {
             setState(command(current.current, { type: 'advance', days: speed }));
         }

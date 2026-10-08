@@ -9,3 +9,5 @@ Install app-debug.apk on a test device (Android7/API24+ with current WebView), i
 Actual device launch, picker, persistence after restart and cross-device JSON transfer are unverified until tested with hardware. No main merge or production deployment has been performed.
 
 Runtime and Japanese-font upstream license/copyright notices are bundled under dist/licenses/THIRD_PARTY.txt and included in the APK's same byte-exact asset check.
+
+Android suspends WebView timers with KeepRunning=false. The UI also ignores ticks between native pause/resume events, including file-picker suspension; resume never converts elapsed wall time into game days. Browser clock regression and APK config/XML inspection cover the contract; verify actual background/foreground behavior on hardware.

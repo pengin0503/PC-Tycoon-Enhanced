@@ -11,3 +11,5 @@ it('Android package and native bridge identify the same application',()=>{
 it('native packaging uses the shared local web bundle without a remote server',()=>{
  expect(config.webDir).toBe('../../dist');expect(config.server?.url).toBeUndefined();
 });
+
+it('native lifecycle pauses WebView timers outside the active game',()=>{expect(config.cordova?.preferences?.KeepRunning).toBe('false');});

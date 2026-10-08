@@ -5,11 +5,13 @@ import json
 import zipfile
 import os
 import subprocess
+import re
 root = Path(__file__).resolve().parents[1]
 apk = root / 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk'
 with zipfile.ZipFile(apk) as package:
     config = json.loads(package.read('assets/capacitor.config.json'))
     assert config['appId'] == 'com.pengin0503.pctycoon'
+    assert config.get('cordova', {}).get('preferences', {}).get('KeepRunning') == 'false'
     assert not config.get('server', {}).get('url'), 'Native game must use bundled assets'
     files = [file for file in (root / 'dist').rglob('*') if file.is_file()]
     for file in files:
@@ -21,4 +23,6 @@ sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '')
 badging = subprocess.check_output([str(sdk / 'build-tools/36.0.0/aapt'), 'dump', 'badging', str(apk)], text=True)
 assert "package: name='com.pengin0503.pctycoon'" in badging
 assert "sdkVersion:'24'" in badging and "targetSdkVersion:'36'" in badging
+xml = subprocess.check_output([str(sdk / 'build-tools/36.0.0/aapt'), 'dump', 'xmltree', str(apk), 'res/xml/config.xml'], text=True)
+assert re.search(r'name[^\n]*KeepRunning[\s\S]*?value[^\n]*"false"', xml), 'Native timer preference is absent from Android XML'
 print(f'APK verified: {len(files)} current web assets; no remote server; SHA256 {hashlib.sha256(apk.read_bytes()).hexdigest()}')
