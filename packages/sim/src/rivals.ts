@@ -53,7 +53,7 @@ export function rivalCommand(s:GameState,c:GameCommand):boolean{
  const overheads=new Map(affected.map(p=>[p.id,assemblyOverhead(s,p)]));
  for(const p of products){
   const id=`p-${s.products.length+1}`;mapping.set(p.id,id);
-  s.products.push({...p,id,spec:{...defaultSpec(r.focus),sourceRivalId:p.id},inventoryValue:inventoryValue(p),remaining:0,line:false,sold:0,revenue:0,profit:0});
+  s.products.push({...p,id,spec:defaultSpec(r.focus),inventoryValue:inventoryValue(p),remaining:0,line:false,sold:0,revenue:0,profit:0});
   p.inventory=0;p.inventoryValue=0;
  }
  for(const p of affected){
