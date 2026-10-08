@@ -5,6 +5,8 @@ import {hardwareBalance} from '../../content/src/hardware';
 import {techEffect} from '../../content/src/research';
 import {validateVisual,visualFinishCost} from './visual';
 import {assertProductPrice} from './pricing';
+import {osRequirements,meetsOSRequirements} from './os';
+import {osBalance} from '../../content/src/os';
 /** Production overhead is fixed at design time, excluding separately sourced components. */
 export function assemblyOverhead(s:GameState,p:Product):number{
  if(typeof p.spec.assemblyOverhead==='number')return Number(p.spec.assemblyOverhead);
@@ -14,13 +16,18 @@ export function assemblyOverhead(s:GameState,p:Product):number{
  return Math.max(1,p.unitCost-own-generic-Number(p.spec.procurementCost??0));
 }
 
+/** Own, generic vendor or (unless acquired, when not `allowLegacy`) launched rival part by id. */
+export function findPart(s:GameState,id:string|undefined,allowLegacy=false){
+ if(id===undefined)return undefined;
+ return s.products.find(p=>p.id===id)??vendorParts.find(p=>p.id===id)??s.rivals.flatMap(r=>(allowLegacy||!r.acquired)?r.products.filter(p=>p.launched):[]).find(p=>p.id===id);
+}
 /** Parts referenced by a PC/laptop spec; the optional PSU slot is included only when present. */
 export function deviceParts(spec:Record<string,string|number>):Partial<Record<typeof deviceSlots[number],string>>{
  return Object.fromEntries(deviceSlots.filter(k=>spec[k]!==undefined).map(k=>[k,String(spec[k])]));
 }
 export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,purpose:'gaming'|'office'|'server',kind:'pc'|'laptop',osId?:string,allowLegacy=false){
  const rivals=s.rivals.flatMap(r=>r.products.map(p=>({part:p,owner:r})));
- const resolve=(k:string)=>{const p=s.products.find(p=>p.id===parts[k])??vendorParts.find(p=>p.id===parts[k])??rivals.find(x=>x.part.id===parts[k]&&(allowLegacy||!x.owner.acquired)&&x.part.launched)?.part;
+ const resolve=(k:string)=>{const p=findPart(s,parts[k],allowLegacy);
   if(!p||p.kind!==k||('remaining'in p&&p.remaining>0))throw new Error('利用可能な部品を選択してください');return p;};
  const resolved=(['cpu','gpu','motherboard','ram','storage'] as const).map(resolve);
  const [cpu,gpu,board,ram,storage]=resolved;
@@ -33,7 +40,8 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
  const os=osId?s.products.find(p=>p.id===osId&&p.kind==='os'&&p.launched):undefined;if(osId&&!os)throw new Error('発売済みOSが必要です');
  const factors=[cpu,gpu,ram,storage].map((p,i)=>p.performance/b.referencePerformance[i]);
  const score=factors.reduce((sum,x,i)=>sum+x*b.purposeWeights[purpose][i],0)*b.scoreScale;
- const osFactor=os?(b.os.baseCompatibility+Number(os.spec.compatibility)*b.os.compatibilityWeight)*(b.os.qualityFloor+Number(os.spec.quality)*b.os.qualityWeight):b.os.withoutOS;
+ const unmet=os&&!meetsOSRequirements(s,parts as Record<string,string>,osRequirements(os))?osBalance.unmetPerformance:1;
+ const osFactor=os?(b.os.baseCompatibility+Number(os.spec.compatibility)*b.os.compatibilityWeight)*(b.os.qualityFloor+Number(os.spec.quality)*b.os.qualityWeight)*unmet:b.os.withoutOS;
  const e=(axis:string)=>techEffect(s.research.completed,kind,axis);
  return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability),performance:Math.round(score*osFactor*(1+Math.max(0,e('compute')-hardwareBalance.rootComputeBonus)+e('compatibility'))*(kind==='laptop'?b.laptopCooling:1)),power:Math.round(resolved.reduce((n,p)=>n+p.power,0)*Math.exp(-e('power'))),unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round((b.caseCost+(kind==='laptop'?b.laptopPackaging:0))*Math.exp(-e('cost')*b.packagingResearchScale))+(os?os.unitCost:0)};
 }

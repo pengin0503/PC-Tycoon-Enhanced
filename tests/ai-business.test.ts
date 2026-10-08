@@ -6,8 +6,8 @@ import {aiHardwareBoost} from '../packages/sim/src/ai';
 import {defaultSpec} from '../packages/content/src/hardware';
 const cmd=(s:any,c:any)=>command(s,c);
 const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
-function ready(){
- let s=createGame({id:'ai',name:'AI社',year:2026,difficulty:'normal',seed:1});
+function ready(seed=1){
+ let s=createGame({id:'ai',name:'AI社',year:2026,difficulty:'normal',seed});
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
  s.research.completed.push('gpu-compute-1');
  s=cmd(s,{type:'design',kind:'gpu',name:'Own AI GPU',spec:{...defaultSpec('gpu'),vram:32},price:600});
@@ -29,7 +29,10 @@ it('budget VRAM and reservations reject atomically',()=>{
 it('benchmarks saturate and data quality is consequential',()=>{
  const benchmark=(math as any).benchmarks;expect(benchmark).toBeTypeOf('function');const low=benchmark({...design,quality:.2}),high=benchmark(design);expect(high.math).toBeGreaterThan(low.math);
  for(const score of Object.values(benchmark({...design,tokens:1e13})))expect(score).toBeLessThan(100);
- const lowData=cmd(cmd(ready(),{...train,design:{...design,quality:.1,diversity:.1}}),{type:'advance',days:7});expect(lowData.models[0].status).toBe('failed');
+ // failure is seeded: poor data fails on some seeds, good data on none
+ const outcome=(seed:number,quality:number)=>cmd(cmd(ready(seed),{...train,design:{...design,quality,diversity:quality}}),{type:'advance',days:7}).models[0].status;
+ const seeds=Array.from({length:30},(_,i)=>i+1);
+ expect(seeds.some(seed=>outcome(seed,.1)==='failed')).toBe(true);expect(seeds.every(seed=>outcome(seed,.8)!=='failed')).toBe(true);
 });
 it('subscriptions charge monthly and open weights improve reputation without API revenue',()=>{
  const trained=cmd(cmd(ready(),train),{type:'advance',days:7});

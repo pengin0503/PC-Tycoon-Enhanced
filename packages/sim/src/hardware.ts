@@ -11,6 +11,7 @@ import {competitorPressure,settleProcurement} from './rivals';
 import {assertProductPrice} from './pricing';
 import {aiHardwareBoost,founderProjects} from './ai';
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
+import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import type {GameState,GameCommand} from './types';
 export function evaluateHardware(kind:HardwareKind,input:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
@@ -51,7 +52,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  }
  if(c.type==='launch'||c.type==='line'||c.type==='price'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
-  if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);}
+  if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);launchReception(s,p,c.presentation??'none');}
   if(c.type==='line'){if(!p.launched||p.kind==='os')throw new Error('発売済みハードウェアを選択してください');p.target=c.target;p.line=c.target>0;}
   if(c.type==='price'){assertProductPrice(c.price,p);p.price=c.price;}
   return true;
@@ -85,7 +86,7 @@ export function sellProducts(s:GameState){
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(b.valueCeiling,p.performance/def.reference)*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1));
   const units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,Math.max(0,demand));
   if(units){
    const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);p.sold+=units;
@@ -94,7 +95,9 @@ export function sellProducts(s:GameState){
    p.revenue+=units*(p.price-license);p.profit+=units*(p.price-license+(bundled?.unitCost??0))-actualCost;
    if(bundled){bundled.sold+=units;bundled.revenue+=units*license;bundled.profit+=units*(license-bundled.unitCost);}
    income(s,units*p.price);if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
+   weeklyFans(s,p,units);
   }
+  decayHype(p);
  }
 }
 export function researchAndDevelopment(s:GameState){

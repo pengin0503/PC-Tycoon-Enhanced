@@ -1,5 +1,6 @@
 import {offices,managementBalance as b} from '../../content/src/management';
 import {expense,logEvent} from './finance';
+import {fanBalance} from '../../content/src/market';
 import {osMonthlyCost} from './devices';
 import type {GameState,GameCommand} from './types';
 export function workBonus(s:GameState,role:'research'|'engineering'|'ai'){return s.staff.filter(e=>e.role===role).reduce((n,e)=>n+e.skill*b.workPerSkill,0);}
@@ -16,8 +17,8 @@ export function managementCommand(s:GameState,c:GameCommand):boolean{
  }
 }
 export function marketingWeek(s:GameState){
- s.company.awareness*=b.awarenessDecay;
- if(s.advertising){if(s.company.cash<s.advertising||s.company.debt>0){s.advertising=0;logEvent(s,'marketingStopped');}else{expense(s,s.advertising);const staff=s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill,0);s.company.awareness=Math.min(100,s.company.awareness+Math.sqrt(s.advertising)/b.advertisingAwareness*(1+staff/b.marketingSkillScale));s.company.reputation=Math.min(100,s.company.reputation+b.advertisingReputation);}}
+ s.company.awareness*=b.awarenessDecay;s.company.fans=Math.floor(s.company.fans*fanBalance.weeklyDecay);
+ if(s.advertising){if(s.company.cash<s.advertising||s.company.debt>0){s.advertising=0;logEvent(s,'marketingStopped');}else{expense(s,s.advertising);const staff=s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill,0);s.company.awareness=Math.min(100,s.company.awareness+Math.sqrt(s.advertising)/b.advertisingAwareness*(1+staff/b.marketingSkillScale));s.company.reputation=Math.min(100,s.company.reputation+b.advertisingReputation);s.company.fans+=Math.round(Math.sqrt(s.advertising)*fanBalance.advertisingRoot*(1+staff/b.marketingSkillScale));}}
 }
 export function monthlyCosts(s:GameState){return offices[s.officeLevel-1].monthlyCost+(s.factoryLevel-1)*b.factoryMonthly+s.staff.reduce((n,e)=>n+e.salary,0)+osMonthlyCost(s)+Math.round(s.company.loan*(s.difficulty==='hard'?b.hardInterest:b.normalInterest));}
 export function monthlyHistory(s:GameState,share=0){s.history.push({day:s.day,cash:s.company.cash,debt:s.company.debt,loan:s.company.loan,...s.finance,share});s.history=s.history.slice(-b.historyLimit);}

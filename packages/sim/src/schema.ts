@@ -7,7 +7,10 @@ export const money = z.number().int().min(0).max(balance.moneyLimit);
 export const seedSchema = z.number().int().min(0).max(0xffffffff);
 export const specSchema=z.record(z.string(),z.union([z.number(),z.string().max(80)]));
 export const visualSchema=z.object({tier:z.number().int().min(0).max(5),color:z.enum(['graphite','silver','teal'])}).strict();
-export const productSchema=z.object({visual:visualSchema.optional(),id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
+export const reviewSchema=z.object({score:z.number().int().min(0).max(100),stars:z.number().min(1).max(5),
+ axes:z.object({performance:z.number().min(0).max(100),value:z.number().min(0).max(100),quality:z.number().min(0).max(100),design:z.number().min(0).max(100),innovation:z.number().min(0).max(100)}).strict(),
+ outlets:z.array(z.object({name:z.string().min(1).max(40),score:z.number().int().min(0).max(100),comment:z.string().max(200)}).strict()).max(8)}).strict();
+export const productSchema=z.object({visual:visualSchema.optional(),review:reviewSchema.optional(),hype:z.number().min(0).max(100).optional(),id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
  performance:z.number().positive(),power:z.number().nonnegative(),unitCost:z.number().int().positive(),remaining:z.number().nonnegative(),inventoryValue:z.number().int().min(0).max(1e12).optional(),
  reliability:z.number().min(.1).max(1).default(.9),price:z.number().int().min(1).max(1000000),inventory:z.number().int().min(0).max(100000),target:z.number().int().min(0).max(100000),
  line:z.boolean(),launched:z.boolean(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
@@ -21,7 +24,7 @@ export const gameSchema = z.object({
   version: z.literal(1), id: z.string().min(1).max(80), seed: seedSchema,
   initialSeed: seedSchema, day: z.number().int().min(0).max(1_000_000), year: z.number().int().min(1970).max(2200),
   difficulty: z.enum(['normal','hard']),
-  company: z.object({name:z.string().trim().min(1).max(80),cash:money,debt:money,loan:money.default(0),reputation:z.number().min(0).max(100),awareness:z.number().min(0).max(100)}).strict(),
+  company: z.object({name:z.string().trim().min(1).max(80),cash:money,debt:money,loan:money.default(0),fans:z.number().int().min(0).max(1e12).default(0),reputation:z.number().min(0).max(100),awareness:z.number().min(0).max(100)}).strict(),
   finance: z.object({revenue:money,expenses:money,capital:money}).strict(),
   research:z.object({completed:z.array(z.string()).max(5000),active:z.array(z.object({id:z.string(),remaining:z.number().nonnegative()}).strict()).max(20)}).default(()=>({completed:[],active:[]})),
   products:z.array(productSchema).max(500).default([]),
@@ -48,7 +51,7 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('eventDecision'),choice:z.enum(['invest','ignore'])}).strict(),
  z.object({type:z.literal('markNotificationsRead'),id:z.number().int().min(0)}).strict(),
  z.object({type:z.literal('design'),kind:z.enum(hardwareKinds),name:z.string().trim().min(1).max(80),spec:specSchema,visual:visualSchema.optional(),price:z.number().int().min(1).max(1000000)}).strict(),
- z.object({type:z.literal('launch'),id:z.string().min(1)}).strict(),
+ z.object({type:z.literal('launch'),id:z.string().min(1),presentation:z.enum(['none','online','event','keynote']).optional()}).strict(),
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(100000)}).strict(),
  z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1000000)}).strict(),
  z.object({type:z.literal('assemble'),kind:z.enum(['pc','laptop']),name:z.string().trim().min(1).max(80),parts:z.object({cpu:z.string(),gpu:z.string(),motherboard:z.string(),ram:z.string(),storage:z.string(),psu:z.string().optional()}).strict(),purpose:z.enum(['gaming','office','server']),appearance:z.enum(['graphite','silver','teal']),visual:visualSchema.optional(),price:z.number().int().min(1).max(1000000),osId:z.string().optional()}).strict(),
