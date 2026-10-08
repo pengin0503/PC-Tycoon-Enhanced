@@ -1,6 +1,6 @@
 import {productCatalog} from '../../content/src/devices';
 /** Simulation-only, deterministic allowable product pricing, not a real-world price claim. */
-export function priceRange(p:{kind:string;unitCost:number;performance:number;reliability:number;visual?:{tier:number}}){
+export function priceRange(p:{kind:string;unitCost:number;performance:number;reliability:number;visual?:{tier:number;color?:string}}){
  const reference=productCatalog[p.kind as keyof typeof productCatalog]?.reference??1000;
  const relative=Math.max(.1,Math.min(10,p.performance/reference));
  const quality=Math.max(.1,Math.min(1,p.reliability));
