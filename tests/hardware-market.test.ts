@@ -3,11 +3,12 @@ import {createGame,command} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
 import {importSave,exportSave} from '../packages/save/src/index';
 import {priceRange} from '../packages/sim/src/pricing';
+import {evaluateHardware} from '../packages/sim/src/hardware';
 const cmd=(s:any,c:any)=>command(s,c);
 function developed(kind:any='cpu'){
  let s=createGame({id:'market',name:'製品社',year:2026,difficulty:'normal',seed:42});
  s=cmd(s,{type:'research',id:`${kind}-compute-1`});s=cmd(s,{type:'advance',days:7});
- s=cmd(s,{type:'design',kind,name:'第一世代',spec:defaultSpec(kind),price:400});return cmd(s,{type:'advance',days:14});
+ const spec=defaultSpec(kind);const metrics=evaluateHardware(kind,spec,[...s.research.completed]);const {max}=priceRange({kind,...metrics});s=cmd(s,{type:'design',kind,name:'第一世代',spec,price:Math.min(400,max)});return cmd(s,{type:'advance',days:14});
 }
 function released(){let s=cmd(developed(),{type:'launch',id:'p-1'});return cmd(s,{type:'line',id:'p-1',target:100});}
 it('manufactures inventory then sells with positive unit economics',()=>{

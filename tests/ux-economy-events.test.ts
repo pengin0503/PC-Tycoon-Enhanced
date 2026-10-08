@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
-import {evaluateHardware} from '../packages/sim/src/hardware';
+import {evaluateHardware,manufacture} from '../packages/sim/src/hardware';
 import {priceRange} from '../packages/sim/src/pricing';
 import {importSave,exportSave} from '../packages/save/src/index';
 const fresh=()=>createGame({id:'new-features',name:'統合テスト社',year:2026,difficulty:'normal',seed:91});
@@ -31,7 +31,7 @@ it('rival parts are bought from limited stock and revenue goes to supplier',()=>
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:10});
  const stock=s.rivals[0].products[0].inventory;
  const before=s.rivals[0].cash;
- const n=cmd(s,{type:'advance',days:1});
+ const n=structuredClone(s);n.day++;manufacture(n);
  expect(n.products[0].inventory).toBeGreaterThan(0);
  expect(n.rivals[0].products[0].inventory).toBe(stock-n.products[0].inventory);
  expect(n.rivals[0].cash).toBe(before+n.products[0].inventory*500);

@@ -35,3 +35,14 @@ export function command(state: GameState, input: GameCommand): GameState {
   }
   return validateGame(s);
 }
+
+/** UI progression halts at the first unresolved decision; batch simulation replay stays unchanged. */
+export function advanceInteractive(state:GameState,days:number):GameState{
+ if(!Number.isInteger(days)||days<0||days>31)throw new Error('時間操作の指定が不正です');
+ let result=state;
+ for(let i=0;i<days;i++){
+  if(result.pendingDecision)break;
+  result=command(result,{type:'advance',days:1});
+ }
+ return result;
+}
