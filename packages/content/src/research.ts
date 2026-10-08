@@ -1,4 +1,4 @@
-export const hardwareKinds=['cpu','gpu','motherboard','ram','storage','monitor'] as const;
+export const hardwareKinds=['cpu','gpu','motherboard','ram','storage','monitor','psu'] as const;
 export type HardwareKind=typeof hardwareKinds[number];
 export type Tech={id:string,label:string,category:string,axis:string,level:number,generation:number,cost:number,work:number,prerequisites:string[],effect:number};
 export const researchDomains=[...hardwareKinds,'pc','laptop','os','ai'];

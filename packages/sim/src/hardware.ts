@@ -1,8 +1,8 @@
-import {hardwareCatalog,hardwareBalance as b,type Spec} from '../../content/src/hardware';
+import {hardwareCatalog,hardwareBalance as b,capacityScaledFields,normalizeSpec,type Spec} from '../../content/src/hardware';
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,income,logEvent} from './finance';
 import {nextRandom} from './random';
-import {productCatalog,vendorParts} from '../../content/src/devices';
+import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
 import {assemblyOverhead} from './devices';
 import {addStock,removeStock} from './inventory';
 import {offices,managementBalance} from '../../content/src/management';
@@ -12,22 +12,23 @@ import {assertProductPrice} from './pricing';
 import {aiHardwareBoost,founderProjects} from './ai';
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import type {GameState,GameCommand} from './types';
-export function evaluateHardware(kind:HardwareKind,spec:Spec,completed:string[]){
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:string[]){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
- if(Object.keys(spec).length!==Object.keys(def.fields).length)throw new Error('仕様の項目が不正です');
+ const spec=normalizeSpec(kind,input);
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);}
-  else if(typeof v!=='number'||!Number.isFinite(v)||v<field.min!||v>field.max!*(1+(['cores','units','vram','slots','capacity','resolution'].includes(key)?techEffect(completed,kind,'capacity'):0))||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
+  else if(typeof v!=='number'||!Number.isFinite(v)||v<field.min!||v>field.max!*(1+(capacityScaledFields.includes(key)?techEffect(completed,kind,'capacity'):0))||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
  }
  const n=(k:string)=>Number(spec[k]);let performance=0,power=0,unitCost=0;
  switch(kind){
-  case'cpu':performance=n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient;power=n('cores')*n('clock')**2*n('process')/b.cpu.referenceProcess*b.cpu.powerCoefficient;unitCost=n('cores')*b.cpu.coreCost+n('clock')*b.cpu.clockCost+n('ipc')*b.cpu.ipcCost;break;
+  case'cpu':performance=n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient*(n('cache')/b.cpu.cacheReference)**b.cpu.cacheExponent;power=n('cores')*n('clock')**2*n('process')/b.cpu.referenceProcess*b.cpu.powerCoefficient;unitCost=n('cores')*b.cpu.coreCost+n('clock')*b.cpu.clockCost+n('ipc')*b.cpu.ipcCost+(n('cache')-b.cpu.cacheReference)*b.cpu.cacheCost;break;
   case'gpu':performance=n('units')*n('clock')*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/b.gpu.referenceBandwidth);power=n('units')*n('clock')**2*b.gpu.powerCoefficient;unitCost=n('units')*b.gpu.unitCost+n('vram')*b.gpu.vramCost+n('bandwidth')*b.gpu.bandwidthCost;break;
   case'motherboard':performance=n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore;power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost;break;
   case'ram':performance=n('capacity')*n('speed')/b.ram.scoreDivisor;power=n('capacity')*b.ram.powerCoefficient;unitCost=n('capacity')*b.ram.capacityCost+n('speed')*b.ram.speedCost;break;
   case'storage':performance=n('capacity')*b.storage.capacityScore+n('speed')*b.storage.speedScore;power=n('speed')*b.storage.powerCoefficient;unitCost=n('capacity')*b.storage.capacityCost+n('speed')*b.storage.speedCost;break;
+  case'psu':{const m=String(spec.modular) as 'none'|'semi'|'full';performance=n('wattage')*n('efficiency')/100*b.psu.modularScore[m];power=n('wattage')*(1-n('efficiency')/100)*b.psu.lossCoefficient;unitCost=n('wattage')*b.psu.wattageCost+(n('efficiency')-b.psu.efficiencyBase)*b.psu.efficiencyCost+b.psu.modularCost[m];break;}
   case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*b.monitor.powerCoefficient;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
  performance*=1+Math.max(0,techEffect(completed,kind,'compute')-b.rootComputeBonus);
@@ -43,9 +44,10 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   expense(s,Math.round(t.cost*(s.difficulty==='hard'?managementBalance.hardResearchCost:1)));s.research.active.push({id:c.id,remaining:t.work});logEvent(s,'researchStarted',t.label);return true;
  }
  if(c.type==='design'){
-  if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
+  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual});
-  expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:c.spec,...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
+  expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
  if(c.type==='launch'||c.type==='line'||c.type==='price'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
@@ -61,10 +63,10 @@ export function manufacture(s:GameState){
  const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=Math.floor(b.baseFactoryCapacity*s.factoryLevel*s.modifiers.production);
  for(let i=0;i<lines.length;i++){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
-  const own=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
-  const sourced=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x):[];
+  const own=p.kind==='pc'||p.kind==='laptop'?deviceSlots.map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
+  const sourced=p.kind==='pc'||p.kind==='laptop'?deviceSlots.map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x):[];
   const device=p.kind==='pc'||p.kind==='laptop';
-  const keys=['cpu','gpu','motherboard','ram','storage'];
+  const keys=deviceSlots;
   const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
   const generic=device?keys.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0):0;
   const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
