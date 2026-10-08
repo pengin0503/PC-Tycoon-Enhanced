@@ -28,14 +28,20 @@ function slidersFor(category:string):Slider[]{
  return [];
 }
 /** Branches whose research still applies a direct bonus (the others only widen sliders). OS capacity only widens support. */
-const directAxes=new Set(['power','cost','reliability','capacity','visual']);
+const directAxes=new Set(['power','cost','reliability','capacity']);
 const hasDirectEffect=(t:Tech)=>t.category==='ai'||(directAxes.has(t.axis)&&!(t.category==='os'&&t.axis==='capacity'));
+/** Appearance research unlocks one grade per stage up to this tier (`unlockedVisualTier`); later stages add nothing. */
+const maxVisualTier=5;
 /**
  * What completing `t` (with its earlier stages) gives: the slider bounds it widens and any direct bonus.
- * Bounds are shown as they will be once this stage is done.
+ * Bounds are shown as they are right after this stage, so a completed card keeps showing what that stage unlocked
+ * even when later stages of the same branch are done.
  */
 export function techEffectText(t:Tech,completed:readonly string[]){
- const chain=new Set(completed);for(let level=1;level<=t.level;level++)chain.add(`${t.category}-${t.axis}-${level}`);
+ if(t.axis==='visual')return t.level<=maxVisualTier?`外観グレード ${t.level} を解放`:`外観グレードは最上位の${maxVisualTier}まで解放済みです`;
+ const branch=`${t.category}-${t.axis}-`;
+ const chain=new Set(completed.filter(id=>!id.startsWith(branch)||Number(id.slice(branch.length))<=t.level));
+ for(let level=1;level<=t.level;level++)chain.add(`${branch}${level}`);
  const after=[...chain];
  const sliders=slidersFor(t.category).filter(f=>f.unlock?.axes.includes(t.axis)).map(f=>{
   const r=unlockedRange(f,t.category,after);return `${f.label}${f.lowerIsBetter?`下限 ${f.format(r.min)}`:`上限 ${f.format(r.max)}`}`;
