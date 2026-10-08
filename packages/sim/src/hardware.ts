@@ -61,9 +61,10 @@ export function manufacture(s:GameState){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
   const own=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
   const sourced=p.kind==='pc'||p.kind==='laptop'?['cpu','gpu','motherboard','ram','storage'].map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x):[];
+  const invalidSupplier=(p.kind==='pc'||p.kind==='laptop')&&s.rivals.some(r=>r.products.some(part=>part.id===p.spec.cpu||part.id===p.spec.gpu||part.id===p.spec.motherboard||part.id===p.spec.ram||part.id===p.spec.storage)&&r.acquired);
   const currentSourcing=sourced.reduce((n,x)=>n+x.part.price,0);
   const cashCost=Math.max(1,p.unitCost-own.reduce((n,part)=>n+part.unitCost,0)-Number(p.spec.procurementCost??0)+currentSourcing);
-  const units=Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
+  const units=invalidSupplier?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
   if(units>0){expense(s,units*cashCost);own.forEach(part=>part.inventory-=units);for(const x of sourced)settleProcurement(x.owner,x.part,units);p.inventory+=units;capacity-=units;}
  }
 }
