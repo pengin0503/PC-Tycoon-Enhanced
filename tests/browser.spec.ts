@@ -29,3 +29,12 @@ test('bundled Japanese fonts decode for offline-capable UI',async({page})=>{
  await page.goto('/');await page.evaluate(()=>document.fonts.ready);
  expect(await page.evaluate(()=>[...document.fonts].some(f=>f.family.includes('Noto Sans JP Variable')&&f.status==='loaded'))).toBe(true);
 });
+
+test('native pause and resume events suspend time without catching up',async({page})=>{
+ await page.clock.install();await page.goto('/');await page.getByRole('button',{name:'会社を設立'}).click();
+ await page.getByRole('button',{name:'1x',exact:true}).click();
+ await page.evaluate(()=>document.dispatchEvent(new Event('pause')));
+ await page.clock.fastForward(5000);await expect(page.getByTestId('day')).toHaveText('0');
+ await page.evaluate(()=>document.dispatchEvent(new Event('resume')));
+ await page.clock.fastForward(1000);await expect(page.getByTestId('day')).toHaveText('1');
+});
