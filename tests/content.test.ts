@@ -8,10 +8,10 @@ import {estimateLLM,estimateInference} from '../packages/sim/src/ai-math';
 import * as events from '../packages/sim/src/events';
 const cmd=(s:any,c:any)=>command(s,c);
 it('catalog contains 3000 unique reachable effect-bearing nodes',()=>{
- expect(techCatalog).toHaveLength(3040);expect(new Set(techCatalog.map(t=>t.id)).size).toBe(3040);
+ expect(techCatalog).toHaveLength(3345);expect(new Set(techCatalog.map(t=>t.id)).size).toBe(3345);
  const map=new Map(techCatalog.map(t=>[t.id,t]));const visiting=new Set<string>(),seen=new Set<string>();
- const visit=(id:string)=>{expect(visiting.has(id)).toBe(false);if(seen.has(id))return;const t=map.get(id)!;expect(t).toBeDefined();expect(t.effect).toBeGreaterThan(0);visiting.add(id);t.prerequisites.forEach(visit);visiting.delete(id);seen.add(id);};techCatalog.forEach(t=>visit(t.id));expect(seen.size).toBe(3040);
- expect(new Set(techCatalog.map(t=>t.category)).size).toBe(10);for(const cat of new Set(techCatalog.map(t=>t.category)))expect(new Set(techCatalog.filter(t=>t.category===cat&&t.axis!=='visual').map(t=>t.axis)).size).toBe(6);
+ const visit=(id:string)=>{expect(visiting.has(id)).toBe(false);if(seen.has(id))return;const t=map.get(id)!;expect(t).toBeDefined();expect(t.effect).toBeGreaterThan(0);visiting.add(id);t.prerequisites.forEach(visit);visiting.delete(id);seen.add(id);};techCatalog.forEach(t=>visit(t.id));expect(seen.size).toBe(3345);
+ expect(new Set(techCatalog.map(t=>t.category)).size).toBe(11);for(const cat of new Set(techCatalog.map(t=>t.category)))expect(new Set(techCatalog.filter(t=>t.category===cat&&t.axis!=='visual').map(t=>t.axis)).size).toBe(6);
 });
 it('hardware research changes compute power cost reliability and capacity',()=>{
  const base=['cpu-compute-1'];const a=evaluateHardware('cpu',defaultSpec('cpu'),base);

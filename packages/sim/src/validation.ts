@@ -3,7 +3,7 @@ import {techById,hardwareKinds,type HardwareKind} from '../../content/src/resear
 import {aiGPUs} from '../../content/src/ai';
 import {offices} from '../../content/src/management';
 import {evaluateHardware} from './hardware';
-import {evaluateDevice} from './devices';
+import {evaluateDevice,deviceParts} from './devices';
 import {estimateInference} from './ai-math';
 import type {GameState} from './types';
 export function validateGame(value:unknown):GameState{
@@ -20,11 +20,14 @@ export function validateGame(value:unknown):GameState{
   if(notice.id<=prevNotice||notice.id>s.notificationSeq||notice.day>s.day)fail('通知履歴の順序が不正です');
   prevNotice=notice.id;
  }
+ if(s.pendingAttack&&!s.products.some(p=>p.id===s.pendingAttack!.osId&&p.kind==='os'))fail('攻撃対象のOSが見つかりません');
+ for(const o of s.offers)if(!s.products.some(p=>p.id===o.productId))fail('取引対象の製品が見つかりません');
+ unique(s.offers.map(o=>String(o.id)),'取引');unique(s.candidates.map(k=>k.id),'候補者');
  for(const p of s.products)if(p.inventoryValue!==undefined&&p.inventory===0&&p.inventoryValue!==0)fail('空在庫に原価が残っています');
  let previous=0;for(const h of s.history){if(h.day>s.day||h.day<=previous)fail('決算履歴の日付が不正です');previous=h.day;}
  for(const p of s.products){if(p.launched&&p.remaining>0)fail('開発中の製品が発売されています');if(!p.launched&&(p.inventory>0||p.line))fail('発売前製品の生産状態が不正です');if(p.releaseDay>s.day)fail('発売日が未来です');
   if((hardwareKinds as readonly string[]).includes(p.kind))evaluateHardware(p.kind as HardwareKind,p.spec,s.research.completed);
-  if(p.kind==='pc'||p.kind==='laptop'){const parts=Object.fromEntries(['cpu','gpu','motherboard','ram','storage'].map(k=>[k,String(p.spec[k])]));if(!['gaming','office','server'].includes(String(p.spec.purpose)))fail('端末用途が不正です');evaluateDevice(s,parts,p.spec.purpose as 'gaming'|'office'|'server',p.kind,p.spec.osId?String(p.spec.osId):undefined,true);}
+  if(p.kind==='pc'||p.kind==='laptop'){const parts=deviceParts(p.spec);if(!['gaming','office','server'].includes(String(p.spec.purpose)))fail('端末用途が不正です');evaluateDevice(s,parts,p.spec.purpose as 'gaming'|'office'|'server',p.kind,p.spec.osId?String(p.spec.osId):undefined,true);}
  }
  for(const c of s.clusters){if(!aiGPUs.some(g=>g.id===c.gpuId)&&!s.products.some(p=>p.id===c.gpuId&&p.kind==='gpu'))fail('クラスタのGPU参照が不正です');if(c.serverId!=='vendor'&&!s.products.some(p=>p.id===c.serverId&&p.kind==='pc'&&p.spec.purpose==='server'))fail('クラスタのサーバー参照が不正です');}
  const occupied=new Set<string>();const reserve=(id:string)=>{if(occupied.has(id))fail('クラスタが重複割当されています');occupied.add(id);};

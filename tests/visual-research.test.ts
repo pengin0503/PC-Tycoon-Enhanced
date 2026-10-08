@@ -4,10 +4,10 @@ import {createGame,command,gameSchema} from '../packages/sim/src/index';
 const start=()=>createGame({id:'visual-legacy',name:'デザイン社',year:2026,difficulty:'normal',seed:42});
 const cpu={cores:4,clock:3,ipc:1,process:14,socket:'Atlas'};
 const design=(visual?:{tier:number,color:'graphite'|'silver'|'teal'})=>({type:'design',kind:'cpu',name:'C1',spec:cpu,price:400,...(visual?{visual}:{})} as const);
-it('adds 40 reachable, non-duplicated visual research milestones without replacing existing technology',()=>{
- expect(techCatalog).toHaveLength(3040);
- expect(new Set(techCatalog.map(t=>t.id)).size).toBe(3040);
- for(const cat of ['cpu','gpu','motherboard','ram','storage','monitor','pc','laptop']){
+it('adds 45 reachable, non-duplicated visual research milestones without replacing existing technology',()=>{
+ expect(techCatalog).toHaveLength(3345);
+ expect(new Set(techCatalog.map(t=>t.id)).size).toBe(3345);
+ for(const cat of ['cpu','gpu','motherboard','ram','storage','monitor','psu','pc','laptop']){
   for(let level=1;level<=5;level++){
    const t=techCatalog.find(x=>x.id===cat+'-visual-'+level);
    expect(t).toBeDefined();

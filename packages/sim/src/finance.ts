@@ -4,7 +4,7 @@ export function logEvent(s: GameState, kind: string, detail = '') {
   const categories:Record<string,'release'|'research'|'finance'|'event'>={
     rivalLaunch:'release',launched:'release',researchComplete:'research',designComplete:'research',
     insolvency:'finance',serviceStopped:'finance',marketEvent:'event',decisionPending:'event',
-    eventDecision:'event',acquired:'finance'
+    eventDecision:'event',acquired:'finance',reviewPublished:'release',hackerAttack:'event',attackResolved:'event',offerReceived:'finance',acquisitionRejected:'finance',achievement:'event',gameOver:'finance'
   };
   const category=categories[kind];
   if(category){

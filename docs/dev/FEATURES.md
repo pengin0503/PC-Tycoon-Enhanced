@@ -35,3 +35,18 @@
 `packages/` prefixes apply to `sim/src/…`; tests are under `tests/`. UI is under `apps/web/src/`. F5 gates: 87 unit tests, 10 browser tests, strict typecheck and production build. Desktop1440px/mobile390px screenshots reviewed; Japanese font is bundled. 320px horizontal overflow, keyboard and hidden-page timing are browser-tested. Browser emulation is not Android hardware verification.
 
 F6 software gates accepted: production offline/update browser tests and signed debug APK with133 byte-exact web assets, manifest and native pause preference verification. Latest suite:94 Vitest/6 inspector/11 browser/2 PWA tests, typecheck/build. Physical Android launch, touch/WebView/storage/background/picker and APK↔browser JSON transfer remain unverified. CI evidence is in STATUS.md.
+
+## PC Tycoon 2 parity extension (2026-10-08)
+
+Design: `docs/superpowers/specs/2026-10-08-pct2-parity-design.md`. Original mechanics beyond the public store text/update notes are not claimed to match.
+
+| ID | Implemented behavior / primary source | Verification |
+|---|---|---|
+| P2-01 | PSU component, optional PSU slot with wattage headroom; CPU cache; factory 13 levels — `sim/src/hardware.ts`, `devices.ts` | `pct2-components.test.ts`, `pct2-ui.spec.ts` |
+| P2-02 | Launch reviews (5 axes, 4 fictional outlets, stars), fans, presentations/hype, benchmarks — `sim/src/reception.ts`, `benchmark.ts` | `pct2-reception.test.ts`, `hardware.spec.ts` |
+| P2-03 | Research points (instant unlock), distribution network, bulk offers + counter, acquisition bids, candidates/search/traits/firing — `sim/src/business.ts` | `pct2-business.test.ts`, `pct2-ui.spec.ts`, `management.spec.ts` |
+| P2-04 | OS features (security/media/games/store), requirements, lock screen/theme, hacker attacks, installer/lock/desktop preview — `sim/src/os.ts` | `pct2-os.test.ts`, `devices.spec.ts`, `pct2-ui.spec.ts` |
+| P2-05 | Modes (standard/tycoon/long/sandbox), hard-mode game over, achievements, rename/logo — `sim/src/progress.ts` | `pct2-progress.test.ts`, `pct2-ui.spec.ts` |
+| P2-06 | PC Tycoon 2-style flow UI: office home, develop tiles → designer, products + launch presentation → review, upgrades, HR, companies, stats/achievements | all `*.spec.ts` |
+
+Excluded by decision: gems, login rewards, daily quests, slot/lottery, season pass, seasonal events, online leaderboards, cloud sync. Art remains original SVG; no original-game assets are used.

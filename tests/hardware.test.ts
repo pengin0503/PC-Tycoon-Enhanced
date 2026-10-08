@@ -3,14 +3,16 @@ import {createGame,command} from '../packages/sim/src/index';
 const start=()=>createGame({id:'hw',name:'研究社',year:2026,difficulty:'normal',seed:42});
 const cmd=(s:any,c:any)=>command(s,c);
 const cpu={cores:4,clock:3,ipc:1,process:14,socket:'Atlas'};
-it('research has a cash cost and weekly completion',()=>{
- const s=cmd(start(),{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(496000);
- const n=cmd(s,{type:'advance',days:7});expect(n.research.completed).toContain('cpu-compute-1');expect(s.research.completed).toEqual([]);
+it('research spends research points, not cash, and completes immediately',()=>{
+ const before=start();expect(before.company.researchPoints).toBe(100);
+ const s=cmd(before,{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(500000);
+ expect(s.company.researchPoints).toBe(0);expect(s.research.completed).toContain('cpu-compute-1');expect(before.research.completed).toEqual([]);
+ const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(100);
 });
-it('research enforces prerequisites duplicates and finite slots',()=>{
+it('research enforces prerequisites, duplicates and available points',()=>{
  expect(()=>cmd(start(),{type:'research',id:'cpu-compute-2'})).toThrow();expect(()=>cmd(start(),{type:'research',id:'unknown'})).toThrow();
  const s=cmd(start(),{type:'research',id:'cpu-compute-1'});expect(()=>cmd(s,{type:'research',id:'cpu-compute-1'})).toThrow();
- expect(()=>cmd(s,{type:'research',id:'gpu-compute-1'})).toThrow();
+ expect(()=>cmd(s,{type:'research',id:'gpu-compute-1'})).toThrow(/研究ポイント/);
 });
 it('design requires research and reflects real tradeoffs',()=>{
  expect(()=>cmd(start(),{type:'design',kind:'cpu',name:'C1',spec:cpu,price:400})).toThrow();

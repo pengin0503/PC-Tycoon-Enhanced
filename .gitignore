@@ -7,3 +7,4 @@ playwright-report/
 apps/android/android/.gradle/
 apps/android/android/app/build/
 apps/android/android/build/
+__pycache__/

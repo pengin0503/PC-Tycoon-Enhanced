@@ -1,22 +1,46 @@
+import type {GameState} from '../../../packages/sim/src/index';
+import {companyValue} from '../../../packages/sim/src/management';
+import {companyStats} from '../../../packages/sim/src/progress';
+import {productCatalog} from '../../../packages/content/src/devices';
+import {tieredAchievements,milestoneAchievements,achievementLabelMap} from '../../../packages/content/src/achievements';
 import {PanelPages} from './PanelPages';
-import { t as uiText } from './i18n';
-import type { GameState } from '../../../packages/sim/src/index';
-import { companyValue } from '../../../packages/sim/src/management';
-import { productCatalog } from '../../../packages/content/src/devices';
-import { yen, eventLabel } from './i18n';
-function CashChart({ state }: {
-    state: GameState;
-}) {
-    const values = state.history.slice(-24);
-    if (!values.length)
-        return <p>{uiText("ui_cc4d7e1223a2")}</p>;
-    const min = Math.min(0, ...values.map(v => v.cash)), max = Math.max(1, ...values.map(v => v.cash));
-    const point = (v: number, i: number) => [60 + i * 460 / Math.max(1, values.length - 1), 180 - (v - min) / (max - min) * 140];
-    return <svg role="img" aria-label={uiText("ui_8b9c90f146d5")} viewBox="0 0 560 220" className="finance-chart"><title>{uiText("ui_8b9c90f146d5")}</title><line x1="60" x2="520" y1="180" y2="180" stroke="#425573"/><text x="0" y="45" fill="#99aecb" fontSize="10">{yen(max)}</text><text x="0" y="183" fill="#99aecb" fontSize="10">{yen(min)}</text><polyline points={values.map((v, i) => point(v.cash, i).join(',')).join(' ')} fill="none" stroke="#65dec5" strokeWidth="3"/>{values.map((v, i) => { const [cx, cy] = point(v.cash, i); return <circle key={v.day} cx={cx} cy={cy} r="4" fill="#c0ffee"><title>{v.day}{uiText("ui_b4a80e24e1ce")}{yen(v.cash)}</title></circle>; })}<text x="60" y="210" fill="#99aecb" fontSize="11">{values[0].day}{uiText("ui_15917f3b3261")}</text><text x="480" y="210" fill="#99aecb" fontSize="11">{values.at(-1)!.day}{uiText("ui_15917f3b3261")}</text></svg>;
+import {Stars,compact} from './ui';
+import {yen,eventLabel} from './i18n';
+
+function CashChart({state}:{state:GameState}){
+ const values=state.history.slice(-24);
+ if(!values.length)return <p className="empty">最初の月次決算（30日目）以降に推移が表示されます。</p>;
+ const min=Math.min(0,...values.map(v=>v.cash)),max=Math.max(1,...values.map(v=>v.cash));
+ const point=(v:number,i:number)=>[60+i*460/Math.max(1,values.length-1),180-(v-min)/(max-min)*140];
+ const offset=state.history.length-values.length;
+ const revenue=values.map((h,i)=>h.revenue-(i?values[i-1].revenue:state.history[offset-1]?.revenue??0));
+ const top=Math.max(1,...revenue);
+ return <svg role="img" aria-label="月次現金推移" viewBox="0 0 560 220" className="finance-chart"><title>月次現金推移</title>
+  {revenue.map((r,i)=><rect key={'r'+i} x={point(0,i)[0]-6} y={180-r/top*60} width="12" height={r/top*60} fill="#9cc4ff" opacity=".7"><title>{values[i].day}日 売上 {yen(r)}</title></rect>)}
+  <line x1="60" x2="520" y1="180" y2="180" stroke="#b9c6d6"/><text x="0" y="45" fill="#6a7a8f" fontSize="10">{compact(max)}</text><text x="0" y="183" fill="#6a7a8f" fontSize="10">{compact(min)}</text>
+  <polyline points={values.map((v,i)=>point(v.cash,i).join(',')).join(' ')} fill="none" stroke="#2f7cf6" strokeWidth="3"/>
+  {values.map((v,i)=>{const [cx,cy]=point(v.cash,i);return <circle key={v.day} cx={cx} cy={cy} r="4" fill="#2f7cf6"><title>{v.day}日 現金 {yen(v.cash)}</title></circle>;})}
+  <text x="60" y="210" fill="#6a7a8f" fontSize="11">{values[0].day}日</text><text x="480" y="210" fill="#6a7a8f" fontSize="11">{values.at(-1)!.day}日</text></svg>;
 }
-export function FinancePanel({ state }: {
-    state: GameState;
-}) {
-    return <PanelPages labels={['財務概要','製品成績','市場イベント']}><section className="card"><h2>{uiText("ui_c740a255e318")}</h2><p>{uiText("ui_25182ba40f2b")}</p><div className="metrics"><article className="metric"><span>{uiText("ui_29057531c692")}</span><strong>{yen(companyValue(state))}</strong></article><article className="metric"><span>{uiText("ui_f93f084f0d94")}</span><strong>{yen(state.finance.revenue - state.finance.expenses)}</strong></article><article className="metric"><span>{uiText("ui_d792787f9713")}</span><strong>{yen(state.finance.capital)}</strong></article><article className="metric"><span>{uiText("ui_8a3bf5007497")}</span><strong data-testid="finance-months">{state.history.length}</strong></article></div><CashChart state={state}/><div className="scroll-table"><table><caption>{uiText("ui_e49a7cd2613b")}</caption><thead><tr><th>{uiText("ui_f0037a52cdd1")}</th><th>{uiText("ui_e3ca5905c270")}</th><th>{uiText("ui_6c2fc344bf34")}</th><th>{uiText("ui_e5c2bd1d3357")}</th><th>{uiText("ui_5e8a6c3a8220")}</th><th>{uiText("ui_8ab527d6aba3")}</th></tr></thead><tbody>{state.history.map((h, i) => { const prev = state.history[i - 1]; const known = !!prev || h.day === 30; return <tr key={h.day}><td>{h.day}</td><td>{yen(h.cash)}</td><td>{known ? yen(h.revenue - (prev?.revenue ?? 0)) : '—'}</td><td>{known ? yen(h.expenses - (prev?.expenses ?? 0)) : '—'}</td><td>{yen(h.loan)}</td><td>{(h.share * 100).toFixed(1)}%</td></tr>; }).slice(-24)}</tbody></table></div></section>
- <section className="card"><h2>{uiText("ui_c928ba4da1ed")}</h2><div className="scroll-table"><table><thead><tr><th>{uiText("ui_42e37e381a87")}</th><th>{uiText("ui_f24d326beefc")}</th><th>{uiText("ui_3dee782d47b2")}</th><th>{uiText("ui_23577d6abd1c")}</th><th>{uiText("ui_8ed7c68404c3")}</th><th>{uiText("ui_1ed7cf831cb8")}</th><th>{uiText("ui_7977ebd382f8")}</th></tr></thead><tbody>{state.products.map(p => <tr key={p.id}><td>{state.company.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>)}{state.rivals.filter(r => !r.acquired).flatMap(r => r.products.map(p => <tr key={`${r.id}-${p.id}`}><td>{r.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>))}</tbody></table></div></section><section className="card"><h2>{uiText("ui_3dc4015e594f")}</h2><p>{uiText("ui_657ac61ccbda")}{state.modifiers.demand.toFixed(2)}{uiText("ui_dc6011b3e39d")}{state.modifiers.production.toFixed(2)}{uiText("ui_95d408c2ffec")}{state.modifiers.expiresDay || uiText("ui_1a2e920ba7c6")}{uiText("ui_15917f3b3261")}</p><ul className="events">{state.events.filter(e => !['daily', 'weekly'].includes(e.kind)).slice(-50).reverse().map((e, i) => <li key={`${e.day}-${i}`}><span>{e.day}{uiText("ui_15917f3b3261")}</span>{eventLabel(e.kind)}<small>{e.detail}</small></li>)}</ul></section></PanelPages>;
+
+/** Statistics: finance, product performance, market log and achievements. */
+export function FinancePanel({state}:{state:GameState}){
+ const stats=companyStats(state);
+ const unlocked=new Map(state.achievements.map(a=>[a.id,a.day]));
+ return <section className="screen stats-screen"><PanelPages labels={['財務','製品成績','市場','実績']}>
+  <div><div className="metrics"><article className="metric"><span>企業価値</span><strong>{yen(companyValue(state))}</strong></article><article className="metric"><span>累計損益</span><strong>{yen(state.finance.revenue-state.finance.expenses)}</strong></article><article className="metric"><span>年間売上</span><strong>{yen(stats.yearRevenue)}</strong></article><article className="metric"><span>決算月数</span><strong data-testid="finance-months">{state.history.length}</strong></article></div>
+   <CashChart state={state}/>
+   <div className="scroll-table"><table><caption>月次決算</caption><thead><tr><th>日</th><th>現金</th><th>月間売上</th><th>月間費用</th><th>借入</th><th>シェア</th></tr></thead>
+    <tbody>{state.history.map((h,i)=>{const prev=state.history[i-1];const known=!!prev||h.day===30;return <tr key={h.day}><td>{h.day}</td><td>{yen(h.cash)}</td><td>{known?yen(h.revenue-(prev?.revenue??0)):'—'}</td><td>{known?yen(h.expenses-(prev?.expenses??0)):'—'}</td><td>{yen(h.loan)}</td><td>{(h.share*100).toFixed(1)}%</td></tr>;}).slice(-24).reverse()}</tbody></table></div></div>
+  <div className="scroll-table"><table><thead><tr><th>製品</th><th>種類</th><th>評価</th><th>性能</th><th>価格</th><th>販売</th><th>売上</th><th>利益</th></tr></thead>
+   <tbody>{state.products.map(p=><tr key={p.id}><td>{state.company.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>{p.review?<Stars value={p.review.stars} size="sm"/>:'—'}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td className={p.profit<0?'bad':''}>{yen(p.profit)}</td></tr>)}
+    {state.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(p=><tr key={`${r.id}-${p.id}`} className="rival-row"><td>{r.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>—</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>))}</tbody></table></div>
+  <div><p>需要係数 ×{state.modifiers.demand.toFixed(2)} · 生産係数 ×{state.modifiers.production.toFixed(2)} · 効果終了 {state.modifiers.expiresDay||'—'}日{state.osIncident&&` · OS需要 ×${state.osIncident.demand.toFixed(2)}（${state.osIncident.expiresDay}日まで）`}</p>
+   <ul className="events">{state.events.filter(e=>!['daily','weekly','sales'].includes(e.kind)).slice(-60).reverse().map((e,i)=><li key={`${e.day}-${i}`}><span>{e.day}日</span>{eventLabel(e.kind)}<small>{e.kind==='achievement'?achievementLabelMap[e.detail]??e.detail:e.detail}</small></li>)}</ul></div>
+  <div>{state.mode==='sandbox'&&<p className="warning">サンドボックスモードでは実績を獲得できません。</p>}
+   <p>獲得実績 <b>{state.achievements.length}</b> / {tieredAchievements.reduce((n,t)=>n+t.tiers.length,0)+milestoneAchievements.length}</p>
+   <div className="achievement-grid">{tieredAchievements.map(t=>t.tiers.map((v,i)=>{const id=`${t.metric}-${i+1}`;const day=unlocked.get(id);
+    return <article key={id} className={`achievement ${day!==undefined?'unlocked':''}`}><span className="medal" aria-hidden="true">{day!==undefined?'🏆':'🔒'}</span><div><strong>{t.label}</strong><small>{compact(v)}{t.unit}{day!==undefined?` · ${day}日目`:` · 現在 ${compact(stats[t.metric])}`}</small></div></article>;}))}
+    {milestoneAchievements.map(m=>{const day=unlocked.get(m.id);return <article key={m.id} className={`achievement ${day!==undefined?'unlocked':''}`}><span className="medal" aria-hidden="true">{day!==undefined?'🏅':'🔒'}</span><div><strong>{m.label}</strong><small>{m.description}{day!==undefined?` · ${day}日目`:''}</small></div></article>;})}</div></div>
+ </PanelPages></section>;
 }
