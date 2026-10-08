@@ -8,6 +8,7 @@ type Rival=GameState['rivals'][number];
 export function newRivals(seed:number,difficulty:'normal'|'hard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:difficulty==='hard'?b.hardEfficiency:1,researchLevel:0,researchRemaining:0,products:[],acquired:false}));}
 function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cash)return false;const paid=Math.min(r.cash,amount);r.cash-=paid;r.debt+=amount-paid;return true;}
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
+export function settleProcurement(r:Rival,p:Rival['products'][number],units:number){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}
 export function rivalDaily(s:GameState){
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
   const products=r.products.filter(p=>p.remaining===0);let available=b.capacity;
@@ -17,7 +18,8 @@ export function rivalDaily(s:GameState){
 export function rivalWeekly(s:GameState){
  for(const r of s.rivals.filter(r=>!r.acquired)){
   if(r.researchRemaining>0){r.researchRemaining=Math.max(0,r.researchRemaining-b.work*r.efficiency);if(r.researchRemaining===0)r.researchLevel++;}
-  for(const p of r.products){p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);if(p.remaining>0)continue;
+  for(const p of r.products){const wasDeveloping=p.remaining>0;p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);if(p.remaining>0)continue;
+   if(wasDeveloping)logEvent(s,'rivalLaunch',`${r.name}: ${p.name}`);
    const [rand,seed]=nextRandom(r.seed);r.seed=seed;const player=s.products.filter(v=>v.launched&&v.kind===p.kind).reduce((n,v)=>n+v.performance/v.price,0);
    const competition=1/(1+player/(p.performance/p.price)*b.playerPressure);
    const count=Math.min(p.inventory,Math.floor(hardwareCatalog[r.focus].demand*r.efficiency*competition*(b.demandFloor+rand*b.demandVariance)*(p.unitCost*b.priceCostMultiple/p.price)));
