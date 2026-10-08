@@ -17,7 +17,7 @@
 ## Verified gates
 - Regression-first commits introduced failing compile/test expectations; subsequent implementation made them pass.
 - CI `37719457060` code `f6041f7f`: Web job **success**, strict TypeScript, 96 Vitest, 6 Python inspector tests, production build, 13 Chromium browser tests, 2 production offline/update PWA tests.
-- APK was generated/verified successfully on preceding comparable code CI `37719364194`. Final code CI `37719457060` Android job is pending when recording this status; consult workflow for conclusive result.
+- CI `37719457060` Android job **success**, Gradle debug APK build, bundled-assets integrity and signature verification. Artifact `pc-tycoon-debug-apk` ID `11525013684` (9,015,484-byte ZIP), available from the GitHub Actions run. Real hardware remains untested.
 
 ## Open, explicitly unverified
 - Real Android device: launch/orientation, touch, system back, background/picker, restart persistence, cross-APK JSON transfer.
