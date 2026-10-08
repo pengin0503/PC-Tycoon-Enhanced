@@ -76,9 +76,9 @@ it('#6 notifications persist unique IDs across same-day identical events and sup
 it('#3 old version-1 inventory without valuation remains valid and takes default manufactured cost',()=>{
  const s=prepared();
  s.research.completed.push('cpu-compute-1');
- const cpu=commandAny(s,{type:'design',kind:'cpu',name:'Legacy CPU',spec:defaultSpec('cpu'),price:400}).products[0];
+ const designed=commandAny(s,{type:'design',kind:'cpu',name:'Legacy CPU',spec:defaultSpec('cpu'),price:400});const cpu=designed.products[0];
  cpu.remaining=0;cpu.launched=true;cpu.inventory=3;cpu.line=true;
- const old=importSave(exportSave(s));
+ const old=importSave(exportSave(designed));
  expect(old.products[0].inventory).toBe(3);
  const cost=old.products[0].unitCost*3;
  sellProducts(old);
