@@ -34,10 +34,11 @@ test('upgrade and AI workspaces provide local subpage navigation without stackin
  await expect(page.getByRole('button',{name:'工場を拡張'})).toBeVisible();
  await expect(page.getByRole('button',{name:'オフィスを拡張'})).toHaveCount(0);
  await nav(page,'AI Lab');
- await expect(page.getByRole('tab',{name:'クラスタ'})).toHaveAttribute('aria-selected','true');
- await page.getByRole('tab',{name:'モデル開発'}).click();
- await expect(page.getByRole('button',{name:'学習を開始'})).toBeVisible();
- await expect(page.getByRole('button',{name:'クラスタを購入'})).toHaveCount(0);
+ await expect(page.getByRole('tab',{name:'開発'})).toHaveAttribute('aria-selected','true');
+ await expect(page.getByRole('button',{name:'AIモデルを設計'})).toBeVisible();
+ await page.getByRole('tab',{name:'クラスタ'}).click();
+ await expect(page.getByText('クラスタがありません。')).toBeVisible();
+ await expect(page.getByRole('button',{name:'AIモデルを設計'})).toHaveCount(0);
 });
 test('native back event navigates to the office without closing active game',async({page})=>{
  await startCompany(page);await nav(page,'開発');

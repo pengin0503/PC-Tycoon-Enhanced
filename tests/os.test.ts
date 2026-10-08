@@ -2,7 +2,7 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 const cmd=(s:any,c:any)=>command(s,c);
 function ready(){let s=createGame({id:'os',name:'OS社',year:2026,difficulty:'normal',seed:4});return cmd(cmd(s,{type:'research',id:'os-compute-1'}),{type:'advance',days:7});}
-const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.9,compatibility:.9,support:.8,price:50};
+const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50};
 it('develops and sells software with licensing and support expenses',()=>{
  let s=cmd(ready(),os);s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  const n=cmd(s,{type:'advance',days:60});expect(n.products[0].sold).toBeGreaterThan(0);expect(n.products[0].inventory).toBe(0);expect(n.products[0].profit).toBeGreaterThan(0);expect(n.finance.expenses).toBeGreaterThan(24000);

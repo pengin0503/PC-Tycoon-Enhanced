@@ -2,7 +2,7 @@ import {it,expect} from 'vitest';
 import {techCatalog} from '../packages/content/src/research';
 import {createGame,command,gameSchema} from '../packages/sim/src/index';
 const start=()=>createGame({id:'visual-legacy',name:'デザイン社',year:2026,difficulty:'normal',seed:42});
-const cpu={cores:4,clock:3,ipc:1,process:14,socket:'Atlas'};
+const cpu={cores:4,clock:3,ipc:1,process:14,cooling:40,socket:'Atlas'};
 const design=(visual?:{tier:number,color:'graphite'|'silver'|'teal'})=>({type:'design',kind:'cpu',name:'C1',spec:cpu,price:400,...(visual?{visual}:{})} as const);
 it('adds 45 reachable, non-duplicated visual research milestones without replacing existing technology',()=>{
  expect(techCatalog).toHaveLength(3345);

@@ -1,11 +1,9 @@
 import {useState} from 'react';
 import {techCatalog,researchDomains,axisLabels} from '../../../packages/content/src/research';
-import {productCatalog} from '../../../packages/content/src/devices';
 import {researchPointCost,weeklyResearchPoints} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
-
-const domainLabel=(d:string)=>d==='ai'?'AI':productCatalog[d as keyof typeof productCatalog]?.label??d.toUpperCase();
+import {domainLabel,techEffectText} from './research-hints';
 /** Research tree browser: spend research points to unlock technologies instantly. */
 export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)=>void}){
  const [query,setQuery]=useState('');
@@ -42,7 +40,7 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
    return <article className={`tech-card ${done?'done':locked?'locked':affordable?'ready':''}`} data-testid="research-card" key={t.id}>
     <span className="tech-domain">{domainLabel(t.category)} · 第{t.generation}世代</span>
     <h3>{t.label}</h3>
-    <p>{axisLabels[t.axis]} +{(t.effect*100).toFixed(1)}%</p>
+    <p className="tech-effect">{techEffectText(t,state.research.completed)}</p>
     {locked&&<small className="muted">前提：{t.prerequisites.join(' / ')}</small>}
     <div className="tech-foot">{!done&&<span className={`rp-cost ${affordable?'':'short'}`}>{cost.toLocaleString('ja-JP')} RP</span>}
      <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||!affordable} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':'研究する'}</button></div>

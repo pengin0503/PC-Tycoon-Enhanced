@@ -1,10 +1,20 @@
-import {aiBalance as b} from '../../content/src/ai';
+import {aiBalance as b,aiDesignSliders,type AISlider} from '../../content/src/ai';
+import {unlockedRange} from '../../content/src/unlocks';
 import {expense,income,logEvent} from './finance';
 import {removeStock} from './inventory';
-import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects} from './ai-math';
+import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects,type LLMDesign} from './ai-math';
 import {workBonus} from './management';
 import {techEffect} from '../../content/src/research';
 import {nextRandom} from './random';
+/** Current selectable range of a model-design slider, in its display unit (parameters/tokens in billions). */
+export function aiDesignRange(key:AISlider,completed:readonly string[]){return unlockedRange(aiDesignSliders[key],'ai',completed);}
+/** Rejects model designs beyond what AI research has unlocked. */
+export function assertAIDesignUnlocked(d:LLMDesign,completed:readonly string[]){
+ for(const key of ['total','active','layers','hidden','context','tokens'] as const){
+  const slider=aiDesignSliders[key],range=aiDesignRange(key,completed),value=d[key]/slider.scale;
+  if(value>range.max+1e-9)throw new Error(`${slider.label}は現在の研究では${range.max.toLocaleString('ja-JP')}${slider.unit}までです`);
+ }
+}
 export function aiEffects(s:GameState):AIResearchEffects{return Object.fromEntries(['compute','architecture','quantization','data','context','economics'].map(axis=>[axis,techEffect(s.research.completed,'ai',axis)]));}
 import type {GameState,GameCommand} from './types';
 export function aiCommand(s:GameState,c:GameCommand):boolean{
@@ -24,7 +34,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='trainModel'){
   if(!s.research.completed.includes('ai-compute-1')||c.design.architecture==='moe'&&!s.research.completed.includes('ai-architecture-1'))throw new Error('AI設計の研究が必要です');
   const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!cluster)throw new Error('クラスタが存在しません');if(clusterBusy(s,c.clusterId))throw new Error('クラスタは使用中です');
-  if(s.models.length>=100)throw new Error('モデル数の上限です');const e=estimateLLM(c.design,cluster,aiEffects(s));if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
+  if(s.models.length>=100)throw new Error('モデル数の上限です');assertAIDesignUnlocked(c.design,s.research.completed);const e=estimateLLM(c.design,cluster,aiEffects(s));if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
   expense(s,e.cost);s.models.push({id:`m-${s.models.length+1}`,name:c.name,design:c.design,clusterId:c.clusterId,status:'training',remainingSeconds:e.seconds,initialSeconds:e.seconds,preparationRemaining:b.preparationDays,trainingCost:e.cost,scores:{math:0,coding:0,knowledge:0,reasoning:0,multilingual:0},service:null});logEvent(s,'trainingStarted',c.name);return true;
  }
  if(c.type==='deployModel'){

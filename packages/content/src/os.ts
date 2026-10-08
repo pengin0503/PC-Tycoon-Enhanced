@@ -7,6 +7,13 @@ export const osFeatureResearch:Partial<Record<OSFeature,string>>={security:'os-r
 export const lockScreens=['aurora','grid','dunes','nebula'] as const;
 export const lockScreenLabels:Record<typeof lockScreens[number],string>={aurora:'オーロラ',grid:'グリッド',dunes:'砂丘',nebula:'星雲'};
 export const osThemes=['teal','blue','orange','violet'] as const;
+/** OS design sliders (0..1 game ratios). Research widens their upper bound instead of boosting the chosen values. */
+export const osSliders={
+ quality:{label:'品質',min:.1,max:1,step:.01,default:.8,unlock:{axes:['compute','reliability'],from:.8}},
+ compatibility:{label:'互換性',min:.1,max:1,step:.01,default:.8,unlock:{axes:['compatibility'],from:.8}},
+ support:{label:'サポート',min:0,max:1,step:.01,default:.7,unlock:{axes:['capacity'],from:.7}},
+} as const;
+export type OSSlider=keyof typeof osSliders;
 export const osBalance={
  requirements:{cpuBase:400,cpuPerFeature:150,cpuPerVersion:50,ramBase:2,ramPerFeature:2,storageBase:32,storagePerFeature:16,storagePerVersion:8},
  unmetPerformance:.75,

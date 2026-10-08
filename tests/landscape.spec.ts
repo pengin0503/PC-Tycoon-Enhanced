@@ -17,7 +17,11 @@ test('hardware numeric specs use keyboard-accessible bounded sliders and render 
  await page.setViewportSize({width:844,height:390});await startCompany(page);
  await openDesigner(page,'CPU');
  const core=page.getByRole('slider',{name:'コア数'});
- await expect(core).toHaveValue('4');await core.focus();await page.keyboard.press('ArrowRight');await expect(core).toHaveValue('5');
+ // Without research the slider stops at the current limit; the locked headroom is shown next to it.
+ await expect(core).toHaveValue('4');await expect(core).toHaveAttribute('max','4');
+ await core.focus();await page.keyboard.press('ArrowRight');await expect(core).toHaveValue('4');
+ await page.keyboard.press('ArrowLeft');await expect(core).toHaveValue('3');await expect(core).toHaveAttribute('aria-valuetext','3コア');
+ await expect(page.locator('.range-field',{has:core}).locator('.research-lock')).toContainText('研究で32コアまで');
  await expect(page.getByRole('img',{name:/CPU/}).first()).toBeVisible();
  await expect(page.getByLabel('評価予測')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
