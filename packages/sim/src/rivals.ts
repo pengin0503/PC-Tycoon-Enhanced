@@ -1,6 +1,8 @@
 import {rivalBalance as b,rivalTemplates} from '../../content/src/management';
 import {defaultSpec,hardwareCatalog} from '../../content/src/hardware';
 import {evaluateHardware} from './hardware';
+import {assemblyOverhead} from './devices';
+import {inventoryValue} from './inventory';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
 import type {GameState,GameCommand} from './types';
@@ -46,6 +48,18 @@ export function rivalCommand(s:GameState,c:GameCommand):boolean{
  const products=r.products.filter(p=>p.remaining===0);if(s.products.length+products.length>500)throw new Error('製品数の上限です');
  expense(s,valuation(s,r.id),false,true);s.company.cash+=r.cash;s.company.debt+=r.debt;r.cash=0;r.debt=0;r.acquired=true;
  if(r.researchLevel>0&&!s.research.completed.includes(`${r.focus}-compute-1`))s.research.completed.push(`${r.focus}-compute-1`);
- for(const p of products){s.products.push({...p,id:`p-${s.products.length+1}`,spec:defaultSpec(r.focus),remaining:0,line:false,sold:0,revenue:0,profit:0});p.inventory=0;}
+ const mapping=new Map<string,string>();
+ const affected=s.products.filter(p=>(p.kind==='pc'||p.kind==='laptop')&&['cpu','gpu','motherboard','ram','storage'].some(k=>products.some(part=>part.id===p.spec[k])));
+ const overheads=new Map(affected.map(p=>[p.id,assemblyOverhead(s,p)]));
+ for(const p of products){
+  const id=`p-${s.products.length+1}`;mapping.set(p.id,id);
+  s.products.push({...p,id,spec:{...defaultSpec(r.focus),sourceRivalId:p.id},inventoryValue:inventoryValue(p),remaining:0,line:false,sold:0,revenue:0,profit:0});
+  p.inventory=0;p.inventoryValue=0;
+ }
+ for(const p of affected){
+  const spec={...p.spec,assemblyOverhead:overheads.get(p.id)!};
+  for(const key of ['cpu','gpu','motherboard','ram','storage']){const replacement=mapping.get(String(spec[key]));if(replacement)spec[key]=replacement;}
+  p.spec=spec;
+ }
  logEvent(s,'acquired',r.name);return true;
 }
