@@ -5,7 +5,7 @@ import json
 import zipfile
 import os
 import subprocess
-import re
+from android_preferences import preference_is_false
 root = Path(__file__).resolve().parents[1]
 apk = root / 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk'
 with zipfile.ZipFile(apk) as package:
@@ -24,5 +24,5 @@ badging = subprocess.check_output([str(sdk / 'build-tools/36.0.0/aapt'), 'dump',
 assert "package: name='com.pengin0503.pctycoon'" in badging
 assert "sdkVersion:'24'" in badging and "targetSdkVersion:'36'" in badging
 xml = subprocess.check_output([str(sdk / 'build-tools/36.0.0/aapt'), 'dump', 'xmltree', str(apk), 'res/xml/config.xml'], text=True)
-assert re.search(r'name[^\n]*KeepRunning[\s\S]*?value[^\n]*"false"', xml), 'Native timer preference is absent from Android XML'
+assert preference_is_false(xml, 'KeepRunning'), 'Native timer preference is absent from Android XML: ' + xml
 print(f'APK verified: {len(files)} current web assets; no remote server; SHA256 {hashlib.sha256(apk.read_bytes()).hexdigest()}')
