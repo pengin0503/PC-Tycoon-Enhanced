@@ -35,7 +35,7 @@ it('rival parts are bought from limited stock and revenue goes to supplier',()=>
  expect(n.products[0].inventory).toBeGreaterThan(0);
  expect(n.rivals[0].products[0].inventory).toBe(stock-n.products[0].inventory);
  expect(n.rivals[0].cash).toBe(before+n.products[0].inventory*500);
- expect(n.rivals[0].products[0].sold).toBe(n.products[0].inventory);
+ expect(n.rivals[0].products[0].sold-s.rivals[0].products[0].sold).toBe(n.products[0].inventory);
  expect(importSave(exportSave(n))).toEqual(n);
 });
 it('AI clusters require GPU production and owned inventory, and use custom servers',()=>{
