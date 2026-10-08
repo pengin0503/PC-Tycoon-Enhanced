@@ -6,6 +6,7 @@ import { SaveRepository } from '../../../packages/save/src/repository';
 import { ja, eventLabel, yen } from './i18n';
 import './styles.css';
 import './landscape.css';
+import './android-game.css';
 import { HardwarePanel } from './HardwarePanel';
 import { ResearchPanel } from './ResearchPanel';
 import { DevicesPanel } from './DevicesPanel';
