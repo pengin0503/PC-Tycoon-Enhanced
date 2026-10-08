@@ -1,5 +1,42 @@
 import {test,expect} from '@playwright/test';
+import {createGame,command} from '../packages/sim/src/index';
+import {exportSave} from '../packages/save/src/index';
+import {defaultSpec} from '../packages/content/src/hardware';
 import {startCompany,nav,openDesigner,launchFirst,openProduct,closeDialog,skipDecision} from './ui-helpers';
+import {unlockBranch} from './research-helpers';
+test('switching a slimmed MoE design back to Dense refits the model shape',async({page})=>{
+ let s:any=createGame({id:'moe',name:'AI社',year:2026,difficulty:'normal',seed:3});
+ s.research.completed.push('ai-compute-1','ai-architecture-1','gpu-compute-1');unlockBranch(s,'gpu','capacity',50);
+ s=command(s,{type:'design',kind:'gpu',name:'Big',spec:{...defaultSpec('gpu'),vram:80},price:900} as any);
+ s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
+ s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:2,network:.8,cooling:.9});
+ await page.setViewportSize({width:844,height:390});await page.goto('/');
+ await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});
+ await nav(page,'AI Lab');await page.getByRole('button',{name:'AIモデルを設計'}).click();
+ await page.getByRole('slider',{name:'総パラメータ'}).focus();await page.keyboard.press('End');
+ await page.getByLabel('アーキテクチャ').selectOption('moe');
+ await page.getByRole('slider',{name:'稼働パラメータ'}).focus();for(let i=0;i<3;i++)await page.keyboard.press('ArrowLeft');
+ await expect(page.getByRole('slider',{name:'稼働パラメータ'})).toHaveAttribute('aria-valuetext','1B');
+ await page.getByLabel('アーキテクチャ').selectOption('dense');
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'学習を開始'})).toBeEnabled();
+});
+test('a service context length saved outside the slider list is shown as saved',async({page})=>{
+ let s:any=createGame({id:'ctx',name:'AI社',year:2026,difficulty:'normal',seed:3});
+ s.research.completed.push('ai-compute-1','gpu-compute-1');unlockBranch(s,'gpu','capacity',5);
+ s=command(s,{type:'design',kind:'gpu',name:'G',spec:{...defaultSpec('gpu'),vram:32},price:600} as any);
+ s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
+ s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
+ const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
+ s=command(s,{type:'trainModel',name:'Legacy',design,clusterId:'c-1',budget:1e9} as any);s=command(s,{type:'advance',days:7});
+ s=command(s,{type:'deployModel',id:'m-1',clusterId:'c-1',bits:16,context:3000,batch:1,mode:'api',apiPrice:1000,subscriptionPrice:500} as any);
+ await page.setViewportSize({width:844,height:390});await page.goto('/');
+ await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});
+ await nav(page,'AI Lab');await page.getByRole('tab',{name:'モデル'}).click();await page.getByRole('button',{name:'サービスを変更'}).click();
+ const context=page.getByRole('slider',{name:'推論コンテキスト長'});
+ await expect(context).toHaveAttribute('aria-valuetext','3,000トークン');
+ await context.focus();await page.keyboard.press('ArrowRight');await expect(context).toHaveAttribute('aria-valuetext','4Kトークン');
+});
 test('AI Lab requires manufactured player GPU before model training and deployment',async({page})=>{
  await page.setViewportSize({width:844,height:390});await startCompany(page);
  await nav(page,'AI Lab');

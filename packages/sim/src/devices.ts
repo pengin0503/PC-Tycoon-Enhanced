@@ -58,10 +58,12 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
  const osFactor=os?(b.os.baseCompatibility+Number(os.spec.compatibility)*b.os.compatibilityWeight)*(b.os.qualityFloor+Number(os.spec.quality)*b.os.qualityWeight)*unmet:b.os.withoutOS;
  const e=(axis:string)=>techEffect(s.research.completed,kind,axis);
  // Compute/compatibility research widen the cooling range instead of multiplying performance.
- const power=Math.round(draw*Math.exp(-e('power')));
+ // The PSU's conversion loss is heat inside the case, so it counts toward the power the cooling must cover.
+ const power=Math.round((draw+(psu?.power??0))*Math.exp(-e('power')));
  if(!allowLegacy&&!previewOnly){const problem=deviceCoolingProblem(s,kind,power,cooling);if(problem)throw new Error(problem);}
- const coolingCost=cooling===undefined?0:Math.round(cooling*deviceCoolingCost[kind]);
- return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability+(cooling?coolingReliability(power,cooling):0)),performance:Math.round(score*osFactor*(kind==='laptop'?b.laptopCooling:1)),power,unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round((b.caseCost+(kind==='laptop'?b.laptopPackaging:0))*Math.exp(-e('cost')*b.packagingResearchScale))+coolingCost+(os?os.unitCost:0)};
+ // Case cooling is part of the case overhead, so cost research discounts it like the CPU/GPU cooler cost.
+ const overhead=b.caseCost+(kind==='laptop'?b.laptopPackaging:0)+(cooling===undefined?0:cooling*deviceCoolingCost[kind]);
+ return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability+(cooling?coolingReliability(power,cooling):0)),performance:Math.round(score*osFactor*(kind==='laptop'?b.laptopCooling:1)),power,unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round(overhead*Math.exp(-e('cost')*b.packagingResearchScale))+(os?os.unitCost:0)};
 }
 export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'|'price'|'performance'|'power'|'unitCost'> & {reliability?:number,visual?:Product['visual']},work:number){
  if(s.products.length>=500)throw new Error('製品数の上限です');

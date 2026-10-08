@@ -6,6 +6,7 @@ import {hardwareKinds} from '../packages/content/src/research';
 import {unlockBranch} from './research-helpers';
 import {unlockedRange} from '../packages/content/src/unlocks';
 import {osSliders} from '../packages/content/src/os';
+import {aiDesignSliders} from '../packages/content/src/ai';
 import {createGame,command} from '../packages/sim/src/index';
 import {evaluateDevice} from '../packages/sim/src/devices';
 import {estimateLLM,estimateInference} from '../packages/sim/src/ai-math';
@@ -45,6 +46,20 @@ it('slider ranges start narrow, grow monotonically with research and reach the a
   }
   expect(field.lowerIsBetter?previous.min:previous.max).toBe(Number(field.lowerIsBetter?field.min:field.max));
  }
+});
+it('list-valued AI sliders only ever unlock up to a value the player can select',()=>{
+ for(const slider of Object.values(aiDesignSliders)){
+  if(!('values' in slider))continue;
+  let previous:number=slider.unlock.from;
+  for(let level=0;level<=50;level++){
+   const s={research:{completed:['ai-compute-1']}};if(level)for(const axis of slider.unlock.axes)unlockBranch(s,'ai',axis,level);
+   const {max}=unlockedRange(slider,'ai',s.research.completed);
+   expect(slider.values).toContain(max);expect(max).toBeGreaterThanOrEqual(previous);previous=max;
+  }
+  expect(previous).toBe(slider.max);
+ }
+ // The first context stage opens 16K/32K/64K, not an unselectable raw bound in between.
+ expect(unlockedRange(aiDesignSliders.context,'ai',['ai-compute-1','ai-context-1']).max).toBe(65536);
 });
 it('device research lowers cost and widens case cooling instead of multiplying performance',()=>{
  const s=createGame({id:'content',name:'技術社',year:2026,difficulty:'normal',seed:42});s.research.completed=['pc-compute-1'];

@@ -10,7 +10,9 @@ type Props={label:string,value:number,min:number,max:number,step:number,onChange
  values?:readonly number[]};
 export function RangeField({label,value,min,max,step,onChange,unit='',disabled=false,description,format,researchLimit,values}:Props){
  const show=format??((n:number)=>formatValue(n,unit));
- const list=values?.filter(v=>v>=min-1e-9&&v<=max+1e-9);
+ // A value saved before the list existed (e.g. an older service's context length) stays selectable and shown as is.
+ const inRange=(v:number)=>v>=min-1e-9&&v<=max+1e-9;
+ const list=values&&[...values.filter(inRange),...(inRange(value)&&!values.some(v=>Math.abs(v-value)<1e-9)?[value]:[])].sort((a,b)=>a-b);
  const found=list?list.findIndex(v=>v>=value-1e-9):-1;
  const index=list?.length?(found===-1?list.length-1:found):0;
  const shown=list?.length?list[index]:Math.max(min,Math.min(max,value));

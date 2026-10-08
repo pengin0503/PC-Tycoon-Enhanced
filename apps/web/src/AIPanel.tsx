@@ -21,7 +21,7 @@ const scoreLabels:Record<keyof Model['scores'],string>={math:'数学',coding:'�
 const percent=(n:number)=>`${Math.round(n*100)}%`;
 const gb=(bytes:number)=>`${(bytes/1e9).toLocaleString('ja-JP',{maximumFractionDigits:1})}GB`;
 /** Context lengths are powers of two: 8,192 → "8Kトークン", 1,048,576 → "1Mトークン" (keeps the slider endpoints on one line). */
-const tokenLength=(n:number)=>n>=1048576?`${formatValue(n/1048576,'M')}トークン`:n>=1024?`${formatValue(n/1024,'K')}トークン`:`${formatValue(n)}トークン`;
+const tokenLength=(n:number)=>n>=1048576&&n%1048576===0?`${formatValue(n/1048576,'M')}トークン`:n>=1024&&n%1024===0?`${formatValue(n/1024,'K')}トークン`:`${formatValue(n)}トークン`;
 const statusLabel=(m:Model)=>m.status==='ready'?'評価完了':m.status==='failed'?'学習失敗':'学習中';
 const initial:LLMDesign={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
 
@@ -135,7 +135,12 @@ function ModelDesigner({state,send,back,done}:{state:GameState,send:Send,back:Re
   if(key==='total'||key==='active'){const shape=fitShape(next.active,range('layers').max,range('hidden').max);if(shape){next.layers=shape.layers;next.hidden=shape.hidden;}}
   setDesign(next);
  };
- const architecture=(a:LLMDesign['architecture'])=>setDesign(a==='dense'?{...design,architecture:a,active:design.total}:{...design,architecture:a});
+ const architecture=(a:LLMDesign['architecture'])=>{
+  if(a!=='dense'){setDesign({...design,architecture:a});return;}
+  // Dense uses every parameter per token, so the shape must be refitted to the (larger) active count.
+  const next={...design,architecture:a,active:design.total};const shape=fitShape(next.active,range('layers').max,range('hidden').max);
+  setDesign(shape?{...next,layers:shape.layers,hidden:shape.hidden}:next);
+ };
  const effects=aiEffects(state);
  const parsed=designSchema.safeParse(design);
  let train:ReturnType<typeof estimateLLM>|null=null;

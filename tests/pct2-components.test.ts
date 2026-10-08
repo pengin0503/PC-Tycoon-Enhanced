@@ -52,6 +52,10 @@ it('assembled PCs accept an optional PSU that must cover the parts with headroom
  const vendor=cmd(s,assembly({...parts,psu:'v-psu'})).products[0];
  expect(vendor.unitCost).toBe(none.unitCost+90);expect(vendor.reliability).toBeGreaterThan(none.reliability);
  expect(vendor.spec.psu).toBe('v-psu');expect(none.spec.psu).toBeUndefined();
+ // The PSU's conversion loss is heat inside the case: it adds to the power the case cooling must cover.
+ expect(vendor.power).toBe(none.power+20);
+ expect(()=>cmd(s,{...assembly(parts),cooling:100})).not.toThrow();
+ expect(()=>cmd(s,{...assembly({...parts,psu:'v-psu'}),cooling:100})).toThrow(/消費電力 110W \/ 冷却性能 100W/);
  s=cmd(s,{type:'design',kind:'psu',name:'Tiny',spec:psuSpec(300,80),price:120});s=cmd(s,{type:'advance',days:14});
  // vendor parts draw 90; 300W easily covers them
  expect(()=>cmd(s,assembly({...parts,psu:'p-1'}))).not.toThrow();

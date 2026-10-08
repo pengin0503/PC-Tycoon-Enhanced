@@ -27,8 +27,9 @@ function slidersFor(category:string):Slider[]{
  if(category==='ai')return Object.values(aiDesignSliders).filter(f=>'unlock' in f).map(f=>({...f,format:(n:number)=>formatValue(n,f.unit)}));
  return [];
 }
-/** Branches whose research still applies a direct bonus (the others only widen sliders). */
+/** Branches whose research still applies a direct bonus (the others only widen sliders). OS capacity only widens support. */
 const directAxes=new Set(['power','cost','reliability','capacity','visual']);
+const hasDirectEffect=(t:Tech)=>t.category==='ai'||(directAxes.has(t.axis)&&!(t.category==='os'&&t.axis==='capacity'));
 /**
  * What completing `t` (with its earlier stages) gives: the slider bounds it widens and any direct bonus.
  * Bounds are shown as they will be once this stage is done.
@@ -39,7 +40,7 @@ export function techEffectText(t:Tech,completed:readonly string[]){
  const sliders=slidersFor(t.category).filter(f=>f.unlock?.axes.includes(t.axis)).map(f=>{
   const r=unlockedRange(f,t.category,after);return `${f.label}${f.lowerIsBetter?`下限 ${f.format(r.min)}`:`上限 ${f.format(r.max)}`}`;
  });
- const direct=t.category==='ai'||directAxes.has(t.axis)?[`${t.axis==='capacity'&&t.category!=='ai'?'開発速度':axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`]:[];
+ const direct=hasDirectEffect(t)?[`${t.axis==='capacity'&&t.category!=='ai'?'開発速度':axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`]:[];
  if(t.axis==='compute'&&t.level===1&&t.category!=='ai')return `${domainLabel(t.category)}の開発を解放`;
  return [...sliders,...direct].join(' / ')||`${axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`;
 }

@@ -21,6 +21,10 @@ it('case cooling must cover the parts, is research limited, priced and stored wi
  const small=cmd(s,{...assembly(),cooling:90}).products[0],large=cmd(s,{...assembly(),cooling:200}).products[0];
  expect(large.unitCost).toBeGreaterThan(small.unitCost);expect(large.reliability).toBeGreaterThan(small.reliability);expect(large.spec.cooling).toBe(200);
  const laptop=ready('laptop');expect(()=>cmd(laptop,{...assembly('laptop'),cooling:150})).toThrow(/20～120W/);
+ // Cost research discounts the case cooler together with the rest of the case overhead.
+ const cheaper=ready();cheaper.research.completed.push('pc-cost-1','pc-cost-2','pc-cost-3');
+ const coolerCost=(state:any)=>cmd(state,{...assembly(),cooling:200}).products[0].unitCost-cmd(state,{...assembly(),cooling:90}).products[0].unitCost;
+ expect(coolerCost(cheaper)).toBeLessThan(coolerCost(s));
 });
 it('laptop packaging has a cost and cooling tradeoff',()=>{
  const pc=cmd(ready(),assembly()).products[0];const laptop=cmd(ready('laptop'),assembly('laptop')).products[0];
