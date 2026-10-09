@@ -10,7 +10,7 @@ import type {DeviceSlot} from '../../content/src/devices';
 function generatedVendor(year:number,kind:DeviceSlot){
  const share=marketShareAt((year-eraBalance.startYear)*eraBalance.daysPerYear);
  const spec=typicalSpec(kind,share);
- const metrics=evaluateHardware(kind,spec,[],{stored:true});
+ const metrics=evaluateHardware(kind,spec,[`${kind}-compute-1`],{stored:true});
  return {id:`v-${year}-${kind}`,name:`汎用 ${kind.toUpperCase()}（${year}年型）`,kind,spec,
   performance:metrics.performance,power:metrics.power,unitCost:Math.max(1,Math.round(metrics.unitCost*1.8))};
 }
