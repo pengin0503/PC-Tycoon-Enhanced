@@ -11,7 +11,8 @@ import {Logo} from './Logo';
 
 /** Launch: pick a presentation → slides (skippable) → review results. */
 export function LaunchFlow({state,product,send,close}:{state:GameState,product:Product,send:(c:GameCommand)=>boolean,close:()=>void}){
- const [kind,setKind]=useState<PresentationKind>('online');
+ const marketer=state.staff.some(e=>e.role==='marketing');
+ const [kind,setKind]=useState<PresentationKind>(marketer?'online':'none');
  const [stage,setStage]=useState<'choose'|'slides'|'review'>('choose');
  const [slide,setSlide]=useState(0);
  const forecast=estimateReview(state,product);
@@ -22,8 +23,9 @@ export function LaunchFlow({state,product,send,close}:{state:GameState,product:P
  if(stage==='choose')return <Modal title={`${product.name} を発売`} onClose={close} wide>
   <p>発売方法を選んでください。プレゼンテーションは話題性（需要の上乗せ）とファン獲得を高めます。</p>
   <div className="presentation-grid" role="radiogroup" aria-label="発表方法">{presentationKinds.map(k=>{const p=presentations[k];
-   return <button key={k} role="radio" aria-checked={kind===k} className={`presentation-card ${kind===k?'selected':''}`} disabled={state.company.cash<p.cost} onClick={()=>setKind(k)}>
+   return <button key={k} role="radio" aria-checked={kind===k} className={`presentation-card ${kind===k?'selected':''}`} disabled={state.company.cash<p.cost||(k!=='none'&&!marketer)} onClick={()=>setKind(k)}>
     <strong>{p.label}</strong><span>{p.cost?yen(p.cost):'無料'}</span><small>話題性 +{p.hype}% · ファン ×{p.fans}</small></button>;})}</div>
+  {!marketer&&<p className="hint">プレゼンテーションにはマーケティング担当の採用が必要です。担当者不在でも発表なしで発売できます。</p>}
   <p className="hint">予想評価 <Stars value={starsFor(forecast.score)} size="sm"/> {forecast.score}点（発売時の競合状況で確定します）</p>
   <div className="button-row end"><button onClick={close}>キャンセル</button><button className="primary" onClick={launch}>この内容で発売</button></div>
  </Modal>;

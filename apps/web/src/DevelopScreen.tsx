@@ -10,7 +10,8 @@ import {evaluateDevice,evaluateOS,deviceCoolingProblem} from '../../../packages/
 import {benchmarkDevice} from '../../../packages/sim/src/benchmark';
 import {osRequirements} from '../../../packages/sim/src/os';
 import {estimateReview,starsFor} from '../../../packages/sim/src/reception';
-import {researchPointCost} from '../../../packages/sim/src/business';
+import {researchPointCost,hasRole} from '../../../packages/sim/src/business';
+import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
 import {priceRange} from '../../../packages/sim/src/pricing';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
@@ -57,7 +58,7 @@ export function DevelopScreen({state,send,go}:{state:GameState,send:Send,go:(scr
     <div className="tile-art"><ProductIllustration kind={k} tier={0} color="silver"/></div>
     <h3>{productCatalog[k].label}</h3>
     {ready?<><small>{count?`${count}製品`:'未開発'}</small><button className="primary" aria-label={`${productCatalog[k].label}を設計`} onClick={()=>setCategory(k)}>設計する</button></>
-     :<><small>🔒 研究が必要</small><button aria-label={`${productCatalog[k].label}を解放`} disabled={state.company.researchPoints<cost} onClick={()=>send({type:'research',id:`${k}-compute-1`})}>解放 {cost.toLocaleString('ja-JP')} RP</button></>}
+     :<><small>🔒 研究が必要</small><button aria-label={`${productCatalog[k].label}を解放`} disabled={state.company.researchPoints<cost||!hasRole(state,'research')} onClick={()=>send({type:'research',id:`${k}-compute-1`})}>解放 {cost.toLocaleString('ja-JP')} RP</button></>}
    </article>;})}</div></section>;
  const back=<button className="back-button" onClick={()=>setCategory(null)}>← カテゴリ選択</button>;
  if(category==='os')return <OSDesigner state={state} send={send} back={back} done={done}/>;
@@ -91,6 +92,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  const unitCost=preview.unitCost+visualFinishCost(tier);
  const range=priceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}});
  const suggested=Math.round(unitCost*2);
+ const designCost=developmentCost(kind,preview.performance,state.day,definition.designCost),engineer=hasRole(state,'engineering');
  const currentPrice=Math.max(range.min,Math.min(range.max,price||suggested));
  const draft={id:'draft',kind,performance:preview.performance,price:currentPrice,unitCost,reliability:preview.reliability,spec,visual:{tier,color:visual.color}};
  const submit=()=>{if(send({type:'design',kind,name,spec,price:currentPrice,visual:{...visual,tier}}))done();};
@@ -105,7 +107,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
    </section>
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
-     <div className="range-grid">{Object.entries(definition.fields).map(([key,field])=>{
+     <div className="range-grid">{Object.entries(definition.fields).filter(([key])=>key!=='cache').map(([key,field])=>{
       if(field.options){const open=fieldOptions(kind,key,state.research.completed);
        return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
         return <option key={v} value={v} disabled={locked}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}{locked?` 🔒 ${field.optionUnlock?.years[v]??''}年の技術`:''}</option>;})}</select></label>;}
@@ -120,7 +122,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
     </PanelPages>
    </section>
   </div>
-  <ActionBar back={back} cost={definition.designCost} label="開発を開始" disabled={!!problem||!name.trim()||state.company.cash<definition.designCost} onClick={submit}/>
+  <ActionBar back={back} cost={designCost} label="開発を開始" note={!engineer?'開発担当の採用が必要です':undefined} disabled={!!problem||!name.trim()||!engineer||state.company.cash<designCost} onClick={submit}/>
  </section>;
 }
 
@@ -142,6 +144,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  try{estimate=evaluateDevice(state,chosen,purpose,kind,osId||undefined,false,cooling,true);}catch(e){problem=e instanceof Error?e.message:String(e);}
  const coolingIssue=estimate?deviceCoolingProblem(state,kind,estimate.power,cooling):'';
  const unitCost=estimate?estimate.unitCost+visualFinishCost(tier):0;
+ const designCost=estimate?developmentCost(kind,estimate.performance,state.day,deviceBalance.designCost):deviceBalance.designCost;
  const range=estimate?priceRange({kind,unitCost,performance:estimate.performance,reliability:estimate.reliability,visual:{tier}}):{min:1,max:1};
  const currentPrice=Math.max(range.min,Math.min(range.max,price||Math.round(unitCost*1.6)));
  const synthetic=estimate?{id:'draft',name,kind,spec:{...chosen,purpose,...(osId?{osId}:{})},performance:estimate.performance,power:estimate.power,unitCost,reliability:estimate.reliability,price:currentPrice,remaining:0,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0,visual:{tier,color:visual.color}} as Product:null;
@@ -178,7 +181,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
     </PanelPages>
    </section>
   </div>
-  <ActionBar back={back} cost={deviceBalance.designCost} label="組立設計を開始" disabled={!estimate||!!coolingIssue||!name.trim()||state.company.cash<deviceBalance.designCost} onClick={submit}/>
+  <ActionBar back={back} cost={designCost} label="組立設計を開始" note={!hasRole(state,'engineering')?'開発担当の採用が必要です':undefined} disabled={!estimate||!!coolingIssue||!name.trim()||!hasRole(state,'engineering')||state.company.cash<designCost} onClick={submit}/>
  </section>;
 }
 
@@ -226,7 +229,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
     </PanelPages>
    </section>
   </div>
-  <ActionBar back={back} cost={result?.designCost??0} label="OS開発を開始" disabled={!result||!name.trim()||state.company.cash<(result?.designCost??0)} onClick={submit}/>
+  <ActionBar back={back} cost={result?.designCost??0} label="OS開発を開始" disabled={!result||!name.trim()||!hasRole(state,'engineering')||state.company.cash<(result?.designCost??0)} onClick={submit}/>
  </section>;
 }
 
