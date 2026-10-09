@@ -37,7 +37,7 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
   l1Cache:{label:'L1キャッシュ',unit:'MB',min:.0625,max:1024,values:binary(.0625,1024),default:.0625,legacyDefault:.0625,unlock:u(['compatibility'],.0625,true)},
   l2Cache:{label:'L2キャッシュ',unit:'MB',min:.0625,max:8192,values:binary(.0625,8192),default:.125,legacyDefault:.125,unlock:u(['compatibility'],.125,true)},
   l3Cache:{label:'L3キャッシュ',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.0625,legacyDefault:.0625,unlock:u(['capacity'],.0625,true)},
-  smt:{label:'同時マルチスレッディング',options:['off','on'],default:'off',legacyDefault:'off',optionUnlock:{axes:['compute'],years:{off:2000,on:2003}}},
+  smt:{label:'同時マルチスレッディング',options:['off','on'],default:'off',legacyDefault:'off',optionUnlock:{axes:['compute'],years:{off:2000,on:2002}}},
   memoryChannels:{label:'メモリチャネル数',unit:'ch',min:1,max:16,values:counts.filter(v=>v<=16),default:1,legacyDefault:1,unlock:u(['compatibility'],1,true)},
   cooling:{label:'冷却性能',unit:'W',min:5,max:1000,values:decades(5,1000),default:40,legacyDefault:0,unlock:u(['power'],60)},
   socket:{label:'ソケット',options:['Atlas','Nova'],default:'Atlas'}}},

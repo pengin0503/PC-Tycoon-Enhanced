@@ -14,7 +14,8 @@ import {researchPointCost,weeklyResearchPoints,distributionDemand,requireRole,ha
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
-import {marketReference} from './market';
+import {marketReference,marketYear} from './market';
+import {earliestResearchYear} from '../../content/src/era';
 import {developmentCost} from './development-cost';
 import {eraDemandFactor} from './events';
 import type {GameState,GameCommand} from './types';
@@ -93,6 +94,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
   requireRole(s,'research');
   if(!researchIsAvailable(t.category,t.axis))throw new Error('この研究系統は廃止されました');
+  const releaseYear=earliestResearchYear(t);if(marketYear(s.day)<releaseYear)throw new Error(`この技術は${releaseYear}年に解禁されます`);
   if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
   if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
   const points=researchPointCost(s,c.id);
@@ -154,7 +156,8 @@ export function productDemandForecast(s:GameState,p:GameState['products'][number
  const total=interests.reduce((a,b)=>a+b,0);
  return total?Math.floor(productDemandInterest(s,p)*Math.max(...interests)/total):0;
 }
-export function sellProducts(s:GameState){
+/** Direct calls keep weekly demand; passing 7 settles a daily share without inflating total volume. */
+export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:ReadonlyMap<string,number>){
  const candidates=s.products.filter(p=>p.launched).map(p=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;
   return {p,demand:productDemandInterest(s,p,1-b.weeklyVariance/2+r*b.weeklyVariance)};
@@ -162,20 +165,31 @@ export function sellProducts(s:GameState){
  const pools=new Map<string,typeof candidates>();
  for(const candidate of candidates){const pool=pools.get(candidate.p.kind)??[];pool.push(candidate);pools.set(candidate.p.kind,pool);}
  for(const pool of pools.values()){
-  const budget=Math.max(...pool.map(x=>x.demand)),total=pool.reduce((sum,x)=>sum+x.demand,0);
+  const expectedBudget=Math.max(...pool.map(x=>x.demand))/daysPerPeriod;
+  let budget=Math.floor(expectedBudget);
+  if(daysPerPeriod>1){const [roll,next]=nextRandom(s.seed);s.seed=next;if(roll<expectedBudget-budget)budget++;}
+  const total=pool.reduce((sum,x)=>sum+x.demand,0);
   const allocations=pool.map(x=>total?Math.floor(x.demand*budget/total):0);
   let unallocated=budget-allocations.reduce((sum,n)=>sum+n,0);
   const priority=pool.map((x,i)=>({i,remainder:total?x.demand*budget/total-allocations[i]:0})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i);
   for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
   for(let i=0;i<pool.length;i++){
-   const p=pool[i].p,units=Math.min(p.kind==='os'?b.osWeeklyLimit:p.inventory,allocations[i]);
+   const p=pool[i].p;
+   // Internal assembly takes precedence over retail. Keep a modest hardware reserve for
+   // self-supplied AI compute; inventory produced today is not available to retail today.
+   const feedsAssembly=s.products.some(device=>(device.kind==='pc'||device.kind==='laptop')&&device.launched&&device.line&&deviceSlots.some(slot=>device.spec[slot]===p.id));
+   const canSupplyAi=s.research.completed.includes('ai-compute-1')&&(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'));
+   const aiReserve=daysPerPeriod>1&&canSupplyAi&&p.line?Math.min(2,Math.max(0,p.target-1),p.inventory):0;
+   const retained=feedsAssembly?p.inventory:aiReserve;
+   const retailStock=Math.max(0,Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory)-retained);
+   const units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):retailStock,allocations[i]);
    if(units){
     const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);
     recordProductSale(s,p,units,p.price,actualCost);
     if(p.kind==='os')expense(s,units*p.unitCost,true);logEvent(s,'sales',`${p.name}: ${units}`);
     weeklyFans(s,p,units);
    }
-   decayHype(p);
+   if(daysPerPeriod===1||s.day%7===0)decayHype(p);
   }
  }
 }

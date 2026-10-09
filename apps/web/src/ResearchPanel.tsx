@@ -3,6 +3,7 @@ import {activeTechCatalog,researchDomains,axisLabels,hardwareKinds} from '../../
 import {researchPointCost,weeklyResearchPoints,hasRole} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
 import {marketYear} from '../../../packages/sim/src/market';
+import {earliestResearchYear} from '../../../packages/content/src/era';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {domainLabel,techEffectText,domainTechYear} from './research-hints';
 /** Research tree browser: spend research points to unlock technologies instantly. */
@@ -44,13 +45,15 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
   <div className="research-results">{filtered.slice(current*12,(current+1)*12).map(t=>{
    const done=completed.has(t.id),active=state.research.active.find(r=>r.id===t.id),locked=t.prerequisites.some(p=>!completed.has(p));
    const cost=researchPointCost(state,t.id),affordable=state.company.researchPoints>=cost;
+   const releaseYear=earliestResearchYear(t),eraLocked=market<releaseYear;
    return <article className={`tech-card ${done?'done':locked?'locked':affordable?'ready':''}`} data-testid="research-card" key={t.id}>
     <span className="tech-domain">{domainLabel(t.category)} · 第{t.generation}世代</span>
     <h3>{t.label}</h3>
     <p className="tech-effect">{techEffectText(t,state.research.completed)}</p>
     {locked&&<small className="muted">前提：{t.prerequisites.join(' / ')}</small>}
+    {eraLocked&&!done&&<small className="muted">登場年：{releaseYear}年（現在 {market}年）</small>}
     <div className="tech-foot">{!done&&<span className={`rp-cost ${affordable?'':'short'}`}>{cost.toLocaleString('ja-JP')} RP</span>}
-     <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||!affordable||!canResearch} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':!canResearch?'研究担当が必要':'研究する'}</button></div>
+     <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||eraLocked||!affordable||!canResearch} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':!canResearch?'研究担当が必要':eraLocked?`${releaseYear}年に解禁`:'研究する'}</button></div>
     {active&&<progress max={t.work} value={t.work-active.remaining}/>}
    </article>;})}</div>
  </section>;

@@ -10,7 +10,17 @@ export const offices=Array.from({length:10},(_,i)=>({level:i+1,label:['ガレー
  * with the square root of the weekly budget, so `advertisingAwareness` is scaled by √100 with the ×100 economy.
  */
 export const managementBalance={maxFactoryLevel:13,factoryUpgrade:30000000,factoryExponent:1.7,factoryMonthly:2000000,recruitPerSkill:30000,salaryBase:200000,salaryPerSkill:5000,trainingCost:300000,trainingGain:10,workPerSkill:.1,advertisingAwareness:300,awarenessDecay:.99,normalLoanCap:500000000,hardLoanCap:250000000,normalInterest:.01,hardInterest:.02,hardResearchCost:1.3,historyLimit:240,marketingSkillScale:100,advertisingReputation:.1,officeValue:30000000,reputationValue:10000000,revenueValue:.2};
-export const rivalTemplates=[{id:'r-1',name:'Vertex Works',focus:'cpu' as const},{id:'r-2',name:'Lumen Circuit',focus:'gpu' as const},{id:'r-3',name:'Cobalt Memory',focus:'ram' as const}];
+export const rivalTemplates=[
+ {id:'r-1',name:'Vertex Works',focus:'cpu'},
+ {id:'r-2',name:'Lumen Circuit',focus:'gpu'},
+ {id:'r-3',name:'Cobalt Memory',focus:'ram'},
+ {id:'r-4',name:'Ironbridge Silicon',focus:'cpu'},
+ {id:'r-5',name:'Prism Graphics',focus:'gpu'},
+ {id:'r-6',name:'Keystone Boards',focus:'motherboard'},
+ {id:'r-7',name:'Harbor Storage',focus:'storage'},
+ {id:'r-8',name:'Aster Power',focus:'psu'},
+ {id:'r-9',name:'Clearview Display',focus:'monitor'},
+] as const;
 /** Rivals pay the same design cost as the player for their focus (`hardwareCatalog[focus].designCost`). */
 export const rivalBalance={initialCash:2000000000,researchCost:50000000,monthlyCost:15000000,work:10,levelWeeks:100,hardEfficiency:1.5,longEfficiency:.7,capacity:120,inventoryTarget:1000,valuationBase:3000000000,valuationPerTech:300000000,pressure:.15,maxResearch:50,playerPressure:.2,demandFloor:.9,demandVariance:.2,priceCostMultiple:2,developmentWork:20,priceUndercut:.9,minimumPriceCostMultiple:1.2};
 export const researchPointBalance={initial:100,pointsPerWork:3,officeBonus:.1,costPerWork:10} as const;

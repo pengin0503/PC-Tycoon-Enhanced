@@ -15,7 +15,7 @@ export const productSchema=z.object({visual:visualSchema.optional(),review:revie
  reliability:z.number().min(.1).max(1).default(.9),price:z.number().int().min(1).max(1e8),inventory:z.number().int().min(0).max(10000000),target:z.number().int().min(0).max(10000000),
  line:z.boolean(),launched:z.boolean(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
 }).strict();
-export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(['cpu','gpu','ram']),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean()}).strict();
+export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(hardwareKinds),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean()}).strict();
 export const modeSchema=z.enum(['standard','tycoon','long','sandbox']);
 export const roleSchema=z.enum(['research','engineering','marketing','ai']);
 export const traitSchema=z.enum(['genius','efficient','charismatic','frugal','ai-specialist']);

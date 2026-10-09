@@ -38,7 +38,8 @@ it('gates AI staff behind transformer and makes research unlocks progressively m
  const unlocked=command(r,{type:'research',id:'cpu-compute-1'});
  expect(researchPointCost(unlocked,'gpu-compute-1')).toBeGreaterThan(first);
  const funded=command(unlocked,{type:'advance',days:35});
- const aiReady=command(funded,{type:'research',id:'ai-compute-1'});
+ const historical=structuredClone(funded);historical.day=17*360;historical.year=2017;
+ const aiReady=command(historical,{type:'research',id:'ai-compute-1'});
  expect(hire(aiReady,'ai').staff.some(e=>e.role==='ai')).toBe(true);
 });
 

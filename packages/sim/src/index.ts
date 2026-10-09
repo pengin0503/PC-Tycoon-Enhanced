@@ -41,8 +41,10 @@ export function command(state: GameState, input: GameCommand): GameState {
   if(c.type==='markNotificationsRead')s.notificationReadId=Math.max(s.notificationReadId,Math.min(s.notificationSeq,c.id));
   if(c.type==='spend') {expense(s,c.amount); logEvent(s,'expense',String(c.amount));}
   if(c.type==='advance') for(let i=0;i<c.days;i++) {
-    s.day++; expireOffers(s); attackDaily(s); marketDaily(s);manufacture(s);rivalDaily(s);aiDaily(s);logEvent(s,'daily');
-    if(s.day%7===0) {aiWeekly(s);researchAndDevelopment(s);marketingWeek(s);sellProducts(s);businessWeekly(s);rivalWeekly(s);logEvent(s,'weekly');}
+    s.day++; expireOffers(s); attackDaily(s); marketDaily(s);
+    const openingInventory=new Map(s.products.map(p=>[p.id,p.inventory]));
+    manufacture(s);rivalDaily(s);sellProducts(s,7,openingInventory);aiDaily(s);logEvent(s,'daily');
+    if(s.day%7===0) {aiWeekly(s);researchAndDevelopment(s);marketingWeek(s);businessWeekly(s);rivalWeekly(s);logEvent(s,'weekly');}
     if(s.day%30===0) {aiMonthly(s);expense(s,monthlyCosts(s),true);rivalMonthly(s);marketMonthly(s);businessMonthly(s);attackMonthly(s);monthlyHistory(s,marketShare(s));logEvent(s,'monthly');checkGameOver(s);}
     if(s.gameOver)break;
   }

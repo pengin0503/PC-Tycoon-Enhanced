@@ -30,7 +30,7 @@ test('hacker attack pauses time and the defence minigame resolves it',async({pag
 });
 
 test('bulk offer can be accepted from the companies screen',async({page})=>{
- const s=withCPU();s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity:10,unitPrice:35000,expiresDay:s.day+14}];
+ const s=withCPU();s.products[0].inventory=10;s.products[0].inventoryValue=s.products[0].unitCost*10;s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity:10,unitPrice:35000,expiresDay:s.day+14}];
  await load(page,s);await nav(page,'企業');await page.getByRole('tab',{name:/^取引/}).click();
  await expect(page.getByText('Helix 物流')).toBeVisible();await page.getByRole('button',{name:'承諾'}).click();
  await expect(page.getByText('現在、大口取引の打診はありません。',{exact:false})).toBeVisible();
@@ -45,7 +45,7 @@ test('acquisition negotiation shows odds and completes at full valuation',async(
  const offer=dialog.getByRole('slider',{name:'提示額'});await offer.focus();await page.keyboard.press('End');
  await expect(dialog).toContainText('100%');await dialog.getByRole('button',{name:/を提示$/}).click();
  await expect(dialog).toContainText('買収が成立しました');await dialog.getByRole('button',{name:'閉じる'}).last().click();
- await expect(page.getByTestId('competitor-count')).toHaveText('2');
+ await expect(page.getByTestId('competitor-count')).toHaveText('8');
 });
 
 test('hard-mode bankruptcy shows the game over screen and allows a new game',async({page})=>{

@@ -14,6 +14,7 @@ const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,at
 function ready(seed=1){
  let s=createGame({id:'ai',name:'AI社',difficulty:'normal',seed});
   s.company.cash=10_000_000_000;
+ s.day=17*360;s.year=2017;
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
  // Language models need GPUs from around 2030: year-2000 cards are far too slow.
  researchTo(s,'gpu',.35);
@@ -60,14 +61,14 @@ it('subscriptions charge monthly and open weights improve reputation without API
 it('subscription billing prorates user-days and settles earned revenue on stop, repricing, and save restore',()=>{
  const trained=cmd(cmd(ready(),train),{type:'advance',days:7});
  let oneDay=cmd(trained,{...deploy,mode:'subscription'});
- oneDay.day=59;
+ oneDay.day=Math.ceil(oneDay.day/30)*30-1;
  oneDay=cmd(oneDay,{type:'advance',days:1});
  const afterOneDay=oneDay.models[0].service!;
  expect(afterOneDay.subscriptionUserDays).toBe(0);
  expect(afterOneDay.revenue).toBe(Math.round(afterOneDay.users*500/30*(1-aiBalance.fee-aiBalance.refund)));
 
  let partial=cmd(trained,{...deploy,mode:'subscription'});
- partial.day=30;
+ partial.day=Math.ceil(partial.day/30)*30;
  partial=cmd(partial,{type:'advance',days:29});
  partial=importSave(exportSave(partial));
  const accrued=partial.models[0].service!.subscriptionUserDays;
@@ -80,7 +81,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(stopped.revenue).toBe(expectedOldRate);expect(stopped.subscriptionUserDays).toBe(0);
 
  const beforeRetire=cmd(trained,{...deploy,mode:'subscription'});
- beforeRetire.day=30;
+ beforeRetire.day=Math.ceil(beforeRetire.day/30)*30;
  const earning=cmd(beforeRetire,{type:'advance',days:1});
  const earnedDays=earning.models[0].service!.subscriptionUserDays;
  const retired=cmd(earning,{type:'retireModel',id:'m-1'}).models[0].service!;
@@ -89,7 +90,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(retired.subscriptionUserDays).toBe(0);
 
  const forSwitch=cmd(trained,{...deploy,mode:'subscription'});
- forSwitch.day=30;
+ forSwitch.day=Math.ceil(forSwitch.day/30)*30;
  const accruedBeforeSwitch=cmd(forSwitch,{type:'advance',days:1});
  const pending=accruedBeforeSwitch.models[0].service!.subscriptionUserDays;
  const switched=cmd(accruedBeforeSwitch,{...deploy,mode:'api'});
@@ -97,7 +98,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(switched.models[0].service!.revenue).toBe(Math.round(pending*500/30*(1-aiBalance.fee-aiBalance.refund)));
 
  const debtStopped=cmd(trained,{...deploy,mode:'subscription'});
- debtStopped.day=30;debtStopped.company.debt=1;
+ debtStopped.day=Math.ceil((debtStopped.day+1)/30)*30-1;debtStopped.company.debt=1_000_000_000;
  const stoppedByDebt=cmd(debtStopped,{type:'advance',days:1}).models[0].service!;
  expect(stoppedByDebt.enabled).toBe(false);
  expect(stoppedByDebt.subscriptionUserDays).toBe(0);
