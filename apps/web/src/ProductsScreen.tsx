@@ -57,7 +57,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
  const device=p.kind==='pc'||p.kind==='laptop';
  const bench=device&&p.remaining===0?benchmarkDevice(state,p):null;
  const specs=specRows(p);
- const labels=['概要',...(specs.length?['仕様']:[]),'レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[])];
+ const labels=['概要',...(specs.length?['仕様']:[]),'レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[]),...(p.launched&&p.kind!=='os'?['在庫配分']:[])];
  const sender=send as (c:GameCommand)=>void;
  const cooling=typeof p.spec.cooling==='number'?p.spec.cooling:undefined;
  const expectedDemand=productDemandForecast(state,p);
@@ -75,7 +75,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
      {p.remaining===0&&!p.launched&&<button className="primary" onClick={launch}>発売する</button>}
      {p.launched&&p.kind!=='os'&&<ProductionEditor product={p} state={state} send={sender}/>}
      {p.launched&&<PriceEditor product={p} send={sender}/>}
-     {p.launched&&p.kind!=='os'&&<StockAllocationEditor product={p} send={sender}/>}
+
     </div>
    </div>
    {specs.length>0&&<div key="spec"><dl className="stat-grid spec-grid">{specs.map(r=><Fragment key={r.key}><dt>{r.label}</dt><dd>{r.value}</dd></Fragment>)}</dl></div>}
@@ -90,6 +90,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
    {p.kind==='os'&&<div key="os">{desktop?<VirtualDesktop state={state} os={p} close={()=>setDesktop(false)}/>:<>
     <p>動作要件：CPU {osRequirements(p).cpu} / RAM {osRequirements(p).ram}GB / ストレージ {osRequirements(p).storage}GB</p>
     <button disabled={p.remaining>0} onClick={()=>setDesktop(true)}>操作テスト</button></>}</div>}
+   {p.launched&&p.kind!=='os'&&<div key="allocation"><StockAllocationEditor product={p} send={sender}/></div>}
   </PanelPages>
  </Modal>;
 }
