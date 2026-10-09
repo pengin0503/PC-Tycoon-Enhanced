@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {hardwareKinds,unlockedVisualTier,techById,type HardwareKind} from '../../../packages/content/src/research';
 import {defaultSpec,hardwareCatalog,fieldRange,fieldOptions,hardwareBalance,type Spec} from '../../../packages/content/src/hardware';
-import {productCatalog,vendorParts,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
+import {productCatalog,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
 import {osFeatures,osFeatureLabels,osFeatureResearch,lockScreens,lockScreenLabels,osThemes,osSliders,type OSFeature,type OSSlider} from '../../../packages/content/src/os';
 import {unlockedRange,canUnlockMore,type RangeSpec} from '../../../packages/content/src/unlocks';
 import {reviewAxisLabels,reviewAxes} from '../../../packages/content/src/market';
@@ -14,6 +14,7 @@ import {researchPointCost,hasRole} from '../../../packages/sim/src/business';
 import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
 import {priceRange} from '../../../packages/sim/src/pricing';
+import {vendorPartsAt} from '../../../packages/sim/src/vendor-market';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {PanelPages} from './PanelPages';
@@ -151,7 +152,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const bench=synthetic?benchmarkDevice(state,synthetic):null;
  // PSUs list their rated output; other parts their power draw, which the case cooling has to cover.
  const watts=(p:{kind:string,power:number,spec:Spec})=>p.kind==='psu'?`${p.spec.wattage}W出力`:`${p.power}W`;
- const options=(slot:string)=>[...vendorParts.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.name}（${yen(p.unitCost)} / ${watts(p)}）`})),
+ const options=(slot:string)=>[...availableVendors.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.name}（${yen(p.unitCost)} / ${watts(p)}）`})),
   ...state.products.filter(p=>p.kind===slot&&p.remaining===0).map(p=>({id:p.id,label:`自社 ${p.name}（在庫 ${p.inventory} / ${watts(p)}）`})),
   ...competitor.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.supplier} ${p.name}（${yen(p.price)} / 在庫${p.inventory} / ${watts(p)}）`}))];
  const submit=()=>{if(send({type:'assemble',kind,name,parts:chosen as {cpu:string,gpu:string,motherboard:string,ram:string,storage:string,psu?:string},purpose,appearance:visual.color,price:currentPrice,cooling,...(osId?{osId}:{}),visual:{tier,color:visual.color}}))done();};
