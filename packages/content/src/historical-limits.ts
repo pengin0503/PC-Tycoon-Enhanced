@@ -45,3 +45,23 @@ export function historicalRange(kind:string,key:string,field:Field,range:{min:nu
  const allowed=values?.filter(v=>v<=cap+1e-9).sort((a,b)=>b-a)[0];
  return {...range,max:Math.max(range.min,Math.min(range.max,allowed??cap))};
 }
+
+/** Typical retail segment balance targets. These are intentionally *not* historical maximum products and do not
+ * constrain what a player can invent with research; they cap the baseline AI/rival market forecasts only.
+ * Numerical rows are gameplay estimates, not claims about a measured global-average machine.
+ */
+const retailTypical:Record<string,Timeline>={
+ 'cpu.cores':[1,1,2,4,4,8,12,16],
+ 'cpu.clock':[.8,2.0,3,3.3,3.7,4.0,4.5,5.0],
+ 'gpu.vram':[.032,.064,.128,.512,2,8,12,16],
+ 'gpu.bandwidth':[3,8,24,60,150,320,448,700],
+ 'ram.capacity':[.128,.256,.512,2,4,8,16,32],
+ 'storage.capacity':[20,80,160,500,1000,2000,4000,8000],
+};
+/** Soft world-market retail target by release year, never used to gate player research or design. */
+export function typicalRetailLimit(kind:string,key:string,year:number):number|undefined{
+ const row=retailTypical[`${kind}.${key}`];if(!row)return undefined;
+ const j=milestoneYears.findIndex(y=>year<y);
+ if(j<0){const last=row.at(-1)!;return year>2025?last*2**((Math.min(year,2100)-2025)/10):last;}
+ return row[Math.max(0,j-1)];
+}

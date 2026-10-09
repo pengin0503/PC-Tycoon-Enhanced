@@ -89,7 +89,7 @@ it('manufacturing a PC consumes own PSU stock',()=>{
  s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'launch',id:'p-2'});
  s=cmd(s,{type:'line',id:'p-1',target:10});s=cmd(s,{type:'advance',days:1});expect(s.products[0].inventory).toBe(10);
  s=cmd(s,{type:'line',id:'p-1',target:0});s=cmd(s,{type:'line',id:'p-2',target:3});s=cmd(s,{type:'advance',days:1});
- expect(s.products[1].inventory).toBe(3);expect(s.products[0].inventory).toBe(7);
+ expect(s.products[1].inventory).toBe(3);expect(s.products[0].inventory+s.products[0].sold).toBe(7);
 });
 
 it('factory expands to level 13 and no further',()=>{

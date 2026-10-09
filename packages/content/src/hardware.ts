@@ -1,7 +1,6 @@
 import type {HardwareKind} from './research';
 import {unlockedRange,unlockProgress,frontierGrowth,type Unlock,type OptionUnlock} from './unlocks';
 import {unlockedOptions,techYear,eraAxes} from './era';
-import {historicalRange} from './historical-limits';
 export type Spec=Record<string,number|string>;
 /**
  * `legacyDefault`: value assumed for products saved before the field existed.
@@ -106,16 +105,9 @@ export function normalizeSpec(kind:HardwareKind,spec:Spec):Spec{
  return out;
 }
 /** Selectable range of a numeric field with the given completed research. */
-export function fieldRange(kind:HardwareKind,key:string,completed:readonly string[],year?:number){
- const field=hardwareCatalog[kind].fields[key],range=unlockedRange(field,kind,completed);
- return year===undefined?range:historicalRange(kind,key,field,range,year);
-}
+export function fieldRange(kind:HardwareKind,key:string,completed:readonly string[]){return unlockedRange(hardwareCatalog[kind].fields[key],kind,completed);}
 /** Option choices of a field available with the given completed research. */
-export function fieldOptions(kind:HardwareKind,key:string,completed:readonly string[],year?:number){
- const f=hardwareCatalog[kind].fields[key];
- const research=unlockedOptions(f.options??[],f.optionUnlock,kind,completed);
- return year===undefined?research:research.filter(option=>(f.optionUnlock?.years[option]??2000)<=year);
-}
+export function fieldOptions(kind:HardwareKind,key:string,completed:readonly string[]){const f=hardwareCatalog[kind].fields[key];return unlockedOptions(f.options??[],f.optionUnlock,kind,completed);}
 /** Frontier growth of a field with the given research (1 for fields research does not widen). */
 export function fieldGrowth(kind:HardwareKind,key:string,completed:readonly string[]){
  const f=hardwareCatalog[kind].fields[key];return f.unlock?frontierGrowth(f,unlockProgress(completed,kind,f.unlock.axes)):1;

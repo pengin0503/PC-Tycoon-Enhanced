@@ -1,6 +1,7 @@
 import { t as uiText } from './i18n';
 import { useState } from 'react';
 import {priceRange} from '../../../packages/sim/src/pricing';
+import {assemblyDemand,availableForRetail,availableForAssembly,availableForAI} from '../../../packages/sim/src/inventory-allocation';
 import {yen} from './i18n';
 import type { Product } from '../../../packages/sim/src/types';
 import type {GameState} from '../../../packages/sim/src/index';
@@ -33,12 +34,16 @@ export function ProductionEditor({product:p,state,send}:{product:Product,state:G
 /** Per-product routing: the external sale pool excludes assembly and AI allocations.
  * Assembly/AI consumption separately protects the retail reserve.
  */
-export function StockAllocationEditor({product:p,send}:{product:Product,send:(c:GameCommand)=>void}){
+export function StockAllocationEditor({product:p,state,send}:{product:Product,state:GameState,send:(c:GameCommand)=>void}){
  const [draft,setDraft]=useState(p.stockAllocation??{retail:0,assembly:0,ai:0});
  const fields=[['retail','外販用最低確保'],['assembly','PC組立用引当'],['ai','AI Lab用引当']] as const;
  const change=(key:keyof typeof draft,raw:string)=>setDraft({...draft,[key]:Math.max(0,Math.min(1000000,Math.round(Number(raw)||0)))});
+ const nextAssembly=assemblyDemand(state,p),retail=availableForRetail(state,p),internal=availableForAssembly(p),ai=availableForAI(state,p);
+ const shortage=Math.max(0,nextAssembly-internal);
  return <div className="inventory-target"><h3>在庫の用途別引当</h3>
   <p className="hint">外販用は組立・AI調達から保護し、組立用・AI用の引当は日次の通常販売から保護します。数量は各在庫に対する上限で、在庫自体は増えません。</p>
+  <p className="hint" data-testid={`allocation-forecast-${p.id}`}>翌日組立の最大必要量：{nextAssembly}台 / 組立に利用可能：{internal}台 / 不足予測：{shortage}台 / 通常販売可能：{retail}台 / AI Lab調達可能：{ai}台</p>
+  <p className="hint">優先順位：外販最低確保とAI用引当を保護した残りから組立し、翌日組立予約とAI用引当を除いた在庫を通常販売します。資金・他社部品不足では組立量は減少します。</p>
   <div className="form-grid">{fields.map(([key,label])=><label key={key}>{label}
    <input type="number" min={0} max={1000000} step={1} aria-label={`${p.name} ${label}`} value={draft[key]} onChange={e=>change(key,e.target.value)}/></label>)}</div>
   <button onClick={()=>send({type:'allocateStock',id:p.id,...draft})}>引当設定を保存</button>

@@ -3,6 +3,7 @@ import {techById} from '../../content/src/research';
 import {expense,logEvent} from './finance';
 import {derivedRandom} from './random';
 import {removeStock} from './inventory';
+import {availableForRetail} from './inventory-allocation';
 import {recordProductSale} from './sales';
 import {weeklyFans} from './reception';
 import type {GameState,GameCommand} from './types';
@@ -84,9 +85,9 @@ export function negotiateAcquisition(s:GameState,r:GameState['rivals'][number],v
 export function offerSuccessChance(markup:number){return Math.max(0,1-markup/o.counterLimit);}
 export function offersMonthly(s:GameState){
  if(s.offers.length>=o.maxOffers||derivedRandom(s.initialSeed,s.day,6000)>=o.monthlyChance)return;
- const stocked=s.products.filter(p=>p.launched&&p.kind!=='os'&&p.inventory>0);if(!stocked.length)return;
+ const stocked=s.products.filter(p=>p.launched&&p.kind!=='os'&&availableForRetail(s,p)>0);if(!stocked.length)return;
  const p=stocked[Math.floor(derivedRandom(s.initialSeed,s.day,6001)*stocked.length)];
- const quantity=Math.max(1,Math.round(p.inventory*(o.minShare+derivedRandom(s.initialSeed,s.day,6002)*o.shareRange)));
+ const quantity=Math.max(1,Math.round(availableForRetail(s,p)*(o.minShare+derivedRandom(s.initialSeed,s.day,6002)*o.shareRange)));
  const unitPrice=Math.max(1,Math.round(p.price*(o.minPrice+derivedRandom(s.initialSeed,s.day,6003)*o.priceRange)));
  const buyer=offerBuyers[Math.floor(derivedRandom(s.initialSeed,s.day,6004)*offerBuyers.length)];
  s.offerSeq++;s.offers.push({id:s.offerSeq,productId:p.id,buyer,quantity,unitPrice,expiresDay:s.day+o.expiryDays});
@@ -95,7 +96,7 @@ export function offersMonthly(s:GameState){
 export function expireOffers(s:GameState){s.offers=s.offers.filter(x=>x.expiresDay>s.day);}
 function fulfil(s:GameState,offer:GameState['offers'][number],unitPrice:number){
  const p=s.products.find(x=>x.id===offer.productId);if(!p)throw new Error('製品が存在しません');
- if(p.inventory<offer.quantity)throw new Error('在庫が不足しています');
+ if(availableForRetail(s,p)<offer.quantity)throw new Error('在庫が不足しています');
  const cost=removeStock(p,offer.quantity);
  recordProductSale(s,p,offer.quantity,unitPrice,cost);weeklyFans(s,p,offer.quantity);
  logEvent(s,'offerAccepted',`${offer.buyer}: ${p.name} ×${offer.quantity} @${unitPrice}`);

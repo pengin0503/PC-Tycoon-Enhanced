@@ -34,9 +34,9 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   const own=s.products.find(p=>p.id===c.gpuId&&p.kind==='gpu'&&p.launched&&p.remaining===0);
   if(!own)throw new Error('自社GPUを開発・発売してください');
   if(!own.line||own.target===0)throw new Error('自社GPUの生産ラインが稼働していません');
-  if(availableForAI(own)<c.gpus)throw new Error('自社GPU在庫が不足しています');
+  if(availableForAI(s,own)<c.gpus)throw new Error('自社GPU在庫が不足しています');
   const server=c.serverId==='vendor'?undefined:s.products.find(p=>p.id===c.serverId&&p.kind==='pc'&&p.spec.purpose==='server'&&p.launched);
-  if(c.serverId!=='vendor'&&(!server||availableForAI(server)<1))throw new Error('自社サーバー在庫が必要です');
+  if(c.serverId!=='vendor'&&(!server||availableForAI(s,server)<1))throw new Error('自社サーバー在庫が必要です');
   const cost=server?0:b.serverCost;expense(s,cost,false,true);
   const ownGpuValue=removeStock(own,c.gpus);const ownServerValue=server?removeStock(server,1):0;
   s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:gpuFlops(own.performance)*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
