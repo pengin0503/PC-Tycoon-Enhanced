@@ -136,7 +136,7 @@ export function manufacture(s:GameState){
  }
 }
 /** Weekly expected interest before inventory constraints and competition between own models of the same category. */
-export function productDemandForecast(s:GameState,p:GameState['products'][number],variance=1){
+export function productDemandInterest(s:GameState,p:GameState['products'][number],variance=1){
  if(!p.launched)return 0;
  const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
@@ -149,14 +149,14 @@ export function productDemandForecast(s:GameState,p:GameState['products'][number
 export function productDemandForecast(s:GameState,p:GameState['products'][number]){
  if(!p.launched)return 0;
  const peers=s.products.filter(x=>x.launched&&x.kind===p.kind);
- const interests=peers.map(x=>productDemandForecast(s,x));
+ const interests=peers.map(x=>productDemandInterest(s,x));
  const total=interests.reduce((a,b)=>a+b,0);
- return total?Math.floor(productDemandForecast(s,p)*Math.max(...interests)/total):0;
+ return total?Math.floor(productDemandInterest(s,p)*Math.max(...interests)/total):0;
 }
 export function sellProducts(s:GameState){
  const candidates=s.products.filter(p=>p.launched).map(p=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;
-  return {p,demand:productDemandForecast(s,p,1-b.weeklyVariance/2+r*b.weeklyVariance)};
+  return {p,demand:productDemandInterest(s,p,1-b.weeklyVariance/2+r*b.weeklyVariance)};
  });
  const pools=new Map<string,typeof candidates>();
  for(const candidate of candidates){const pool=pools.get(candidate.p.kind)??[];pool.push(candidate);pools.set(candidate.p.kind,pool);}

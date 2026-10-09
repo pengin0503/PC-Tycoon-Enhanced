@@ -1,4 +1,5 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 export const hardwareExplanations:Record<string,string>={
  cores:'CPU内で命令を処理するコアの数。多いほど並列処理に有利ですが、消費電力と原価も増えます。',
  ipc:'IPC相当は1クロック当たりの処理効率を表すゲーム内の相対値（標準=1倍）です。実物のCPUのIPCを直接測定した値ではありません。',
@@ -38,6 +39,17 @@ export const hardwareExplanations:Record<string,string>={
 export function TermHelp({label,description}:{label:string,description?:string}){
  const [open,setOpen]=useState(false);
  const trigger=useRef<HTMLButtonElement>(null);
+ const popup=useRef<HTMLSpanElement>(null);
+ const [position,setPosition]=useState({left:8,top:8});
+ useLayoutEffect(()=>{
+  if(!open||!popup.current||!trigger.current)return;
+  const rect=trigger.current.getBoundingClientRect(),bubble=popup.current.getBoundingClientRect();
+  const width=bubble.width,height=bubble.height,edge=8;
+  const left=Math.min(Math.max(edge,rect.left),Math.max(edge,window.innerWidth-width-edge));
+  const below=rect.bottom+6,above=rect.top-height-6;
+  const top=below+height<=window.innerHeight-edge?below:above>=edge?above:Math.max(edge,window.innerHeight-height-edge);
+  setPosition({left,top});
+ },[open,description]);
  useEffect(()=>{
   if(!open)return;
   const close=(e:Event)=>{if(e.target instanceof Node&&trigger.current?.contains(e.target))return;setOpen(false);};
@@ -48,5 +60,7 @@ export function TermHelp({label,description}:{label:string,description?:string})
   return()=>{for(const name of events)document.removeEventListener(name,close,opts);};
  },[open]);
  if(!description)return null;
- return <span className="term-help"><button ref={trigger} type="button" className="term-trigger" aria-expanded={open} aria-label={label+'の解説'} onClick={e=>{e.preventDefault();setOpen(v=>!v);}}>ⓘ</button>{open&&<span className="term-explanation" role="note">{description}</span>}</span>;
+ return <span className="term-help"><button ref={trigger} type="button" className="term-trigger" aria-expanded={open} aria-label={label+'の解説'} onClick={e=>{e.preventDefault();setOpen(v=>!v);}}>ⓘ</button>
+  {open&&createPortal(<span ref={popup} className="term-explanation" role="note" style={{left:position.left,top:position.top}}>{description}</span>,document.body)}
+ </span>;
 }

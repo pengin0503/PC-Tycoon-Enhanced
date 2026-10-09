@@ -21,7 +21,7 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
  const income=weeklyResearchPoints(state,hardwareBalance.researchPerWeek);
  const year=category?domainTechYear(category,state.research.completed):undefined;
  const market=marketYear(state.day),gap=year===undefined?undefined:year-market,canResearch=hasRole(state,'research');
- const doneIn=(c:string)=>techCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
+ const doneIn=(c:string)=>activeTechCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
  return <section className="screen research-scene">
   <header className="research-head">
    <div className="rp-balance"><span>研究ポイント</span><strong data-testid="rp-balance">{state.company.researchPoints.toLocaleString('ja-JP')} RP</strong><small>+{income.toLocaleString('ja-JP')} RP / 週</small></div>
