@@ -8,6 +8,9 @@ on:
       - 'tools/android-emulator-smoke.sh'
       - '.github/workflows/android-emulator-qa.yml'
   workflow_dispatch:
+concurrency:
+  group: pct-android-emulator-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
