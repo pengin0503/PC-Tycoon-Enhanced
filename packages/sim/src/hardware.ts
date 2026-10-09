@@ -64,11 +64,12 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  /** Value in production-cost terms: divided by how far research has moved this field's frontier. */
  const c=(k:string)=>n(k)/fieldGrowth(kind,k,completed);
  const node=(k='process')=>(n(k)/b.referenceProcess)**b.processExponent;
- const performance=hardwarePerformance(kind,spec);let power=0,unitCost=0;
+ const legacyCache=kind==='cpu'&&input.l1Cache===undefined&&input.l2Cache===undefined&&input.l3Cache===undefined;
+ const performance=hardwarePerformance(kind,legacyCache?{...spec,l1Cache:undefined as unknown as number}:spec);let power=0,unitCost=0;
  switch(kind){
   case'cpu':power=n('cores')*n('clock')*node()*b.cpu.powerCoefficient*(spec.smt==='on'?1.1:1);
    unitCost=b.cpu.baseCost+c('cores')*b.cpu.coreCost+c('clock')*b.cpu.clockCost+c('ipc')*b.cpu.ipcCost+
-    (c('l1Cache')+c('l2Cache')+c('l3Cache'))*b.cpu.cacheCost+
+    (legacyCache?c('cache'):c('l1Cache')+c('l2Cache')+c('l3Cache'))*b.cpu.cacheCost+
     (spec.smt==='on'?1500:0)+Math.max(0,c('memoryChannels')-1)*1200;break;
   case'gpu':power=n('units')**b.gpu.unitsPowerExponent*n('clock')*node()*b.gpu.powerCoefficient;unitCost=b.gpu.baseCost+c('units')*b.gpu.unitCost+c('clock')*b.gpu.clockCost+c('vram')*b.gpu.vramCost+c('bandwidth')*b.gpu.bandwidthCost+Math.max(0,c('busWidth')-64)*75;break;
   case'motherboard':power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost+c('bus')*b.motherboard.busCost;break;

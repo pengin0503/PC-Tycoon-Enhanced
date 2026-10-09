@@ -21,7 +21,7 @@ it('blocks cosmetic level before research, retains optional old-save visual fiel
  let s=start();s=command(s,{type:'research',id:'cpu-compute-1'});s=command(s,{type:'advance',days:7});
  expect(()=>command(s,design({tier:1,color:'teal'}))).toThrow();
  const legacy=command(s,design());expect(gameSchema.parse(JSON.parse(JSON.stringify(legacy))).products[0].visual).toBeUndefined();
- s=command(s,{type:'research',id:'cpu-visual-1'});s=command(s,{type:'advance',days:7});
+ s=command({...s,company:{...s.company,researchPoints:100}}, {type:'research',id:'cpu-visual-1'});s=command(s,{type:'advance',days:7});
  const styled=command(s,design({tier:1,color:'teal'})).products[0];
  expect(styled.visual).toEqual({tier:1,color:'teal'});
  expect(styled.unitCost).toBeGreaterThan(legacy.products[0].unitCost);

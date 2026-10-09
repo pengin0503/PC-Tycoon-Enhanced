@@ -7,6 +7,7 @@ import * as math from '../packages/sim/src/ai-math';
 import {aiHardwareBoost} from '../packages/sim/src/ai';
 import {aiBalance} from '../packages/content/src/ai';
 import {defaultSpec} from '../packages/content/src/hardware';
+import {evaluateHardware} from '../packages/sim/src/hardware';
 import {unlockBranch,researchTo,frontierSpec} from './research-helpers';
 const cmd=(s:any,c:any)=>command(s,c);
 const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
@@ -15,7 +16,10 @@ function ready(seed=1){
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
  // Language models need GPUs from around 2030: year-2000 cards are far too slow.
  researchTo(s,'gpu',.35);
- s=cmd(s,{type:'design',kind:'gpu',name:'Own AI GPU',spec:frontierSpec('gpu',s.research.completed),price:60000});
+ const spec=frontierSpec('gpu',s.research.completed);
+ // Post-rebalance designs must have physically adequate cooling even at the frontier.
+ while(evaluateHardware('gpu',spec,s.research.completed,{stored:true}).power>Number(spec.cooling)&&Number(spec.units)>1)spec.units=Math.max(1,Number(spec.units)/2);
+ s=cmd(s,{type:'design',kind:'gpu',name:'Own AI GPU',spec,price:60000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  s=cmd(s,{type:'line',id:'p-1',target:100});s=cmd(s,{type:'advance',days:1});
  return cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});

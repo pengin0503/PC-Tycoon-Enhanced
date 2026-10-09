@@ -33,7 +33,7 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
   clock:{label:'クロック',unit:'GHz',min:.1,max:10,step:.1,default:.8,unlock:u(['compute'],1)},
   ipc:{label:'IPC相当',unit:'倍',min:.5,max:10,step:.1,default:1,unlock:u(['compute'],1)},
   process:{label:'製造プロセス',unit:'nm',min:.1,max:350,values:processNodes,default:180,lowerIsBetter:true,unlock:u(['power'],180,true)},
-  cache:{label:'総キャッシュ（旧データ互換）',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.25,legacyDefault:8,unlock:u(['compatibility'],.5,true)},
+  cache:{label:'キャッシュ容量（旧データ互換）',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.25,legacyDefault:8,unlock:u(['compatibility'],.5,true)},
   l1Cache:{label:'L1キャッシュ',unit:'MB',min:.0625,max:1024,values:binary(.0625,1024),default:.0625,legacyDefault:.0625,unlock:u(['compatibility'],.0625,true)},
   l2Cache:{label:'L2キャッシュ',unit:'MB',min:.0625,max:8192,values:binary(.0625,8192),default:.125,legacyDefault:.125,unlock:u(['compatibility'],.125,true)},
   l3Cache:{label:'L3キャッシュ',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.0625,legacyDefault:.0625,unlock:u(['capacity'],.0625,true)},
@@ -101,10 +101,6 @@ export function normalizeSpec(kind:HardwareKind,spec:Spec):Spec{
   const v=spec[key]??field.legacyDefault;
   if(v===undefined)throw new Error('仕様の項目が不正です');
   out[key]=v;
- }
- // Preserve pre-L1/L2/L3 saves: distribute the old aggregate into three caches.
- if(kind==='cpu'&&spec.l1Cache===undefined&&spec.l2Cache===undefined&&spec.l3Cache===undefined&&typeof spec.cache==='number'){
-  out.l1Cache=.0625;out.l2Cache=.125;out.l3Cache=Math.max(.0625,spec.cache-.1875);
  }
  return out;
 }
