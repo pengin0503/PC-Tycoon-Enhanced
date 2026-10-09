@@ -15,6 +15,7 @@ import {researchPointCost,weeklyResearchPoints,distributionDemand,requireRole,ha
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
+import {availableForRetail,availableForAssembly} from './inventory-allocation';
 import {marketReference,marketYear} from './market';
 import {earliestResearchYear} from '../../content/src/era';
 import {developmentCost} from './development-cost';
@@ -109,11 +110,12 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
- if(c.type==='launch'||c.type==='line'||c.type==='price'){
+ if(c.type==='launch'||c.type==='line'||c.type==='price'||c.type==='allocateStock'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
   if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);launchReception(s,p,c.presentation??'none');}
   if(c.type==='line'){if(!p.launched||p.kind==='os')throw new Error('発売済みハードウェアを選択してください');p.target=c.target;p.line=c.target>0;}
   if(c.type==='price'){assertProductPrice(c.price,p,marketReference(p.kind,s.day));p.price=c.price;}
+  if(c.type==='allocateStock'){if(p.kind==='os'||!p.launched)throw new Error('発売済みハードウェアを選択してください');p.stockAllocation={retail:c.retail,assembly:c.assembly,ai:c.ai};}
   return true;
  }
  return false;
@@ -130,11 +132,11 @@ export function manufacture(s:GameState){
   const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
   const generic=device?keys.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0):0;
   const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
-  const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
+  const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>availableForAssembly(part)),...sourced.map(x=>x.part.inventory));
   if(units>0){
    expense(s,units*cashCost);
    const transfers=own.reduce((n,part)=>n+removeStock(part,units),0);
-   for(const x of sourced)settleProcurement(x.owner,x.part,units);
+   for(const x of sourced)settleProcurement(x.owner,x.part,units,s);
    addStock(p,units,units*cashCost+transfers);capacity-=units;
   }
  }
