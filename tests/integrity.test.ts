@@ -1,3 +1,4 @@
+import {withTestStaff} from './staff-fixture';
 import {it,expect} from 'vitest';
 import {indexedDB} from 'fake-indexeddb';
 import {createGame,command} from '../packages/sim/src/index';
@@ -12,7 +13,7 @@ it('rejects unknown or duplicate research identifiers and overstaffing',()=>{
 });
 it('rejects future histories missing clusters and overbooked compute',()=>{
  const s=cmd(start(),{type:'advance',days:30});s.history[0].day=31;expect(()=>importSave(JSON.stringify(s))).toThrow();
- let a=start();a.research.completed.push('ai-compute-1','gpu-compute-1');unlockBranch(a,'gpu','capacity',8);
+ let a=withTestStaff(start(),true);a.research.completed.push('ai-compute-1','gpu-compute-1');unlockBranch(a,'gpu','capacity',8);
  a=cmd(a,{type:'design',kind:'gpu',name:'Own GPU',spec:{...defaultSpec('gpu'),vram:2},price:20000});
  a=cmd(a,{type:'advance',days:14});a=cmd(a,{type:'launch',id:'p-1'});a=cmd(a,{type:'line',id:'p-1',target:100});a=cmd(a,{type:'advance',days:1});
  a=cmd(a,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});a=cmd(a,{type:'trainModel',name:'Model',design:{architecture:'dense',total:1e8,active:1e8,layers:12,hidden:768,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8},clusterId:'c-1',budget:40000000});

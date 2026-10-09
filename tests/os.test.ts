@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args));
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 const cmd=(s:any,c:any)=>command(s,c);
 function ready(){let s=createGame({id:'os',name:'OS社',difficulty:'normal',seed:4});return cmd(cmd(s,{type:'research',id:'os-compute-1'}),{type:'advance',days:7});}
 const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000};

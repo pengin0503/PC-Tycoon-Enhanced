@@ -16,7 +16,8 @@ test('UI size persists from 50 to 150 percent with accessible icon-led clock',as
  await expect(page.getByText('150%',{exact:true})).toBeVisible();
  await page.reload();
  await expect(page.getByRole('slider',{name:'UIサイズ'})).toHaveValue('150');
- await expect(page.getByRole('button',{name:'1日進める'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'1x',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'30日進める'})).toHaveCount(0);
 });
 test('research inner grid accepts wheel and touch-compatible scrolling in low landscape heights',async({page})=>{
  await page.setViewportSize({width:844,height:390});await page.goto('/');
@@ -41,6 +42,18 @@ test('technical definitions are disclosed on demand without editing hardware val
  await page.getByRole('tab',{name:'デザイン'}).click();await expect(page.getByRole('note')).toHaveCount(0);
  await page.getByRole('tab',{name:'仕様'}).click();
  await button.click();await button.click();await expect(page.getByRole('note')).toHaveCount(0);
+});
+test('technical explanation repositions inside a narrow landscape viewport',async({page})=>{
+ await page.setViewportSize({width:844,height:390});
+ await startCompany(page);await openDesigner(page,'CPU');
+ await page.getByRole('button',{name:'クロックの解説'}).click();
+ const popup=page.getByRole('note');await expect(popup).toBeVisible();
+ const bounds=await popup.boundingBox();expect(bounds).not.toBeNull();
+ const area=bounds!;
+ expect(area.x).toBeGreaterThanOrEqual(0);
+ expect(area.y).toBeGreaterThanOrEqual(0);
+ expect(area.x+area.width).toBeLessThanOrEqual(844);
+ expect(area.y+area.height).toBeLessThanOrEqual(390);
 });
 test('the game behaves as an app: no text selection, context menu or page zoom outside text fields',async({page})=>{
  await startCompany(page);

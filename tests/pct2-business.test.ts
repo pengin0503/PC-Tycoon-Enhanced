@@ -1,3 +1,4 @@
+import {withTestStaff} from './staff-fixture';
 import {it,expect} from 'vitest';
 import {createGame,command,type GameState} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
@@ -17,12 +18,12 @@ it('research point costs scale with level and difficulty; points accrue weekly w
  const base=cmd(s,{type:'advance',days:7}).company.researchPoints-s.company.researchPoints;
  const staffed=cmd(cmd(s,{type:'hire',role:'research',skill:80}),{type:'advance',days:7});
  expect(staffed.company.researchPoints-s.company.researchPoints).toBeGreaterThan(base);
- const office=start();office.company.cash=1_000_000_000;const big=cmd(office,{type:'office',level:2});
+ const office=withTestStaff(start());office.company.cash=1_000_000_000;const big=cmd(office,{type:'office',level:2});
  expect(cmd(big,{type:'advance',days:7}).company.researchPoints).toBeGreaterThan(cmd(office,{type:'advance',days:7}).company.researchPoints);
 });
 
 it('legacy in-progress research still completes from saved work',()=>{
- const s=start();const json=JSON.parse(exportSave(s));json.research.active=[{id:'cpu-compute-1',remaining:5}];delete json.company.researchPoints;
+ const s=withTestStaff(start());const json=JSON.parse(exportSave(s));json.research.active=[{id:'cpu-compute-1',remaining:5}];delete json.company.researchPoints;
  const loaded=importSave(JSON.stringify(json));expect(loaded.company.researchPoints).toBe(0);
  expect(cmd(loaded,{type:'advance',days:7}).research.completed).toContain('cpu-compute-1');
 });
@@ -37,13 +38,13 @@ it('distribution network raises demand and fans at a monthly cost',()=>{
 });
 
 function stocked(){
- let s=start();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:60000});
+ let s=withTestStaff(start());s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:60000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:300});
  s=cmd(s,{type:'advance',days:6});return s;
 }
 const withOffer=(s:GameState,quantity=10)=>{s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity,unitPrice:50000,expiresDay:s.day+14}];return s;};
 function bundledOffer({price=280000,osPrice=5000,includeOS=true}:{price?:number,osPrice?:number,includeOS?:boolean}={}){
- let s=start();s.research.completed.push('os-compute-1','pc-compute-1');
+ let s=withTestStaff(start());s.research.completed.push('os-compute-1','pc-compute-1');
  s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:300000,...(includeOS?{osId:'p-1'}:{})});

@@ -5,6 +5,8 @@ import {reviewAxes,reviewAxisLabels,benchmarkPresets} from '../../../packages/co
 import {benchmarkDevice} from '../../../packages/sim/src/benchmark';
 import {osRequirements} from '../../../packages/sim/src/os';
 import {reviewDemandFactor} from '../../../packages/sim/src/reception';
+import {productDemandForecast} from '../../../packages/sim/src/hardware';
+import {eraDemandFactor} from '../../../packages/sim/src/events';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {PriceEditor,ProductionEditor} from './ProductEditors';
@@ -41,7 +43,7 @@ export function ProductsScreen({state,send}:{state:GameState,send:Send}){
    <div className="product-card-body"><h3>{p.name}</h3><div className="row"><Chip>{productCatalog[p.kind].label}</Chip><Chip tone={st.tone}>{st.label}</Chip></div>
     {p.review?<Stars value={p.review.stars} size="sm"/>:<small className="muted">レビュー未公開</small>}
     {p.remaining>0?<><Meter value={Math.max(0,20-p.remaining)} max={Math.max(20,p.remaining)} label={`${p.name} 開発進捗`}/><small>残り作業 {p.remaining.toFixed(1)}</small></>
-     :<p className="card-stats"><span>販売 <b data-testid={`sold-${p.id}`}>{p.sold}</b></span><span>在庫 {p.inventory}</span><span>{yen(p.price)}</span></p>}
+     :<p className="card-stats"><span>販売 <b data-testid={`sold-${p.id}`}>{p.sold}</b></span><span>在庫 {p.inventory}</span><span>{yen(p.price)}</span></p>}{p.launched&&<small className="demand-preview">推定週需要：<b data-testid={`demand-${p.id}`}>{productDemandForecast(state,p).toLocaleString('ja-JP')}</b> 台</small>}
     {p.remaining===0&&!p.launched&&<button className="primary" onClick={()=>setLaunch(p.id)}>発売する</button>}
    </div></article>;})}</div>
    :<Empty>まだ製品がありません。「開発」から新製品を設計しましょう。</Empty>}
@@ -58,18 +60,20 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
  const labels=['概要',...(specs.length?['仕様']:[]),'レビュー',...(device?['ベンチマーク']:[]),...(p.kind==='os'?['製品・テスト']:[])];
  const sender=send as (c:GameCommand)=>void;
  const cooling=typeof p.spec.cooling==='number'?p.spec.cooling:undefined;
+ const expectedDemand=productDemandForecast(state,p);
  return <Modal title={p.name} onClose={close} onBack={desktop?()=>{setDesktop(false);return true;}:undefined} wide>
   <PanelPages labels={labels}>
    <div className="detail-overview"><ProductVisual product={p}/>
     <dl className="stat-grid"><dt>カテゴリ</dt><dd>{productCatalog[p.kind].label}</dd><dt>性能スコア</dt><dd>{p.performance.toLocaleString('ja-JP')}</dd>
      {p.kind!=='os'&&<><dt>消費電力</dt><dd>{p.power.toLocaleString('ja-JP')}W</dd></>}{cooling!==undefined&&<><dt>冷却性能</dt><dd>{cooling.toLocaleString('ja-JP')}W</dd></>}
      <dt>製造原価</dt><dd>{yen(p.unitCost)}</dd><dt>販売価格</dt><dd>{yen(p.price)}</dd>
+     <dt>推定週需要</dt><dd data-testid="detail-demand">{expectedDemand.toLocaleString('ja-JP')}台</dd><dt>時代需要係数</dt><dd>×{eraDemandFactor(p.kind,state.day).toFixed(2)}</dd>
      <dt>販売数</dt><dd>{p.sold.toLocaleString('ja-JP')}</dd><dt>在庫</dt><dd>{p.inventory}</dd><dt>売上</dt><dd>{yen(p.revenue)}</dd><dt>利益</dt><dd className={p.profit<0?'bad':''}>{yen(p.profit)}</dd>
      {p.hype?<><dt>話題性</dt><dd>+{p.hype.toFixed(0)}%</dd></>:null}{p.review&&<><dt>レビューによる需要</dt><dd>×{reviewDemandFactor(p).toFixed(2)}</dd></>}</dl>
     <div className="detail-actions">
      {p.remaining>0&&<p>開発中：残り作業 {p.remaining.toFixed(1)}</p>}
      {p.remaining===0&&!p.launched&&<button className="primary" onClick={launch}>発売する</button>}
-     {p.launched&&p.kind!=='os'&&<ProductionEditor product={p} send={sender}/>}
+     {p.launched&&p.kind!=='os'&&<ProductionEditor product={p} state={state} send={sender}/>}
      {p.launched&&<PriceEditor product={p} send={sender}/>}
     </div>
    </div>

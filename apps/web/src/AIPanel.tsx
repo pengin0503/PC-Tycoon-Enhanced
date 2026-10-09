@@ -10,6 +10,7 @@ import {PanelPages} from './PanelPages';
 import {ProductIllustration} from './ProductIllustration';
 import {RangeField,formatValue,formatFlops} from './RangeField';
 import {ActionBar,lockFor} from './DevelopScreen';
+import {hasRole} from '../../../packages/sim/src/business';
 import {describeWithResearch} from './research-hints';
 import {Meter,Empty,Chip} from './ui';
 import {yen} from './i18n';
@@ -183,7 +184,7 @@ function ModelDesigner({state,send,back,done}:{state:GameState,send:Send,back:Re
     </PanelPages>
    </section>
   </div>
-  <ActionBar back={back} costLabel="学習費" cost={cost} label="学習を開始" disabled={!!problem||!train||!name.trim()||state.company.cash<cost} onClick={submit}/>
+  <ActionBar back={back} costLabel="学習費" cost={cost} label="学習を開始" note={!hasRole(state,'ai')?'AI担当の採用が必要です':undefined} disabled={!!problem||!train||!name.trim()||!hasRole(state,'ai')||state.company.cash<cost} onClick={submit}/>
  </section>;
 }
 const aiHelp:Record<AISlider,string>={

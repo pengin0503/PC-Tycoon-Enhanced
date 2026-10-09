@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 import {unlockBranch} from './research-helpers';
 const start=()=>createGame({id:'hw',name:'研究社',difficulty:'normal',seed:42});
 const cmd=(s:any,c:any)=>command(s,c);
@@ -9,7 +11,7 @@ it('research spends research points, not cash, and completes immediately',()=>{
  const before=start();expect(before.company.researchPoints).toBe(100);
  const s=cmd(before,{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(1000000000);
  expect(s.company.researchPoints).toBe(0);expect(s.research.completed).toContain('cpu-compute-1');expect(before.research.completed).toEqual([]);
- const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(100);
+ const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(36);
 });
 it('research enforces prerequisites, duplicates and available points',()=>{
  expect(()=>cmd(start(),{type:'research',id:'cpu-compute-2'})).toThrow();expect(()=>cmd(start(),{type:'research',id:'unknown'})).toThrow();
@@ -31,8 +33,8 @@ it('design requires research and reflects real tradeoffs',()=>{
 });
 it('cooling must cover the power draw and headroom improves reliability',()=>{
  const s=unlockBranch(unlockBranch(cmd(start(),{type:'research',id:'cpu-compute-1'}),'cpu','compute',3),'cpu','power',1);
- const hot={...cpu,clock:2.3,cooling:40};
- expect(()=>cmd(s,{type:'design',kind:'cpu',name:'Hot',spec:hot,price:60000})).toThrow(/冷却性能が不足しています（消費電力 80W \/ 冷却性能 40W）/);
+ const hot={...cpu,clock:2.0,cooling:40};
+ expect(()=>cmd(s,{type:'design',kind:'cpu',name:'Hot',spec:hot,price:60000})).toThrow(/冷却性能が不足しています（消費電力 78W \/ 冷却性能 40W）/);
  const {cooling:_,...missing}=cpu;
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'None',spec:missing,price:40000})).toThrow(/冷却性能を指定/);
  const tight=cmd(s,{type:'design',kind:'cpu',name:'Tight',spec:{...hot,cooling:80},price:60000}).products.at(-1)!;

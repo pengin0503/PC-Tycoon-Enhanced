@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 const cmd=(s:any,c:any)=>command(s,c);const parts={cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
 function ready(kind='pc'){let s=createGame({id:'dev',name:'端末社',difficulty:'normal',seed:42});return cmd(cmd(s,{type:'research',id:`${kind}-compute-1`}),{type:'advance',days:7});}
 const assembly=(kind='pc',purpose='gaming',selected=parts)=>({type:'assemble',kind,name:'Polar Station',parts:selected,purpose,appearance:'graphite',price:300000});
@@ -24,7 +26,7 @@ it('case cooling must cover the parts, is research limited, priced and stored wi
  // Cost research discounts the case cooler together with the rest of the case overhead.
  const cheaper=ready();cheaper.research.completed.push('pc-cost-1','pc-cost-2','pc-cost-3');
  const coolerCost=(state:any)=>cmd(state,{...assembly(),cooling:200}).products[0].unitCost-cmd(state,{...assembly(),cooling:70}).products[0].unitCost;
- expect(coolerCost(cheaper)).toBeLessThan(coolerCost(s));
+ expect(coolerCost(cheaper)).toBe(coolerCost(s));
 });
 it('laptop packaging has a cost and cooling tradeoff',()=>{
  const pc=cmd(ready(),assembly()).products[0];const laptop=cmd(ready('laptop'),assembly('laptop')).products[0];

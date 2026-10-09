@@ -1,7 +1,8 @@
 import {useState} from 'react';
-import {techCatalog,researchDomains,axisLabels} from '../../../packages/content/src/research';
-import {researchPointCost,weeklyResearchPoints} from '../../../packages/sim/src/business';
+import {activeTechCatalog,researchDomains,axisLabels,hardwareKinds} from '../../../packages/content/src/research';
+import {researchPointCost,weeklyResearchPoints,hasRole} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
+import {marketYear} from '../../../packages/sim/src/market';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {domainLabel,techEffectText,domainTechYear} from './research-hints';
 /** Research tree browser: spend research points to unlock technologies instantly. */
@@ -12,21 +13,25 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
  const [view,setView]=useState<'available'|'all'|'done'>('available');
  const [page,setPage]=useState(0);
  const completed=new Set(state.research.completed);
- const filtered=techCatalog.filter(t=>(!category||t.category===category)&&(!axis||t.axis===axis)&&t.label.toLowerCase().includes(query.toLowerCase())
+ const filtered=activeTechCatalog.filter(t=>(!category||t.category===category)&&(!axis||t.axis===axis)&&t.label.toLowerCase().includes(query.toLowerCase())
   &&(view==='all'||(view==='done'?completed.has(t.id):!completed.has(t.id)&&t.prerequisites.every(p=>completed.has(p)))))
   .sort((a,b)=>Number(b.axis==='compute'&&b.level===1)-Number(a.axis==='compute'&&a.level===1)||a.level-b.level);
  const count=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,count-1);
  const update=(set:(s:string)=>void,value:string)=>{set(value);setPage(0);};
  const income=weeklyResearchPoints(state,hardwareBalance.researchPerWeek);
- const year=category?domainTechYear(category,state.research.completed):undefined;
- const doneIn=(c:string)=>techCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
+ const selectedYear=category?domainTechYear(category,state.research.completed):undefined;
+ const year=selectedYear??Math.round(hardwareKinds.reduce((total,kind)=>total+(domainTechYear(kind,state.research.completed)??2000),0)/hardwareKinds.length);
+ const market=marketYear(state.day),gap=year===undefined?undefined:year-market,canResearch=hasRole(state,'research');
+ const doneIn=(c:string)=>activeTechCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
  return <section className="screen research-scene">
   <header className="research-head">
    <div className="rp-balance"><span>研究ポイント</span><strong data-testid="rp-balance">{state.company.researchPoints.toLocaleString('ja-JP')} RP</strong><small>+{income.toLocaleString('ja-JP')} RP / 週</small></div>
-   <div className="research-progress"><span>解放済み技術</span><strong>{completed.size} / <span data-testid="tech-count">{techCatalog.length}</span></strong></div>
-   {year!==undefined&&<div className="research-progress research-era"><span>{domainLabel(category)} 技術水準</span><strong data-testid="tech-year">{year}年相当</strong><small>2100年が上限</small></div>}
+   <div className="research-progress"><span>市場年</span><strong data-testid="market-year">{market}年</strong></div>
+   <div className="research-progress"><span>解放済み技術</span><strong>{completed.size} / <span data-testid="tech-count">{activeTechCatalog.length}</span></strong></div>
+   {year!==undefined&&<div className="research-progress research-era"><span>{selectedYear===undefined?'総合':domainLabel(category)} 技術水準</span><strong data-testid="tech-year">{year}年相当</strong><small data-testid="tech-gap">{gap===undefined?'':gap<0?`市場より${-gap}年遅れ`:gap>0?`市場より${gap}年先行`:'市場と同水準'}</small></div>}
    <div className="pager"><button aria-label="前の研究ページ" disabled={current===0} onClick={()=>setPage(current-1)}>‹</button><span data-testid="research-page">{current+1} / {count} · {filtered.length}件</span><button aria-label="次の研究ページ" disabled={current>=count-1} onClick={()=>setPage(current+1)}>›</button></div>
   </header>
+  {!canResearch&&<p className="warning" role="status">研究を行うには研究担当を1名以上採用してください。</p>}
   <div className="chip-row domain-row" role="group" aria-label="研究分野">
    <button aria-pressed={category===''} onClick={()=>update(setCategory,'')}>すべて</button>
    {researchDomains.map(d=><button key={d} aria-pressed={category===d} onClick={()=>update(setCategory,d)}>{domainLabel(d)} <small>{doneIn(d)}</small></button>)}
@@ -45,7 +50,7 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
     <p className="tech-effect">{techEffectText(t,state.research.completed)}</p>
     {locked&&<small className="muted">前提：{t.prerequisites.join(' / ')}</small>}
     <div className="tech-foot">{!done&&<span className={`rp-cost ${affordable?'':'short'}`}>{cost.toLocaleString('ja-JP')} RP</span>}
-     <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||!affordable} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':'研究する'}</button></div>
+     <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||!affordable||!canResearch} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':!canResearch?'研究担当が必要':'研究する'}</button></div>
     {active&&<progress max={t.work} value={t.work-active.remaining}/>}
    </article>;})}</div>
  </section>;

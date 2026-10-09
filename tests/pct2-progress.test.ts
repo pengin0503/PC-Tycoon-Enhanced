@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args));
 import {it,expect} from 'vitest';
-import {createGame,command,advanceInteractive,type GameState} from '../packages/sim/src/index';
+import {createGame as baseGame,command,advanceInteractive,type GameState} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
 import {companyStats,yearRevenue} from '../packages/sim/src/progress';
 import {researchPointCost} from '../packages/sim/src/business';

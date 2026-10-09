@@ -102,8 +102,6 @@ export default function App(){
     <button aria-label={ja.pause} title={ja.pause} aria-pressed={speed===0} onClick={()=>setSpeed(0)}>⏸</button>
     <button aria-label="1x" title="1倍速" aria-pressed={speed===1} disabled={blocked} onClick={()=>setSpeed(1)}>▶</button>
     <button aria-label="7x" title="7倍速" aria-pressed={speed===7} disabled={blocked} onClick={()=>setSpeed(7)}>⏩</button>
-    <button aria-label={ja.one} title={ja.one} onClick={()=>send({type:'advance',days:1})}>+1</button>
-    <button aria-label={ja.month} title={ja.month} onClick={()=>send({type:'advance',days:30})}>+30</button>
     <button aria-label={ja.save} title={ja.save} onClick={()=>{setError('');void save(state,true);}}>💾</button>
     <button aria-label={`通知センター（未読${unread}件）`} title="通知センター" onClick={()=>setShowInbox(v=>!v)}>🔔{unread>0&&<span className="badge" aria-hidden="true">{unread}</span>}</button>
     <button aria-label="セーブ・設定" title="セーブ・設定" aria-pressed={tab==='settings'} onClick={()=>navigate('settings')}><ScreenIcon id="settings" size={18}/></button>

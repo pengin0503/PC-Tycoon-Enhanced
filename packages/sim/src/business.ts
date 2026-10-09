@@ -13,8 +13,18 @@ type Role=Staff['role'];
 export function researchCostMultiplier(s:GameState){return (s.difficulty==='hard'?managementBalance.hardResearchCost:1)*modeResearchCost(s);}
 /** Overridden by game modes (G5); 1 for standard games. */
 export function modeResearchCost(s:GameState){return s.mode==='long'?2:s.mode==='tycoon'?.75:1;}
-export function researchPointCost(s:GameState,id:string){const t=techById.get(id);if(!t)throw new Error('研究が存在しません');return Math.ceil(t.work*rp.costPerWork*researchCostMultiplier(s));}
+export function researchPointCost(s:GameState,id:string){
+ const t=techById.get(id);if(!t)throw new Error('研究が存在しません');
+ const otherUnlocks=t.axis==='compute'&&t.level===1?s.research.completed.filter(x=>x.endsWith('-compute-1')&&x!==id).length:0;
+ return Math.ceil(t.work*rp.costPerWork*researchCostMultiplier(s)*(1+otherUnlocks*.4));
+}
+export function hasRole(s:GameState,role:Role){return s.staff.some(e=>e.role===role);}
+export function requireRole(s:GameState,role:Role){
+ if(!hasRole(s,role))throw new Error(({research:'研究',engineering:'開発',marketing:'マーケティング',ai:'AI'} as const)[role]+'担当が1名以上必要です');
+}
+export function aiStaffUnlocked(s:GameState){return s.research.completed.includes('ai-compute-1');}
 export function weeklyResearchPoints(s:GameState,base:number){
+ if(!hasRole(s,'research'))return 0;
  const office=1+rp.officeBonus*(s.officeLevel-1);
  return Math.round((base+traitWork(s,'research'))*rp.pointsPerWork*office);
 }
@@ -32,16 +42,18 @@ function nextStaffId(s:GameState){
  return `e-${s.staffSeq}`;
 }
 function addStaff(s:GameState,role:Role,skill:number,trait?:StaffTrait){
+ if(role==='ai'&&!aiStaffUnlocked(s))throw new Error('AI担当の採用にはTransformer基盤技術の研究が必要です');
  if(s.staff.length>=offices[s.officeLevel-1].staffCapacity)throw new Error('オフィスの人員枠が不足しています');
  expense(s,skill*managementBalance.recruitPerSkill);
  s.staff.push({id:nextStaffId(s),role,skill,salary:salaryFor(skill,trait),...(trait?{trait}:{})});logEvent(s,'hired',role);
 }
-const roles:Role[]=['research','engineering','marketing','ai'];
+const roles:Role[]=['research','engineering','marketing'];
 export function generateCandidates(s:GameState,tier:keyof typeof h.searches){
  const cfg=h.searches[tier];s.candidates=[];
+ const available:Role[]=aiStaffUnlocked(s)?[...roles,'ai']:roles;
  for(let i=0;i<h.candidateCount;i++){
   const salt=s.candidateSeq*7+i;
-  const role=roles[Math.floor(derivedRandom(s.initialSeed,s.day,1000+salt)*roles.length)];
+  const role=available[Math.floor(derivedRandom(s.initialSeed,s.day,1000+salt)*available.length)];
   const skill=Math.min(100,cfg.minSkill+Math.floor(derivedRandom(s.initialSeed,s.day,2000+salt)*(cfg.skillRange+1)));
   const trait=derivedRandom(s.initialSeed,s.day,3000+salt)<cfg.traitChance?staffTraits[Math.floor(derivedRandom(s.initialSeed,s.day,4000+salt)*staffTraits.length)]:undefined;
   s.candidateSeq++;s.candidates.push({id:`k-${s.candidateSeq}`,role,skill,...(trait?{trait}:{})});

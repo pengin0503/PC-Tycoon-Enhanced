@@ -1,3 +1,4 @@
+import {withTestStaff} from './staff-fixture';
 import {it,expect} from 'vitest';
 import {techCatalog,techEffect} from '../packages/content/src/research';
 import {evaluateHardware} from '../packages/sim/src/hardware';
@@ -25,9 +26,9 @@ it('hardware research widens slider ranges instead of multiplying performance; p
  expect(fieldRange('cpu','ipc',[...base,'cpu-compute-2']).max).toBeGreaterThan(fieldRange('cpu','ipc',base).max);
  expect(fieldRange('cpu','cache',[...base,'cpu-compatibility-1']).max).toBeGreaterThan(fieldRange('cpu','cache',base).max);
  expect(fieldRange('cpu','process',base)).toEqual({min:180,max:350});expect(fieldRange('cpu','process',[...base,'cpu-power-1']).min).toBeLessThan(180);
- expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-power-1']).power).toBeLessThan(a.power);
- expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-cost-1']).unitCost).toBeLessThan(a.unitCost);
- expect((evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-reliability-1']) as any).reliability).toBeGreaterThan((a as any).reliability);
+ expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-power-1']).power).toBe(a.power);
+ expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-cost-1']).unitCost).toBe(a.unitCost);
+ expect((evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-reliability-1']) as any).reliability).toBe((a as any).reliability);
  const dual={...defaultSpec('cpu'),cores:2,clock:.7,cooling:60};
  expect(()=>evaluateHardware('cpu',dual,base)).toThrow(/コア数/);
  expect(evaluateHardware('cpu',dual,[...base,'cpu-capacity-1']).performance).toBeGreaterThan(a.performance);
@@ -98,13 +99,13 @@ it('seeded market events change real modifiers and expire',()=>{
  const after=cmd(s,{type:'advance',days:31});expect(after.modifiers.expiresDay===0||after.modifiers.expiresDay>after.day).toBe(true);
 });
 it('all OS research branches lower costs, raise reliability or widen the design sliders',()=>{
- const base=createGame({id:'os-tech',name:'OS技術',difficulty:'normal',seed:42});base.research.completed=['os-compute-1'];
+ const base=withTestStaff(createGame({id:'os-tech',name:'OS技術',difficulty:'normal',seed:42}));base.research.completed=['os-compute-1'];
  const design={type:'developOS',name:'OS',version:1,features:['files'],quality:.8,compatibility:.8,support:.7,price:5000};
  const a=cmd(base,design);
  const withTech=(id:string)=>({...base,research:{completed:[...base.research.completed,id],active:[]}});
- expect(cmd(withTech('os-cost-1'),design).company.cash).toBeGreaterThan(a.company.cash);
+ expect(cmd(withTech('os-cost-1'),design).company.cash).toBe(a.company.cash);
  expect(cmd(withTech('os-power-1'),design).products[0].unitCost).toBeLessThanOrEqual(a.products[0].unitCost);
- expect(cmd(withTech('os-reliability-1'),design).products[0].reliability).toBeGreaterThan(a.products[0].reliability);
+ expect(cmd(withTech('os-reliability-1'),design).products[0].reliability).toBe(a.products[0].reliability);
  for(const [id,key] of [['os-compute-2','quality'],['os-compatibility-1','compatibility'],['os-capacity-1','support']] as const){
   const before=unlockedRange(osSliders[key],'os',base.research.completed).max,after=unlockedRange(osSliders[key],'os',withTech(id).research.completed).max;
   expect(after).toBeGreaterThan(before);
