@@ -45,3 +45,27 @@ These figures do **not** establish unique universal upper limits for all CPU/GPU
 - Verify power, memory throughput, prices and process technology together with release dates. Distinguish DDR/SDR generations and consumer/workstation/server categories.
 - Calibrate performance *ratios* and manufacturing costs from real measurements; never equate an abstract game score with a published benchmark.
 - Run #25 policy experiments to verify that research costs and production profitability can sustain early inventions without trivializing the late game.
+
+
+## 2026-10-09: verified manufacturer/product anchors and in-game metric mapping (#33)
+
+These are **individual available-by-year samples**, NOT all-year release claims, worldwide medians, or caps on what the player can invent. The independent machine-readable list is `packages/content/src/hardware-evidence.ts`, covered by `tests/hardware-source-anchors.test.ts`.
+
+| Category | By year | Published example | Physical figure | Game metric interpretation |
+| --- | ---: | --- | --- | --- |
+| CPU | 2000 | [Intel Pentium III](https://www.intel.com/pressroom/archive/releases/2000/sp030800.htm) | 1.0 GHz | Clock only; **not** IPC-equivalent or game score |
+| CPU | 2002 | [Intel Pentium 4 with HT](https://www.intel.com/pressroom/archive/releases/2002/20021114comp.htm) | 3.06 GHz, HT | Clock + SMT reference; not a research date restriction |
+| CPU | 2025 | [AMD Ryzen 9 9950X3D](https://www.amd.com/en/products/processors/desktops/ryzen.html) | 16 cores, 32 threads, up to 5.7 GHz, TDP 170 W | Upper-tier **desktop** reference; game `cpu.power` is simplified and does not equal TDP |
+| GPU | 2000 | [GeForce2 GTS contemporary report](https://pc.watch.impress.co.jp/docs/article/20000426/winhec05.htm) | 32–64 MB VRAM | 0.032–0.064 GB conversion; CUDA cores and virtual game units cannot be mapped |
+| GPU | 2025 | [NVIDIA RTX 5090 launch](https://www.nvidia.com/ja-jp/geforce/news/rtx-50-series-graphics-cards-gpu-laptop-announcements/) | 32 GB GDDR7, 1,792 GB/s | Separate VRAM capacity and bandwidth; 21,760 CUDA cores are **not** game `gpu.units` |
+| Motherboard | 2025 | [ASUS ROG Crosshair X870E Hero](https://rog.asus.com/jp/motherboards/rog-crosshair/rog-crosshair-x870e-hero/spec/) | DDR5 support, PCIe 5.0 x16 expansion | `memoryGen` reflects DDR family. `bus` is an invented chipset-bandwidth aggregate, not PCIe5 physical speed |
+| RAM | 2025 | [G.SKILL Trident Z5](https://www.gskill.com/specification/165/371/1716256240/F5-8000J4048F24GX2-TZ5K-Specification) | 48 GB dual-stick kit, DDR5-8000 **XMP OC** | 8,000 MT/s is an overclock profile, not official standard speed; kit capacity vs individual module matters |
+| Storage | 2025 | [Samsung 9100 PRO, 4 TB](https://news.samsung.com/us/samsung-announces-9100-pro-series-ssds-with-breakthrough-pcie-5-0-performance/) | 14,800 MB/s sequential read, 2.2M random read IOPS | Game `speed` is a single composite throughput input; 2025 historical envelope rounded to **15,000 MB/s** to include this actual product; game random IOPS has its own field |
+| PSU | 2025 | [Corsair HX1500i](https://www.corsair.com/jp/ja/p/psu/cp-9020309-jp/hx1500i-fully-modular-ultra-low-noise-platinum-atx-1500-watt-pc-power-supply-jp-cp-9020309-jp) | 1,500 W continuous power, Platinum-class certified | Wattage and efficiency separate; fictional `psu.power` denotes heat/loss proxy |
+| Monitor | 2025 | [ASUS ROG Swift Pro PG248QP](https://rog.asus.com/jp/monitors/23-to-24-5-inches/rog-swift-pro-pg248qp/spec/) | 1920×1080 resolution, **540 Hz maximum OC** | `resolution` stores **vertical** 1080 pixels, `refresh` stores maximum Hz; extreme refresh not a typical retail average |
+
+**Field and unit caveats:** MB/s and GB/s differ by ×1000 in the game display convention (decimal storage throughput); GB of VRAM converted from MB should not silently assume a universally applicable binary/decimal standard; CPU 170 W TDP is a cooler-design guideline rather than a directly measured application power reading. Memory transfers/s (MT/s) are not equivalent to a DRAM core clock in MHz. CPU IPC-equivalent, GPU abstract unit count, `monitor.gamut`, pricing and performance score coefficients remain explicitly fictional.
+
+**Prices:** These manufacturer spec pages generally do not provide launch Japanese yen MSRPs for all models in the same market. Do not invent comparable yen price rows. Product/production prices should be calibrated separately with dated country, currency, inclusive tax and currency-rate conventions. This source pass does **not** close #33.
+
+**Coverage gaps:** Complete primary-source 2000/2002/2005/2008/2012/2017/2020/2025 across all seven hardware categories; mainstream vs halo launch price comparisons; desktop/enterprise segmentation; physical wattage and throughput cross-checks; integrated manufacturing costs. Do not treat these few source anchors as a complete year-by-year dataset.
