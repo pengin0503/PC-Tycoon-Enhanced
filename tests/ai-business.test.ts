@@ -81,7 +81,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(stopped.revenue).toBe(expectedOldRate);expect(stopped.subscriptionUserDays).toBe(0);
 
  const beforeRetire=cmd(trained,{...deploy,mode:'subscription'});
- beforeRetire.day=30;
+ beforeRetire.day=Math.ceil(beforeRetire.day/30)*30;
  const earning=cmd(beforeRetire,{type:'advance',days:1});
  const earnedDays=earning.models[0].service!.subscriptionUserDays;
  const retired=cmd(earning,{type:'retireModel',id:'m-1'}).models[0].service!;
@@ -90,7 +90,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(retired.subscriptionUserDays).toBe(0);
 
  const forSwitch=cmd(trained,{...deploy,mode:'subscription'});
- forSwitch.day=30;
+ forSwitch.day=Math.ceil(forSwitch.day/30)*30;
  const accruedBeforeSwitch=cmd(forSwitch,{type:'advance',days:1});
  const pending=accruedBeforeSwitch.models[0].service!.subscriptionUserDays;
  const switched=cmd(accruedBeforeSwitch,{...deploy,mode:'api'});
