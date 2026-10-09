@@ -2,6 +2,7 @@
 def pctKeyStoreFile = System.getenv('PCT_ANDROID_KEYSTORE_FILE')
 def pctHasReleaseKey = pctKeyStoreFile != null && !pctKeyStoreFile.trim().isEmpty()
 def pctVersionCode = System.getenv('PCT_VERSION_CODE') ? Integer.parseInt(System.getenv('PCT_VERSION_CODE')) : 1
+def pctVersionName = System.getenv('PCT_VERSION_NAME') ?: "1.0.${pctVersionCode}"
 apply plugin: 'com.android.application'
 
 android {
@@ -12,7 +13,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode pctVersionCode
-        versionName "1.0.${pctVersionCode}"
+        versionName pctVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
