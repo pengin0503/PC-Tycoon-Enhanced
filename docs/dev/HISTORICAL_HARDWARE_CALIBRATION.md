@@ -1,47 +1,47 @@
-# Historical hardware milestones and PC Tycoon Enhanced era calibration
+# Historical hardware references and research-based game balance
 
-Status: historical calibration baseline (2026-10-09). Real component specifications are evidence; game scores, research stages, and simulated years are **not** real-world benchmark-equivalent values.
+Updated 2026-10-09. **The player may research technology at any calendar date** once its prerequisites, RP cost and research staffing are satisfied. Historical launch dates are reference points for relative performance and the *simulated industry*, not research/purchase or design locks.
 
-## Primary-source milestones
+## Referenced hardware milestones
 
-| Date | Real event | Game rule / interpretation | Evidence |
-| --- | --- | --- | --- |
-| 2000-03-08 | Intel Pentium III reaches 1.0 GHz; SPECint2000 410, SPECfp2000 284, SYSmark 2000 188 | Year-2000 starting CPU is single-core, 0.8 GHz default; a 1.0 GHz CPU is plausible in that year. Game's abstract performance score is **not** SPECint2000. | [Intel, March 8 2000](https://www.intel.com/pressroom/archive/releases/2000/sp030800.htm) |
-| 2002-11-14 | Pentium 4 at 3.06 GHz introduces consumer desktop Hyper-Threading | SMT/HT option begins in year 2002, rather than 2000 | [Intel, November 14 2002](https://www.intel.com/pressroom/archive/releases/2002/20021114comp.htm) |
-| 2005-04-18 | First dual-core Intel desktop platforms become available, Pentium Extreme Edition 840 at 3.2 GHz | New CPU-capacity research cannot enable multicore until 2005 | [Intel, April 18 2005](https://www.intel.com/pressroom/archive/releases/2005/20050418comp.htm) |
-| 2017 | Original Transformer architecture published in *Attention Is All You Need* | Transformer-based simulated AI research starts in 2017 | [Google Research, 2017](https://research.google/pubs/attention-is-all-you-need/) |
+| Original year | Verified source/specification | Game-design interpretation |
+| --- | --- | --- |
+| 2000 | [Intel's launch list](https://www.intel.com/pressroom/kits/quickrefyr.htm) records the 1 GHz Pentium III release in March 2000. | Starting CPU defaults to 0.8 GHz, one core and 180 nm; 1.0 GHz is a plausible high-end reference |
+| 2000 | [GeForce2 GTS contemporary coverage](https://pc.watch.impress.co.jp/docs/article/20000426/winhec05.htm) reports the 200 MHz GPU, 32–64 MB DDR RAM and 128-bit memory bus. | Starting GPU defaults to 0.2 GHz, 32 MB VRAM and 3 GB/s; different products have different widths/bandwidths |
+| 2002 | [Intel's November 14 press release](https://www.intel.com/pressroom/archive/releases/2002/20021114comp.htm) documents the 3.06 GHz Pentium 4 with desktop HT. | SMT is an invention/research option, *not* a compulsory 2002 unlock |
+| 2005 | [Intel's April 18 desktop dual-core launch](https://www.intel.com/pressroom/archive/releases/2005/20050418comp.htm). | Dual-core is a reference capability, *not* a compulsory 2005 unlock |
+| 2017 | [Google's Transformer paper](https://research.google/pubs/attention-is-all-you-need/). | AI simulation is unlockable via research without waiting until 2017 |
+| 2021 | [Samsung's DDR5 production release](https://news.samsung.com/us/samsung-14nm-euv-ddr5-dram-mass-production-most-advanced/). | DDR generation depends on compatibility research |
+| 2025 | [AMD Ryzen 9 9950X3D specification](https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-9000-series/amd-ryzen-9-9950x3d.html): 16 desktop cores, up to 5.7 GHz, 4 nm CPU chiplet, 170 W TDP. | A high-end *desktop* reference separate from workstation/server products |
 
-## Implementation and limitations
+These figures do **not** establish unique universal upper limits for all CPU/GPU/RAM/storage models. Not every year/category has been primary-source calibrated.
 
-- Game starts in 2000, with 360 simulated days per game-year. Historical availability is checked when buying new research; previously saved research and products are retained.
-- Player research for all supported families has calendar-year availability checks. First compute level allows a category to exist in 2000; later stages advance by a 2000–2100 calendar schedule, with explicit 2005 minimum for desktop multicore and 2017 for Transformer simulation.
-- The existing 2000 starting specification and hardware slider progression are stylized. Calendar release gates should not be misconstrued as strict fidelity to actual transistor density, CPU IPC, VRAM bandwidth, HDD IOPS or display standards.
-- For scientific fidelity, **data-backed** year-by-year ceilings must separately constrain each numeric field, including GPU shader counts, RAM generation/speed/capacity, storage and CPU cache/process. This remains a follow-up task; interpolation to 2100 is hypothetical.
-- Distinguish desktop from server hardware: multiple CPUs were available in workstations before 2005, but a consumer single-package dual-core desktop processor is a later milestone.
-- Market-share percentages in this release represent a game's cumulative observed units among player and simulated rival firms, **not** worldwide market share; the game does not explicitly model the whole exogenous hardware market.
+## Mechanics
 
-## 2026-10-09: Calendar bounds for new designs (issue #33)
+1. **Player research:** no `earliestResearchYear` or release-year check. Research requires a research employee, completed prerequisites and sufficient RP; scaling RP costs and research tiers regulate how early a player can invent advanced technology.
+2. **Player hardware:** `fieldRange` and `fieldOptions` depend on researched branches and their technology-equivalent progress, not on `state.day`. A saved product remains valid after changes to market conditions. A researched year-2000 company can exceed the real-world year-2000 product characteristics.
+3. **Market and rivals:** `typicalSpec` uses time-progressive expectations, distinguishing approximate *typical retail* profiles from broad historic high-end envelopes. `historical-limits.ts` is used for the virtual market, never for restricting player invention. The 2000–2025 milestone table below remains a **stylized calibration envelope** with interpolated estimates.
+4. **Performance:** CPU IPC-equivalent, GPU abstract computing units and in-game scores do not correspond to specific SPEC, PassMark or FLOPS benchmarks. Hardware designs trade CPU cores/clock/IPC, GPU VRAM/bandwidth/units, process size, power, cooling and price. A faster competing world reduces the appeal of older products.
+5. **Beyond 2025:** The 2026–2100 trajectories are intentionally fictional. Technology-equivalent year is a progression indicator, not an assertion that an invention was released in that calendar year.
 
-New `packages/content/src/historical-limits.ts` intersects research progress with a **calendar-specific ceiling**. Existing completed products and old save specs are preserved; future research cannot create 2000-era 2-core CPUs merely by importing completed research.
+## Reference envelopes (not gameplay hard locks)
 
-The dates below are a **game-balance envelope**, not a dataset of exact high-end products. These are model-selected conservative constraints that must be verified against original launch specifications before the issue can be fully accepted.
+| Calendar year | Possible high-end CPU cores | Possible high-end CPU GHz | GPU VRAM GB | GPU bandwidth GB/s |
+| --- | ---: | ---: | ---: | ---: |
+| 2000 | 1 | 1.5 | 0.064 | 5.3 |
+| 2002 | 1 | 3.1 | 0.128 | 11 |
+| 2005 | 2 | 3.8 | 0.256 | 35 |
+| 2008 | 4 | 4.0 | 1 | 120 |
+| 2012 | 8 | 4.5 | 6 | 288 |
+| 2017 | 16 | 5.0 | 12 | 484 |
+| 2020 | 64 | 5.3 | 24 | 936 |
+| 2025 | 192 | 6 | 32 | 1792 |
 
-| Game year | CPU cores, max | CPU GHz, max | GPU VRAM, max GB | GPU bandwidth, max GB/s | RAM generation latest |
-| --- | ---: | ---: | ---: | ---: | --- |
-| 2000 | 1 | 1.5 | 0.064 | 5.3 | DDR |
-| 2002 | 1 | 3.1 | 0.128 | 11 | DDR |
-| 2005 | 2 | 3.8 | 0.256 | 35 | DDR2 |
-| 2008 | 4 | 4.0 | 1 | 120 | DDR3 |
-| 2012 | 8 | 4.5 | 6 | 288 | DDR3 |
-| 2017 | 16 | 5.0 | 12 | 484 | DDR4 |
-| 2020 | 64 | 5.3 | 24 | 936 | DDR4 |
-| 2025 | 192 | 6 | 32 | 1792 | DDR5 |
+**Caveat:** These envelope entries are preliminary design estimates, **not** a source-backed exact universal maximum. In particular, the 2025 192-core envelope covers workstation/server-style categories rather than the 16-core enthusiast desktop segment. Separate `retailTypical` curves constrain the **simulated typical market**, not the player.
 
-**Source-backed anchor points:**
-- Intel's [processor launch guide](https://www.intel.com/pressroom/kits/quickrefyr.htm) lists 1GHz Pentium III (2000-03-08), and Intel's [product chronology](https://www.intel.co.jp/content/dam/www/central-libraries/jp/ja/documents/2022-05/history-of-intel-jp.pdf) identifies the 2005 consumer dual-core product.
-- NVIDIA's [GeForce 8800 architecture technical brief](https://www.nvidia.com/content/PDF/Geforce_8800/GeForce_8800_GPU_Architecture_Technical_Brief.pdf) documents 768MB GDDR3 with 86.4GB/s bandwidth in the 2006 8800 GTX. The model's 2005/2008 neighboring limits are **not** specifications for that card.
-- Samsung's [2021 DDR5 mass production notice](https://news.samsung.com/us/samsung-14nm-euv-ddr5-dram-mass-production-most-advanced/) corroborates the DDR5 era.
+## Outstanding source and balance work (#33)
 
-The year-2025 caps on CPU cores refer to high-end workstation/server markets, not ordinary consumer desktop tiers. IPC-equivalent, GPU abstract compute-unit count, PC benchmark score, storage IOPS and motherboard chipset bandwidth remain simulator quantities, not homologated real benchmark units. Future game years 2026–2100 intentionally interpolate toward fictional design bounds; such extrapolation is not a forecast.
-
-**Next research work before closing #33:** source 2000/2002/2005/2008/2012/2017/2020/2025 launch documents per component category; distinguish mainstream vs halo products; validate PSU, monitor, RAM density/latency, storage generation and GPU computation units with evidence. No undocumented claim of exact historical fidelity.
+- Collect a source-backed launch/typical/high-end product table for CPU, GPU, RAM, storage, board, PSU and display at the milestone years.
+- Verify power, memory throughput, prices and process technology together with release dates. Distinguish DDR/SDR generations and consumer/workstation/server categories.
+- Calibrate performance *ratios* and manufacturing costs from real measurements; never equate an abstract game score with a published benchmark.
+- Run #25 policy experiments to verify that research costs and production profitability can sustain early inventions without trivializing the late game.
