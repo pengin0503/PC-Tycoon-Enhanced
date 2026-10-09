@@ -9,7 +9,7 @@ import {productDemandForecast} from '../../../packages/sim/src/hardware';
 import {eraDemandFactor} from '../../../packages/sim/src/events';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
-import {PriceEditor,ProductionEditor} from './ProductEditors';
+import {PriceEditor,ProductionEditor,StockAllocationEditor} from './ProductEditors';
 import {ProductVisual} from './ProductVisual';
 import {LaunchFlow} from './LaunchFlow';
 import {VirtualDesktop} from './VirtualDesktop';
@@ -73,7 +73,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
     <div className="detail-actions">
      {p.remaining>0&&<p>開発中：残り作業 {p.remaining.toFixed(1)}</p>}
      {p.remaining===0&&!p.launched&&<button className="primary" onClick={launch}>発売する</button>}
-     {p.launched&&p.kind!=='os'&&<ProductionEditor product={p} state={state} send={sender}/>}
+     {p.launched&&p.kind!=='os'&&<><ProductionEditor product={p} state={state} send={sender}/><StockAllocationEditor product={p} send={sender}/></>}
      {p.launched&&<PriceEditor product={p} send={sender}/>}
     </div>
    </div>
