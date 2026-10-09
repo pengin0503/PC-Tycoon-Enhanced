@@ -2,8 +2,9 @@ import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,fieldOptio
 import {techById,researchIsAvailable,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
-import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
+import {productCatalog,deviceSlots} from '../../content/src/devices';
 import {assemblyOverhead} from './devices';
+import {findVendorPart} from './vendor-market';
 import {addStock,removeStock} from './inventory';
 import {workBonus} from './management';
 import {competitorPressure,settleProcurement} from './rivals';
@@ -127,7 +128,7 @@ export function manufacture(s:GameState){
   const device=p.kind==='pc'||p.kind==='laptop';
   const keys=deviceSlots;
   const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
-  const generic=device?keys.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0):0;
+  const generic=device?keys.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0):0;
   const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
   const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
   if(units>0){
