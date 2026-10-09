@@ -22,11 +22,15 @@ import type {GameState,GameCommand} from './types';
 export function hardwarePerformance(kind:HardwareKind,spec:Spec){
  const n=(k:string)=>Number(spec[k]);
  switch(kind){
-  case'cpu':return n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient*(n('cache')/b.cpu.cacheReference)**b.cpu.cacheExponent;
-  case'gpu':{const ops=n('units')*n('clock');return ops*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/(ops*b.gpu.bandwidthPerOp));}
+  case'cpu':{
+   const cache=spec.l1Cache===undefined?n('cache'):n('l1Cache')+n('l2Cache')+n('l3Cache');
+   return n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient*(cache/b.cpu.cacheReference)**b.cpu.cacheExponent*
+    (spec.smt==='on'?1.18:1)*(1+.035*(Number(spec.memoryChannels??1)-1));
+  }
+  case'gpu':{const ops=n('units')*n('clock');return ops*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/(ops*b.gpu.bandwidthPerOp))*Math.min(1,Number(spec.busWidth??64)/64);}
   case'motherboard':return (n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore)*(n('bus')/b.motherboard.busReference)**b.motherboard.busExponent;
-  case'ram':return n('capacity')*n('speed')/b.ram.scoreDivisor;
-  case'storage':return Math.sqrt(n('capacity')*n('speed'))*b.storage.scoreCoefficient;
+  case'ram':return n('capacity')*n('speed')/b.ram.scoreDivisor*(7/Number(spec.latency??7))**.15;
+  case'storage':return Math.sqrt(n('capacity')*n('speed'))*b.storage.scoreCoefficient*(Number(spec.iops??100)/100)**.1;
   case'psu':return n('wattage')*n('efficiency')/100*b.psu.modularScore[String(spec.modular) as 'none'|'semi'|'full'];
   case'monitor':return n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;
  }
@@ -62,11 +66,14 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  const node=(k='process')=>(n(k)/b.referenceProcess)**b.processExponent;
  const performance=hardwarePerformance(kind,spec);let power=0,unitCost=0;
  switch(kind){
-  case'cpu':power=n('cores')*n('clock')*node()*b.cpu.powerCoefficient;unitCost=b.cpu.baseCost+c('cores')*b.cpu.coreCost+c('clock')*b.cpu.clockCost+c('ipc')*b.cpu.ipcCost+c('cache')*b.cpu.cacheCost;break;
-  case'gpu':power=n('units')**b.gpu.unitsPowerExponent*n('clock')*node()*b.gpu.powerCoefficient;unitCost=b.gpu.baseCost+c('units')*b.gpu.unitCost+c('clock')*b.gpu.clockCost+c('vram')*b.gpu.vramCost+c('bandwidth')*b.gpu.bandwidthCost;break;
+  case'cpu':power=n('cores')*n('clock')*node()*b.cpu.powerCoefficient*(spec.smt==='on'?1.1:1);
+   unitCost=b.cpu.baseCost+c('cores')*b.cpu.coreCost+c('clock')*b.cpu.clockCost+c('ipc')*b.cpu.ipcCost+
+    (c('l1Cache')+c('l2Cache')+c('l3Cache'))*b.cpu.cacheCost+
+    (spec.smt==='on'?1500:0)+Math.max(0,c('memoryChannels')-1)*1200;break;
+  case'gpu':power=n('units')**b.gpu.unitsPowerExponent*n('clock')*node()*b.gpu.powerCoefficient;unitCost=b.gpu.baseCost+c('units')*b.gpu.unitCost+c('clock')*b.gpu.clockCost+c('vram')*b.gpu.vramCost+c('bandwidth')*b.gpu.bandwidthCost+Math.max(0,c('busWidth')-64)*75;break;
   case'motherboard':power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost+c('bus')*b.motherboard.busCost;break;
-  case'ram':power=b.ram.basePower+c('capacity')*b.ram.powerCoefficient;unitCost=b.ram.baseCost+c('capacity')*b.ram.capacityCost+c('speed')*b.ram.speedCost;break;
-  case'storage':power=b.storage.basePower+c('speed')*b.storage.speedPower;unitCost=b.storage.baseCost+c('capacity')*b.storage.capacityCost+c('speed')*b.storage.speedCost;break;
+  case'ram':power=b.ram.basePower+c('capacity')*b.ram.powerCoefficient;unitCost=b.ram.baseCost+c('capacity')*b.ram.capacityCost+c('speed')*b.ram.speedCost+Math.max(0,7-c('latency'))*800;break;
+  case'storage':power=b.storage.basePower+c('speed')*b.storage.speedPower;unitCost=b.storage.baseCost+c('capacity')*b.storage.capacityCost+c('speed')*b.storage.speedCost+Math.max(0,c('iops')-100)*.05;break;
   case'psu':{const m=String(spec.modular) as 'none'|'semi'|'full';power=n('wattage')*(1-n('efficiency')/100)*b.psu.lossCoefficient;unitCost=b.psu.baseCost+c('wattage')*b.psu.wattageCost+Math.max(0,n('efficiency')-b.psu.efficiencyBase)*b.psu.efficiencyCost/fieldGrowth(kind,'efficiency',completed)+b.psu.modularCost[m];break;}
   case'monitor':power=c('resolution')*b.monitor.powerCoefficient*c('refresh')/b.monitor.referenceRefresh;unitCost=b.monitor.baseCost+c('resolution')*b.monitor.resolutionCost+c('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }

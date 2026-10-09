@@ -33,7 +33,12 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
   clock:{label:'クロック',unit:'GHz',min:.1,max:10,step:.1,default:.8,unlock:u(['compute'],1)},
   ipc:{label:'IPC相当',unit:'倍',min:.5,max:10,step:.1,default:1,unlock:u(['compute'],1)},
   process:{label:'製造プロセス',unit:'nm',min:.1,max:350,values:processNodes,default:180,lowerIsBetter:true,unlock:u(['power'],180,true)},
-  cache:{label:'キャッシュ容量',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.25,legacyDefault:8,unlock:u(['compatibility'],.5,true)},
+  cache:{label:'総キャッシュ（旧データ互換）',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.25,legacyDefault:8,unlock:u(['compatibility'],.5,true)},
+  l1Cache:{label:'L1キャッシュ',unit:'MB',min:.0625,max:1024,values:binary(.0625,1024),default:.0625,legacyDefault:.0625,unlock:u(['compatibility'],.0625,true)},
+  l2Cache:{label:'L2キャッシュ',unit:'MB',min:.0625,max:8192,values:binary(.0625,8192),default:.125,legacyDefault:.125,unlock:u(['compatibility'],.125,true)},
+  l3Cache:{label:'L3キャッシュ',unit:'MB',min:.0625,max:65536,values:binary(.0625,65536),default:.0625,legacyDefault:.0625,unlock:u(['capacity'],.0625,true)},
+  smt:{label:'同時マルチスレッディング',options:['off','on'],default:'off',legacyDefault:'off',optionUnlock:{axes:['compute'],years:{off:2000,on:2003}}},
+  memoryChannels:{label:'メモリチャネル数',unit:'ch',min:1,max:16,values:counts.filter(v=>v<=16),default:1,legacyDefault:1,unlock:u(['compatibility'],1,true)},
   cooling:{label:'冷却性能',unit:'W',min:5,max:1000,values:decades(5,1000),default:40,legacyDefault:0,unlock:u(['power'],60)},
   socket:{label:'ソケット',options:['Atlas','Nova'],default:'Atlas'}}},
  gpu:{label:'GPU',designCost:300000000,work:20,demand:1000,reference:1600,fields:{
@@ -41,6 +46,7 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
   clock:{label:'クロック',unit:'GHz',min:.05,max:6,step:.05,default:.2,unlock:u(['compute'],.25)},
   vram:{label:'VRAM容量',unit:'GB',min:.008,max:4096,values:memorySizes(.008,4096),default:.032,unlock:u(['capacity'],.064,true)},
   bandwidth:{label:'メモリ帯域',unit:'GB/s',min:1,max:1000000,values:decades(1,1000000),default:3,unlock:u(['compatibility'],5,true)},
+  busWidth:{label:'VRAMバス幅',unit:'bit',min:32,max:4096,values:counts.filter(v=>v>=32&&v<=4096),default:64,legacyDefault:64,unlock:u(['compatibility'],64,true)},
   process:{label:'製造プロセス',unit:'nm',min:.1,max:350,values:processNodes,default:180,legacyDefault:5,lowerIsBetter:true,unlock:u(['power'],180,true)},
   cooling:{label:'冷却性能',unit:'W',min:5,max:1500,values:decades(5,1500),default:20,legacyDefault:0,unlock:u(['power'],40)}}},
  motherboard:{label:'マザーボード',designCost:30000000,work:20,demand:1100,reference:225,fields:{socket:{label:'ソケット',options:['Atlas','Nova'],default:'Atlas'},
@@ -50,10 +56,12 @@ export const hardwareCatalog:Record<HardwareKind,HardwareDefinition>={
   bus:{label:'チップセット帯域',unit:'GB/s',min:.5,max:100000,values:decades(.5,100000),default:1,legacyDefault:64,unlock:u(['compute','compatibility'],1,true)}}},
  ram:{label:'RAM',designCost:20000000,work:20,demand:1400,reference:320,fields:{memoryGen:{label:'メモリ世代',options:memoryGenerations,optionUnlock:{axes:['compatibility'],years:memoryYears},default:'SDR'},
   capacity:{label:'容量',unit:'GB',min:.016,max:16384,values:memorySizes(.016,16384),default:.128,unlock:u(['capacity'],.256,true)},
+  latency:{label:'CAS相当遅延',unit:'ns',min:1,max:40,step:.5,default:7,legacyDefault:7,lowerIsBetter:true,unlock:u(['compatibility'],7,true)},
   speed:{label:'転送レート',unit:'MT/s',min:66,max:200000,values:[66,100,133,200,266,333,400,533,667,800,1066,1333,1600,1866,2133,2400,2666,3200,3600,4000,4800,5600,6400,7200,8000,8800,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,100000,128000,160000,200000],default:133,unlock:u(['compute','compatibility'],266,true)}}},
  storage:{label:'ストレージ',designCost:100000000,work:20,demand:1400,reference:150,fields:{
   capacity:{label:'容量',unit:'GB',min:1,max:4000000,values:decades(1,4000000),default:20,unlock:u(['capacity'],80,true)},
-  speed:{label:'転送速度',unit:'MB/s',min:5,max:2000000,values:decades(5,2000000),default:30,unlock:u(['compute','compatibility'],40,true)}}},
+  speed:{label:'転送速度',unit:'MB/s',min:5,max:2000000,values:decades(5,2000000),default:30,unlock:u(['compute','compatibility'],40,true)},
+  iops:{label:'ランダムI/O性能',unit:'IOPS',min:100,max:100000000,values:decades(100,100000000),default:100,legacyDefault:100,unlock:u(['compute'],100,true)}}},
  psu:{label:'電源ユニット',designCost:15000000,work:20,demand:1200,reference:175,fields:{
   wattage:{label:'定格出力',unit:'W',min:150,max:3000,step:50,default:250,unlock:u(['capacity','compute'],400)},
   efficiency:{label:'変換効率',unit:'%',min:60,max:99,step:1,default:70,unlock:u(['power','compatibility'],75)},
@@ -93,6 +101,10 @@ export function normalizeSpec(kind:HardwareKind,spec:Spec):Spec{
   const v=spec[key]??field.legacyDefault;
   if(v===undefined)throw new Error('仕様の項目が不正です');
   out[key]=v;
+ }
+ // Preserve pre-L1/L2/L3 saves: distribute the old aggregate into three caches.
+ if(kind==='cpu'&&spec.l1Cache===undefined&&spec.l2Cache===undefined&&spec.l3Cache===undefined&&typeof spec.cache==='number'){
+  out.l1Cache=.0625;out.l2Cache=.125;out.l3Cache=Math.max(.0625,spec.cache-.1875);
  }
  return out;
 }
