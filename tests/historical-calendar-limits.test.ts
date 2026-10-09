@@ -7,7 +7,7 @@ import {importSave,exportSave} from '../packages/save/src/index';
 it('player hardware capability follows research, not a mandatory historical year (#33)',()=>{
  const untouched=['cpu-compute-1'];
  expect(fieldRange('cpu','cores',untouched).max).toBe(1);
- const progressed=[...untouched,'cpu-capacity-1','cpu-capacity-2','cpu-capacity-3'];
+ const progressed=[...untouched,'cpu-capacity-1','cpu-capacity-2','cpu-capacity-3','cpu-power-1','cpu-power-2','cpu-power-3'];
  expect(fieldRange('cpu','cores',progressed).max).toBeGreaterThan(1);
  const year2000=withTestStaff(createGame({id:'cap',name:'研究社',difficulty:'normal',seed:7}));
  year2000.company.cash=10_000_000_000;
