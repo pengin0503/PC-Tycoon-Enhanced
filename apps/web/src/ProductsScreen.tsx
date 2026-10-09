@@ -73,8 +73,9 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
     <div className="detail-actions">
      {p.remaining>0&&<p>開発中：残り作業 {p.remaining.toFixed(1)}</p>}
      {p.remaining===0&&!p.launched&&<button className="primary" onClick={launch}>発売する</button>}
-     {p.launched&&p.kind!=='os'&&<><ProductionEditor product={p} state={state} send={sender}/><StockAllocationEditor product={p} send={sender}/></>}
+     {p.launched&&p.kind!=='os'&&<ProductionEditor product={p} state={state} send={sender}/>}
      {p.launched&&<PriceEditor product={p} send={sender}/>}
+     {p.launched&&p.kind!=='os'&&<StockAllocationEditor product={p} send={sender}/>}
     </div>
    </div>
    {specs.length>0&&<div key="spec"><dl className="stat-grid spec-grid">{specs.map(r=><Fragment key={r.key}><dt>{r.label}</dt><dd>{r.value}</dd></Fragment>)}</dl></div>}
