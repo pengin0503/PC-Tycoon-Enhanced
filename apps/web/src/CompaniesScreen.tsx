@@ -14,17 +14,17 @@ export function CompaniesScreen({state,send}:{state:GameState,send:Send}){
  const [target,setTarget]=useState<string|null>(null);
  const [amount,setAmount]=useState(100000000);
  const sold=(r:GameState['rivals'][number])=>r.products.reduce((n,p)=>n+p.sold,0);
- const total=state.products.reduce((n,p)=>n+p.sold,0)+state.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+sold(r),0);
+ const total=state.products.reduce((n,p)=>n+p.sold,0)+state.rivals.reduce((n,r)=>n+sold(r),0);
  const rival=state.rivals.find(r=>r.id===target);
  const cap=state.difficulty==='hard'?managementBalance.hardLoanCap:managementBalance.normalLoanCap;
  return <section className="screen companies-screen">
-  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア {(marketShare(state)*100).toFixed(1)}%</small></h2></header>
+  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア <span data-testid="player-market-share">{(marketShare(state)*100).toFixed(1)}%</span>（累計販売台数）</small></h2></header>
   <PanelPages labels={['競合',`取引${state.offers.length?`（${state.offers.length}）`:''}`,'資金']}>
    <div className="rival-grid">{state.rivals.map((r,i)=>{const value=valuation(state,r.id);const latest=r.products.filter(p=>p.remaining===0).at(-1);
     return <article key={r.id} className={`rival-card ${r.acquired?'acquired':''}`}>
      <header><Logo id={(i*7+3)%24} size={40}/><div><h3>{r.name}</h3><small>{productCatalog[r.focus].label}専業 · 技術 Lv.{r.researchLevel}</small></div>{r.acquired&&<Chip tone="good">買収済み</Chip>}</header>
      <dl><dt>現金</dt><dd>{yen(r.cash)}</dd><dt>販売台数</dt><dd>{sold(r).toLocaleString('ja-JP')}</dd><dt>最新製品</dt><dd>{latest?`${latest.name}（性能 ${latest.performance} / ${yen(latest.price)}）`:'なし'}</dd><dt>評価額</dt><dd>{yen(value)}</dd></dl>
-     {!r.acquired&&<><div className="share"><span>市場シェア</span><Meter value={total?sold(r)/total*100:0} label={`${r.name} シェア`}/></div>
+     {!r.acquired&&<><div className="share"><span>市場シェア（累計） <b>{(total?sold(r)/total*100:0).toFixed(1)}%</b></span><Meter value={total?sold(r)/total*100:0} label={`${r.name} シェア`}/></div>
       {r.negotiationDay!==undefined&&state.day<r.negotiationDay&&<p className="hint">交渉決裂：{r.negotiationDay}日目まで再交渉できません</p>}
       <button className="primary" onClick={()=>setTarget(r.id)}>買収交渉</button></>}
     </article>;})}</div>
