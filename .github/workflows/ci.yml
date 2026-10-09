@@ -15,6 +15,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: pwsh -NoProfile -File tools/setup-android-signing.ps1 -ValidateOnly
       - run: python3 -m unittest discover -s tests -p '*_test.py'
       - run: npm run build
       - run: npx playwright install chromium --only-shell
