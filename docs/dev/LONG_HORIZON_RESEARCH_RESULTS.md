@@ -23,3 +23,23 @@ A separate deterministic scenario begins with ¥1 trillion, hires one skill-50 r
 - Under the observed 30-year normal scenario, the RP economy permits a small team to keep roughly pace with the market and a larger research team to innovate significantly ahead. Do not rebalance point costs solely from the unrealistic 100-year one-purchase case.
 - Repeat experiments with manufacturing, sales cash flow, office upgrades, difficulty modes, multiple hardware categories and higher-year R&D to evaluate sustainable late-game strategy.
 - If future tuning is justified, keep physical performance and price balancing separate from calendar research prohibition; tests should assert RP/prerequisite invariants.
+
+
+## 30-year commercial policy reproduction (PR #36)
+
+Unlike the no-product policies above, `tests/long-horizon-commercial.test.ts` starts at the ordinary ¥1 billion seed capital with research/engineering/marketing employees, pays for CPU research and manufacturing, launches a 2000-era CPU, operates its retail line with an explicit marketing budget, buys office level 2 and recruits two additional research employees in year 6, and designs refreshed CPUs when affordable. It buys valid CPU branch stages at their actual RP prices once per year. All outcomes come from the unchanged production `command` game simulation, with **no additional cash or RP grants**.
+
+GitHub Actions successful game job on commit `ecfe864b4b2e0af29b5125119e66472931b94bb4` reported:
+
+| Game year | CPU research-equivalent year | Cash (JPY) | Lifetime units sold across CPU models | Rival max research stage | Office level | RP remaining |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2010 | 2018.58 | ¥1,772,922,095 | 111,540 | 5 | 2 | 5,903 |
+| 2020 | 2029.14 | ¥1,670,594,435 | 168,650 | 10 | 2 | 6,530 |
+| 2030 | 2036.67 | ¥1,171,379,383 | 175,547 | 15 | 2 | 5,857 |
+
+- Total incremental purchased research cost: **118,352 RP**. Four CPU products were attempted/created over the horizon. The normal-difficulty firm survived all 30 years.
+- Lifetime product sales, finance revenue and company cash are *simulated game economy* values; 175,547 units are not real-world market share and the 2010/2020/2030 technology years are research-progress equivalents, not real release dates.
+- Sales flatten in the late 20-year window while cash trends downward, so one successful 30-year seed is **not evidence** that indefinite growth or a 100-year financed player strategy is viable.
+- A single policy/seed cannot establish acceptable tuning for all play styles; follow up with 50/100-year commercially funded policies, multiple difficulty/mode/seed combinations, recurrent upgrades, advanced graphics/AI strategy and sensitivity across CPU/GPU/RAM.
+
+**Decision:** Preserve existing RP cost and market speed on this evidence alone. With 3 research employees and legal CPU investments, technology is ahead of the industry's calendar-equivalent average, but the economy has slower late-game sales; tune with further reproducible data, never with calendar release-year research locks.
