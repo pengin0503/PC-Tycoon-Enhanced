@@ -14,6 +14,9 @@ it('runs an ADB install/update/back/offline/relaunch smoke on pull requests (#4)
  expect(script).toMatch(/am force-stop/);
  expect(script).toMatch(/KEYCODE_BACK/);
  expect(script).toMatch(/run-as/);
+ // Android's app-private files/ dir need not exist on first launch: create it under run-as before writing.
+ expect(script).toMatch(/run-as\s+"\$PACKAGE"\s+mkdir\s+-p\s+files/);
+ expect(script.indexOf('mkdir -p files')).toBeLessThan(script.indexOf('echo keep-save-data'));
  expect(script).toMatch(/svc wifi disable/);
  expect(script).not.toMatch(/adb uninstall/);
  expect(workflow).toMatch(/if: always\(\)/);
