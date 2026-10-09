@@ -16,7 +16,7 @@ import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
 import {availableForRetail,availableForAssembly} from './inventory-allocation';
-import {marketReference,marketYear} from './market';
+import {marketReference} from './market';
 import {developmentCost} from './development-cost';
 import {eraDemandFactor} from './events';
 import type {GameState,GameCommand} from './types';
@@ -44,7 +44,7 @@ export function hardwarePerformance(kind:HardwareKind,spec:Spec){
  * Costs use each value divided by its field's research frontier growth (mass production follows the frontier), so the
  * same specification gets cheaper with research; performance and power use the designed values.
  */
-export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false,year}:{stored?:boolean,year?:number}={}){
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
  if(!stored&&'cooling' in def.fields&&input.cooling===undefined)throw new Error('冷却性能を指定してください');
@@ -52,11 +52,11 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);
-   if(!stored&&!fieldOptions(kind,key,completed,year).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
+   if(!stored&&!fieldOptions(kind,key,completed).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
   if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
   if(stored)continue;
   if(field.values&&!field.values.some(x=>Math.abs(x-v)<1e-9))throw new Error(`${field.label}が不正です`);
-  const range=fieldRange(kind,key,completed,year);
+  const range=fieldRange(kind,key,completed);
   if(v<range.min-1e-9||v>range.max+1e-9){
    const unit=field.unit??'';
    throw new Error(v<Number(field.min)||v>Number(field.max)?`${field.label}が不正です`:`${field.label}は現在の研究では${range.min}～${range.max}${unit}の範囲で設計できます`);
