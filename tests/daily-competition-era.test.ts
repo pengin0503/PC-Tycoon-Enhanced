@@ -9,12 +9,14 @@ import {importSave,exportSave} from '../packages/save/src/index';
 
 const start=()=>createGame({id:'daily-economy',name:'販売テスト',difficulty:'normal',seed:17});
 
-it('competing firms cover additional component markets and old three-rival saves still load',()=>{
+it('competing firms cover additional component markets and expand legacy three-rival saves without changing existing firms',()=>{
  const s=start();
  expect(s.rivals.length).toBeGreaterThanOrEqual(8);
  expect(new Set(s.rivals.map(r=>r.focus))).toEqual(new Set(['cpu','gpu','ram','motherboard','storage','psu','monitor']));
  const legacy=structuredClone(s);legacy.rivals=legacy.rivals.slice(0,3);
- expect(importSave(exportSave(legacy)).rivals).toHaveLength(3);
+ const restored=importSave(exportSave(legacy));
+ expect(restored.rivals).toHaveLength(9);
+ expect(restored.rivals.slice(0,3)).toEqual(legacy.rivals);
 });
 
 it('a stocked launched product can sell on the next day rather than waiting for a weekly tick',()=>{
