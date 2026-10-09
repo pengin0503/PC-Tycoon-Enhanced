@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {startCompany,openDesigner,nav,prepareTeam} from './ui-helpers';
+import {startCompany,openDesigner,nav,prepareTeam,advanceDays,launchFirst,openProduct,closeDialog} from './ui-helpers';
 
 test('design selling price has precise numeric keyboard entry on narrow screens (#26)',async({page})=>{
  await page.setViewportSize({width:390,height:844});
@@ -31,4 +31,19 @@ test('market share filter reports no data instead of falsely showing zero percen
  await page.getByRole('combobox',{name:'シェア製品カテゴリ'}).selectOption('cpu');
  await expect(page.getByText(/世界市場のシェアではありません/)).toBeVisible();
  await expect(page.locator('.rival-grid .share').first()).toContainText('データなし');
+});
+
+test('product stock allocations persist through the product detail editor (#32)',async({page})=>{
+ await startCompany(page);await openDesigner(page,'CPU');
+ await page.getByRole('tab',{name:'販売'}).click();
+ await page.getByRole('button',{name:'開発を開始'}).click();
+ await advanceDays(page,30);
+ await launchFirst(page);
+ await openProduct(page,'CPU 1');
+ const reserved=page.getByRole('spinbutton',{name:'CPU 1 PC組立用引当'});
+ await reserved.fill('5');
+ await page.getByRole('button',{name:'引当設定を保存'}).click();
+ await closeDialog(page);
+ await openProduct(page,'CPU 1');
+ await expect(page.getByRole('spinbutton',{name:'CPU 1 PC組立用引当'})).toHaveValue('5');
 });
