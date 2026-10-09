@@ -1,0 +1,56 @@
+name: Android emulator acceptance
+on:
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'tools/android-emulator-smoke.sh'
+      - '.github/workflows/android-emulator-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          cmdline-tools-version: '13114758'
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - run: npm ci
+      - run: npm run android:sync
+      - name: Build initial emulator Debug APK, versionCode 1001
+        working-directory: apps/android/android
+        env:
+          PCT_VERSION_CODE: '1001'
+          PCT_VERSION_NAME: emulator.qa.1
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Run an Android emulator and verify in-place upgrade, Back and offline restart
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          force-avd-creation: false
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: bash tools/android-emulator-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-emulator-evidence
+          path: test-results/android-emulator/
+          if-no-files-found: warn
