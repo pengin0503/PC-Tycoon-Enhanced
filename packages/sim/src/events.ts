@@ -1,8 +1,19 @@
-import {marketEvents,eventBalance} from '../../content/src/events';
+import {marketEvents,eventBalance,eraMarketEvents} from '../../content/src/events';
 import {nextRandom} from './random';
+import {marketYear} from './market';
+import {eraBalance} from '../../content/src/era';
 import {logEvent,expense} from './finance';
 import type {GameState,GameCommand} from './types';
-export function marketDaily(s:GameState){if(s.modifiers.expiresDay>0&&s.modifiers.expiresDay<=s.day)s.modifiers={demand:1,production:1,expiresDay:0};}
+export function eraDemandFactor(kind:string,day:number){
+ const year=marketYear(day);
+ return eraMarketEvents.reduce((factor,event)=>factor*(year>=event.year&&(!('until' in event)||year<event.until)?(event.affected[kind]??1):1),1);
+}
+export function marketDaily(s:GameState){
+ if(s.day>0&&s.day%eraBalance.daysPerYear===0){
+  const year=marketYear(s.day);
+  for(const event of eraMarketEvents)if(event.year===year)logEvent(s,'marketEvent',event.label);
+ }
+ if(s.modifiers.expiresDay>0&&s.modifiers.expiresDay<=s.day)s.modifiers={demand:1,production:1,expiresDay:0};}
 export function marketMonthly(s:GameState){
  if(s.pendingDecision)return;
  const [chance,seed]=nextRandom(s.seed);s.seed=seed;

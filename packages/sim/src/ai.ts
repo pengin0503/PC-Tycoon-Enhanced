@@ -4,6 +4,7 @@ import {expense,income,logEvent} from './finance';
 import {removeStock} from './inventory';
 import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects,type LLMDesign} from './ai-math';
 import {workBonus} from './management';
+import {requireRole,hasRole} from './business';
 import {techEffect} from '../../content/src/research';
 import {nextRandom} from './random';
 /** Current selectable range of a model-design slider, in its display unit (parameters/tokens in billions). */
@@ -41,6 +42,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){
+  requireRole(s,'ai');
   if(!s.research.completed.includes('ai-compute-1')||c.design.architecture==='moe'&&!s.research.completed.includes('ai-architecture-1'))throw new Error('AI設計の研究が必要です');
   const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!cluster)throw new Error('クラスタが存在しません');if(clusterBusy(s,c.clusterId))throw new Error('クラスタは使用中です');
   if(s.models.length>=100)throw new Error('モデル数の上限です');assertAIDesignUnlocked(c.design,s.research.completed);const e=estimateLLM(c.design,cluster,aiEffects(s));if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
@@ -60,6 +62,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
 export function clusterBusy(s:GameState,id:string,except=''){return s.models.some(m=>m.id!==except&&(m.status==='training'&&m.clusterId===id||m.service?.enabled&&m.service.mode!=='open'&&m.service.clusterId===id));}
 export function founderProjects(s:GameState){return Math.max(1,Number(s.research.active.length>0)+Number(s.products.some(p=>p.remaining>0))+Number(s.models.some(m=>m.status==='training')));}
 export function aiWeekly(s:GameState){
+ if(!hasRole(s,'ai'))return;
  const jobs=s.models.filter(m=>m.status==='training');const founder=1/founderProjects(s);const bonus=workBonus(s,'ai');
  for(const m of jobs){m.remainingSeconds=Math.max(0,m.remainingSeconds-7*86400*(1+bonus/b.trainingStaffTimeScale));m.preparationRemaining=Math.max(0,m.preparationRemaining-7*(founder+bonus/b.preparationStaffScale)/jobs.length);
   if(m.remainingSeconds===0&&m.preparationRemaining===0){const [rand,seed]=nextRandom(s.seed);s.seed=seed;const failure=Math.max(0,b.failureThreshold-m.design.quality)*b.failureCoefficient/(1+bonus/b.preparationStaffScale);m.status=rand<failure?'failed':'ready';if(m.status==='ready')m.scores=benchmarks({...m.design,quality:m.design.quality+(1-m.design.quality)*(1-Math.exp(-techEffect(s.research.completed,'ai','data')))},techEffect(s.research.completed,'ai','compute')+techEffect(s.research.completed,'ai','architecture')*b.architectureScore);logEvent(s,m.status==='ready'?'trainingComplete':'trainingFailed',m.name);}
