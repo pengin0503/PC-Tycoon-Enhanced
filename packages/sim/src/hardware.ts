@@ -45,7 +45,7 @@ export function hardwarePerformance(kind:HardwareKind,spec:Spec){
  * Costs use each value divided by its field's research frontier growth (mass production follows the frontier), so the
  * same specification gets cheaper with research; performance and power use the designed values.
  */
-export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false,year}:{stored?:boolean,year?:number}={}){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
  if(!stored&&'cooling' in def.fields&&input.cooling===undefined)throw new Error('冷却性能を指定してください');
@@ -53,11 +53,11 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);
-   if(!stored&&!fieldOptions(kind,key,completed).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
+   if(!stored&&!fieldOptions(kind,key,completed,year).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
   if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
   if(stored)continue;
   if(field.values&&!field.values.some(x=>Math.abs(x-v)<1e-9))throw new Error(`${field.label}が不正です`);
-  const range=fieldRange(kind,key,completed);
+  const range=fieldRange(kind,key,completed,year);
   if(v<range.min-1e-9||v>range.max+1e-9){
    const unit=field.unit??'';
    throw new Error(v<Number(field.min)||v>Number(field.max)?`${field.label}が不正です`:`${field.label}は現在の研究では${range.min}～${range.max}${unit}の範囲で設計できます`);
@@ -106,7 +106,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='design'){
   requireRole(s,'engineering');
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
-  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed,{year:marketYear(s.day)});const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
