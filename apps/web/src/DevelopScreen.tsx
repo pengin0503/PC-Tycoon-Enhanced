@@ -14,6 +14,7 @@ import {researchPointCost,hasRole} from '../../../packages/sim/src/business';
 import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
 import {priceRange} from '../../../packages/sim/src/pricing';
+import {marketYear} from '../../../packages/sim/src/market';
 import {vendorPartsAt} from '../../../packages/sim/src/vendor-market';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
@@ -88,7 +89,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  const tier=Math.min(visual.tier,unlockedVisualTier(state.research.completed,kind));
  // Metrics are previewed even for an invalid draft (e.g. too little cooling); the problem blocks the start button.
  const preview=evaluateHardware(kind,spec,state.research.completed,{stored:true});
- let problem='';try{evaluateHardware(kind,spec,state.research.completed);}catch(e){problem=e instanceof Error?e.message:String(e);}
+ let problem='';try{evaluateHardware(kind,spec,state.research.completed,{year:marketYear(state.day)});}catch(e){problem=e instanceof Error?e.message:String(e);}
  const cooling=typeof spec.cooling==='number'?spec.cooling:undefined;
  const unitCost=preview.unitCost+visualFinishCost(tier);
  const range=priceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}});
@@ -109,10 +110,10 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
      <div className="range-grid">{Object.entries(definition.fields).filter(([key])=>key!=='cache').map(([key,field])=>{
-      if(field.options){const open=fieldOptions(kind,key,state.research.completed);
+      if(field.options){const open=fieldOptions(kind,key,state.research.completed,marketYear(state.day));
        return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
         return <option key={v} value={v} disabled={locked}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}{locked?` 🔒 ${field.optionUnlock?.years[v]??''}年の技術`:''}</option>;})}</select></label>;}
-      const range=fieldRange(kind,key,state.research.completed);
+      const range=fieldRange(kind,key,state.research.completed,marketYear(state.day));
       return <RangeField key={key} label={field.label} unit={field.unit} description={describeWithResearch(hardwareExplanations[key],kind,field.unlock?.axes)} min={range.min} max={range.max} step={field.step??1} values={field.values} value={Number(spec[key])} onChange={v=>setSpec({...spec,[key]:v})}
        researchLimit={lockFor(field,range,kind)}/>;
      })}</div>
