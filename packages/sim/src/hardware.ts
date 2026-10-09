@@ -17,7 +17,6 @@ import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans
 import {recordProductSale} from './sales';
 import {availableForRetail,availableForAssembly} from './inventory-allocation';
 import {marketReference,marketYear} from './market';
-import {earliestResearchYear} from '../../content/src/era';
 import {developmentCost} from './development-cost';
 import {eraDemandFactor} from './events';
 import type {GameState,GameCommand} from './types';
@@ -96,7 +95,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
   requireRole(s,'research');
   if(!researchIsAvailable(t.category,t.axis))throw new Error('この研究系統は廃止されました');
-  const releaseYear=earliestResearchYear(t);if(marketYear(s.day)<releaseYear)throw new Error(`この技術は${releaseYear}年に解禁されます`);
+
   if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
   if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
   const points=researchPointCost(s,c.id);
@@ -106,7 +105,7 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='design'){
   requireRole(s,'engineering');
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
-  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed,{year:marketYear(s.day)});const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
