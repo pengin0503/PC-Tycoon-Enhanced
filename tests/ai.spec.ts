@@ -14,7 +14,7 @@ function frontierGPU(s:any,name:string){
 }
 test('switching a slimmed MoE design back to Dense refits the model shape',async({page})=>{
  let s:any=withTestStaff(createGame({id:'moe',name:'AI社',difficulty:'normal',seed:3}),true);s.company.cash=100_000_000_000;
- s.research.completed.push('ai-compute-1','ai-architecture-1');researchTo(s,'gpu',.6);
+ s.day=100*360;s.year=2100;s.research.completed.push('ai-compute-1','ai-architecture-1');researchTo(s,'gpu',.6);
  s=frontierGPU(s,'Big');
  s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
  s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:2,network:.8,cooling:.9});
@@ -31,7 +31,7 @@ test('switching a slimmed MoE design back to Dense refits the model shape',async
 });
 test('a service context length saved outside the slider list is shown as saved',async({page})=>{
  let s:any=withTestStaff(createGame({id:'ctx',name:'AI社',difficulty:'normal',seed:3}),true);s.company.cash=100_000_000_000;
- s.research.completed.push('ai-compute-1');researchTo(s,'gpu',.35);
+ s.day=35*360;s.year=2035;s.research.completed.push('ai-compute-1');researchTo(s,'gpu',.35);
  s=frontierGPU(s,'G');
  s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
  s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
