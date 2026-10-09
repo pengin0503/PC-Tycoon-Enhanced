@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame} from '../packages/sim/src/index';
 import {vendorParts} from '../packages/content/src/devices';
 import {vendorPartsAt,findVendorPart} from '../packages/sim/src/vendor-market';
 import {findPart,evaluateDevice} from '../packages/sim/src/devices';
