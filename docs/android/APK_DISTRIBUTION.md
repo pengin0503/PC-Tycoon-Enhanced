@@ -7,60 +7,26 @@ PC Tycoon Enhanced is distributed as a self-contained **Android game APK**, not 
 2. Unzip the artifact. Sideload `app-debug.apk` with Android's install-unknown-apps permission for the chosen file manager.
 3. Keep in mind: an Actions runner's **debug keystore is ephemeral**. Rebuilding in a different run may change the signing certificate. Android will reject installing a differently signed APK over the existing package. Back up your game JSON before switching builds. Avoid uninstalling unless the backup has been verified.
 
-## Signed versioned GitHub Releases (direct APK assets)
+## GitHub Releases: automatic Debug APK prereleases (no signing secrets)
 
-Pushing a trusted, stable Git tag matching root `package.json` (e.g. `v0.1.0` for `"version": "0.1.0"`) automatically runs `.github/workflows/android-release.yml`. It tests the game, builds a **signed release APK**, verifies the signature, packaged assets, Android `versionName`/`versionCode`, and publishes a GitHub Release. The Release contains **PC-Tycoon-Enhanced-v0.1.0.apk**, downloadable directly without unzipping, and **PC-Tycoon-Enhanced-v0.1.0.apk.sha256**. The release page contains generated change notes. The repository is private: users must have repository access to download.
+**Default distribution:** After each successful `main` push, `.github/workflows/android-release.yml` builds a Debug APK signed automatically by Android's temporary CI debug keystore, verifies the APK contents, Android version metadata and signature, and creates a GitHub prerelease. `workflow_dispatch` can also run the same release workflow from `main`. Neither JDK signing-key generation on the owner's PC nor any `PCT_ANDROID_*` GitHub Actions secret is required.
 
-### One-time owner setup — Windows and a permanently reusable signing key
+Release tags are generated automatically as `v<package.json version>-beta.<release workflow run number>`, for example `v0.1.0-beta.1`. Each successful run gets a distinct tag, so normal pushes to `main` do not require manual tagging. The Release includes:
 
-For private, personal use, the simplest approach is to register the same release key **once**, then publish future APK updates with new version tags. Android still requires APK signing even for private distribution. Never post a keystore or password in a chat or commit it to Git.
+- `PC-Tycoon-Enhanced-v0.1.0-beta.1.apk` — **direct APK download** (no Actions ZIP extraction).
+- `PC-Tycoon-Enhanced-v0.1.0-beta.1.apk.sha256` — checksum for verifying file integrity.
 
-**Prerequisites:** Install JDK 21 (`keytool` on PATH) and GitHub CLI (`gh`), and open PowerShell in a fresh local clone of this repository. Authenticate once with `gh auth login` (choose GitHub.com and a browser login with repository administration access). You do not need Play Store enrollment.
+The tag, Android `versionName`, and release APK filename agree; Android `versionCode` equals that workflow's run number. The workflow publishes a draft only after tests and APK/signature validation succeed, checks the two uploaded assets, then makes the prerelease visible. If the build or tests fail, the publish step does not run. The repository is **private** and requires authorized GitHub sign-in to view and download Releases: <https://github.com/pengin0503/PC-Tycoon-Enhanced/releases>.
 
-From the repository root, run this one-time command in Windows PowerShell:
+### Installation and update limitations
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\setup-android-signing.ps1
-```
+Even for free private apps, Android **requires an APK signing certificate**; the temporary debug keystore provides it automatically. APK signing is **not encryption or anti-extraction**. Because each GitHub runner may produce a different debug signing certificate, **in-place upgrades are not guaranteed**; Android may report an incompatible package/signature. Before installing a newer prerelease, **export the game save to a JSON file and verify that backup**. If Android requires the existing app to be uninstalled, that operation can erase its data. After reinstalling, re-import the JSON save. Merely increasing `versionCode` cannot bypass Android's same-signature requirement.
 
-The script:
+The experimental persistent-signing setup script `tools/setup-android-signing.ps1` remains available but is **not needed** for Debug prereleases. Switching in future to a permanent release-signing certificate will also require a JSON save export/import migration from existing Debug installations.
 
-1. Checks GitHub CLI access, required permissions, and existing signing secrets. It refuses to overwrite any signing secrets by default.
-2. Creates `pc-tycoon-release.jks` under your Windows **Documents/PC-Tycoon-Enhanced-Signing** folder if it doesn't exist, or reuses the same file on subsequent runs. It refuses to generate a different key if Releases already exist.
-3. Prompts for the keystore password privately and verifies that the alias and password actually open the keystore.
-4. Requires confirmation that **an independent backup of the .jks and password** has been made before configuring secrets. Losing this key prevents future in-place upgrades.
-5. Registers the following four Actions Secrets using GitHub CLI's encrypted repository secret API and private process stdin; it never puts a secret value into the command line, terminal output, clipboard, repository, or a temp credentials file:
+### Versioning
 
-   - `PCT_ANDROID_KEYSTORE_BASE64`
-   - `PCT_ANDROID_KEYSTORE_PASSWORD`
-   - `PCT_ANDROID_KEY_ALIAS`
-   - `PCT_ANDROID_KEY_PASSWORD`
-
-The release workflow retains no private keystore after the isolated runner finishes. Do not rerun setup with a newly generated keystore once you have shipped a release. If the first setup partially fails, **reuse the original keystore** and rerun with `-AllowReplace`; do not regenerate it. You can instead configure the four repository secrets manually under [Settings → Secrets and variables → Actions](https://github.com/pengin0503/PC-Tycoon-Enhanced/settings/secrets/actions).
-
-**Stop point:** The assistant's GitHub connector cannot administer Actions Secrets and cannot access your local signing keystore, so the one-time script must be executed on your trusted PC. No publish/tag operation should occur until the four secrets are confirmed.
-
-### Publish a new version
-
-1. Update `package.json` to the intended new stable version, commit the change and wait for main CI to pass.
-2. On the trusted maintainer machine, tag that main commit (example for the current package version):
-   ```sh
-   git checkout main
-   git pull --ff-only origin main
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-3. GitHub Actions starts **Android signed GitHub Release** on the tag push. Release tags must match exactly `vMAJOR.MINOR.PATCH`, without suffixes or leading zeros, and must match `package.json`. Version mismatch or malformed tag fails before signing or publishing.
-4. Wait for successful completion, then open **Releases** from the repository sidebar or visit the releases page. Download `PC-Tycoon-Enhanced-vX.Y.Z.apk` directly from **Assets** (not the Actions ZIP).
-5. Verify the APK's SHA-256 against the accompanying `.apk.sha256` file if transferring the artifact outside GitHub.
-
-Android `versionName` is exactly the tag version without `v`; the integer `versionCode` increases with the run number **of this release workflow**. Do not reset this workflow or publish releases with a versionCode less than that of any already-installed APK. Publishing an already-existing tag is intentionally not an asset-overwrite operation: the publishing step will fail instead of silently replacing a previous Release.
-
-### Upgrade safety and device acceptance
-
-The debug APK produced by the ordinary `verify` workflow is signed with a temporary debug key. **It cannot be updated in place by the permanent release-signed APK**. Export the in-game save to JSON and independently verify the backup *before* uninstalling or switching signing identities. Do not assume the save survives uninstall. Once installed using the permanent release key, subsequent versions signed with exactly the same keystore/alias and an increasing `versionCode` can be installed as in-place upgrades.
-
-Successful CI and a valid signature do **not** replace Android physical-device tests. Test an actual in-place upgrade, save persistence and touch controls before calling the version production-certified.
+The prerelease tag derives from `package.json` plus the workflow run number. To start a new version series, bump the package version on `main` (for example `0.1.0` to `0.2.0`). Each successful subsequent `main` push produces a unique prerelease and direct APK asset without any manual GitHub tag or external signing secrets.
 
 ## On-device acceptance before declaring production complete
 - Device/Android version/WebView version, orientation on phone and tablet; device back, home and multi-window handling.
@@ -68,6 +34,6 @@ Successful CI and a valid signature do **not** replace Android physical-device t
 - Tap targets, keyboard showing/hiding, immersive system bars, file pickers, dark theme, text readability and 844×390 / 960×540 / portrait fallback.
 - Save, terminate process and restart, imported malformed JSON leaves current state unmodified, export/import backup, activity pause/resume prevents unearned simulation days.
 - Offline airplane-mode start/restart, no external network dependencies, low-memory/WebView lifecycle.
-- Release signing reproducibility, version increments, signing-key backup, in-place upgrade from a prior **release signed with the same key**.
+- Debug APK signing certificate and version inspection, JSON save export/import after reinstall, and versioned direct GitHub Releases assets.
 
-Debug artifact success and browser tests do **not** equal physical-device certification. No credentials are required to produce the debug APK but a persistent signing key is mandatory for updateable release APKs.
+Debug artifact success and browser tests do **not** equal physical-device certification. No credentials are required to produce the debug APK but a persistent signing key is needed for reliably updateable release APKs, but **not** for the automatic Debug prereleases.
