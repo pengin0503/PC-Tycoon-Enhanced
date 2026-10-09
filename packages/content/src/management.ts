@@ -13,7 +13,7 @@ export const managementBalance={maxFactoryLevel:13,factoryUpgrade:30000000,facto
 export const rivalTemplates=[{id:'r-1',name:'Vertex Works',focus:'cpu' as const},{id:'r-2',name:'Lumen Circuit',focus:'gpu' as const},{id:'r-3',name:'Cobalt Memory',focus:'ram' as const}];
 /** Rivals pay the same design cost as the player for their focus (`hardwareCatalog[focus].designCost`). */
 export const rivalBalance={initialCash:2000000000,researchCost:50000000,monthlyCost:15000000,work:10,levelWeeks:100,hardEfficiency:1.5,longEfficiency:.7,capacity:120,inventoryTarget:1000,valuationBase:3000000000,valuationPerTech:300000000,pressure:.15,maxResearch:50,playerPressure:.2,demandFloor:.9,demandVariance:.2,priceCostMultiple:2,developmentWork:20,priceUndercut:.9,minimumPriceCostMultiple:1.2};
-export const researchPointBalance={initial:100,pointsPerWork:10,officeBonus:.1,costPerWork:10} as const;
+export const researchPointBalance={initial:100,pointsPerWork:3,officeBonus:.1,costPerWork:10} as const;
 export const distributionBalance={maxLevel:10,upgradeCost:20000000,upgradeExponent:1.8,monthlyCost:2000000,demandPerLevel:.06,fansPerLevel:15} as const;
 export const distributionLabels=['販売店なし','地域の取扱店','専門店コーナー','家電量販店','全国チェーン','直営ショップ','オンラインストア','海外代理店','グローバル流通網','旗艦店ネットワーク','世界直販体制'];
 export const offerBalance={monthlyChance:.35,maxOffers:5,expiryDays:14,minShare:.3,shareRange:.5,minPrice:.85,priceRange:.15,counterLimit:25} as const;
