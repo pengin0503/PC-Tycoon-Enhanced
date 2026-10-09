@@ -15,8 +15,8 @@ export function newRivals(seed:number,difficulty:'normal'|'hard',mode:GameState[
 function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cash)return false;const paid=Math.min(r.cash,amount);r.cash-=paid;r.debt+=amount-paid;return true;}
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
 export function settleProcurement(r:Rival,p:Rival['products'][number],units:number){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}
-export function rivalDaily(s:GameState){
- // Manufacture first, then sell a share of weekly demand every day.
+export function rivalManufacture(s:GameState){
+ // Keep production isolated so manufacturing tests do not run retail transactions.
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
   const products=r.products.filter(p=>p.remaining===0);let available=b.capacity;
   if(!products.length)continue;
@@ -27,6 +27,9 @@ export function rivalDaily(s:GameState){
    if(count){cost(r,count*p.unitCost);p.inventory+=count;available-=count;}
   }
  }
+}
+export function rivalDaily(s:GameState){
+ rivalManufacture(s);
  for(const r of s.rivals.filter(r=>!r.acquired)){
   for(const p of r.products.filter(p=>p.remaining===0)){
    const [rand,seed]=nextRandom(r.seed);r.seed=seed;
