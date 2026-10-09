@@ -40,10 +40,12 @@ test('product stock allocations persist through the product detail editor (#32)'
  await advanceDays(page,30);
  await launchFirst(page);
  await openProduct(page,'CPU 1');
+ await page.getByRole('tab',{name:'在庫配分'}).click();
  const reserved=page.getByRole('spinbutton',{name:'CPU 1 PC組立用引当'});
  await reserved.fill('5');
  await page.getByRole('button',{name:'引当設定を保存'}).click();
  await closeDialog(page);
  await openProduct(page,'CPU 1');
+ await page.getByRole('tab',{name:'在庫配分'}).click();
  await expect(page.getByRole('spinbutton',{name:'CPU 1 PC組立用引当'})).toHaveValue('5');
 });
