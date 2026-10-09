@@ -15,6 +15,10 @@ it('allows a product to split retail, assembly and AI reserved inventory while p
  expect(availableForRetail(s,s.products[0],40)).toBe(17);
  expect(importSave(exportSave(s)).products[0].stockAllocation).toEqual(s.products[0].stockAllocation);
  expect(()=>command(s,{type:'allocateStock',id:'p-1',retail:-1,assembly:0,ai:0})).toThrow();
+ const contracted=structuredClone(s);contracted.offers=[{id:1,productId:'p-1',buyer:'契約先',quantity:20,unitPrice:20000,expiresDay:s.day+7}];contracted.offerSeq=1;
+ expect(()=>command(contracted,{type:'respondOffer',id:1,action:'accept'})).toThrow(/在庫/);
+ contracted.offers[0].quantity=10;
+ expect(command(contracted,{type:'respondOffer',id:1,action:'accept'}).products[0].inventory).toBe(30);
 });
 
 it('reserves the next assembly batch while selling only surplus, without freezing an entire part line (#32)',()=>{
