@@ -55,7 +55,7 @@ it('models 30 years of paid research, office expansion, engineering and retail r
   }
   s=command(s,{type:'advance',days:360-(y===9||y===17||y===25?35:0)});
   if([10,20,30].includes(y))rows.push({year:marketYear(s.day),tech:hardwareTechYear('cpu',s.research.completed),cash:s.company.cash,revenue:s.finance.revenue,sold:s.products.reduce((n,p)=>n+p.sold,0),rivalLevel:Math.max(...s.rivals.map(r=>r.researchLevel)),office:s.officeLevel,rp:s.company.researchPoints});
-  expect(s.gameOver, `game-over in year ${y}`).toBe(false);
+  expect(s.gameOver, `game-over in year ${y}`).toBeFalsy();
  }
  expect(upgrades).toBe(1);
  expect(s.products.some(p=>p.sold>0)).toBe(true);
