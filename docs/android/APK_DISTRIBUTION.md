@@ -2,6 +2,16 @@
 
 PC Tycoon Enhanced is distributed as a self-contained **Android game APK**, not a public website. It continues to use TypeScript/React rendered locally by Capacitor's Android WebView: **no programming-language migration** is necessary. Vite/Chromium smoke tests remain internal development tools; the app requires no live server while playing.
 
+## Local build during GitHub Actions billing restrictions
+
+If GitHub-hosted workflows cannot start because of an account payment failure or an Actions spending limit, an Actions re-run cannot fix the issue. See [billing diagnosis and complete Windows local verification](../dev/ACTIONS_BILLING_AND_LOCAL_VERIFICATION.md). On a Windows 11 development PC with Node.js 24, Python 3, JDK 21 and Android SDK 36:
+
+```powershell
+pwsh -NoProfile -File tools/verify-local.ps1
+```
+
+After the selected checks pass, the locally signed **debug** APK is at `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`. GitHub Release publishing still requires a separately approved and verified publication process; a local success does **not** turn GitHub Actions check statuses green, establish Android emulator success, or guarantee compatibility with an APK signed using another keystore. Export and verify the game's JSON save before any install that may require removing the previous app.
+
 ## Development APK
 1. Open the current Android-first branch's successful GitHub Actions `verify` run and download `pc-tycoon-debug-apk`.
 2. Unzip the artifact. Sideload `app-debug.apk` with Android's install-unknown-apps permission for the chosen file manager.
