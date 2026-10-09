@@ -178,13 +178,8 @@ export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:Reado
   for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
   for(let i=0;i<pool.length;i++){
    const p=pool[i].p;
-   // Internal assembly takes precedence over retail. Keep a modest hardware reserve for
-   // self-supplied AI compute; inventory produced today is not available to retail today.
-   const feedsAssembly=s.products.some(device=>(device.kind==='pc'||device.kind==='laptop')&&device.launched&&device.line&&deviceSlots.some(slot=>device.spec[slot]===p.id));
-   const canSupplyAi=s.research.completed.includes('ai-compute-1')&&(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'));
-   const aiReserve=daysPerPeriod>1&&canSupplyAi&&p.line?Math.min(2,Math.max(0,p.target-1),p.inventory):0;
-   const retained=feedsAssembly?p.inventory:aiReserve;
-   const retailStock=Math.max(0,Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory)-retained);
+   // Existing products retain legacy prioritization until a custom allocation is configured.
+   const retailStock=p.stockAllocation||daysPerPeriod>1?availableForRetail(s,p,openingInventory?.get(p.id)??p.inventory):p.inventory;
    const units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):retailStock,allocations[i]);
    if(units){
     const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);
