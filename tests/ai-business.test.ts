@@ -61,7 +61,7 @@ it('subscriptions charge monthly and open weights improve reputation without API
 it('subscription billing prorates user-days and settles earned revenue on stop, repricing, and save restore',()=>{
  const trained=cmd(cmd(ready(),train),{type:'advance',days:7});
  let oneDay=cmd(trained,{...deploy,mode:'subscription'});
- oneDay.day=59;
+ oneDay.day=Math.ceil(oneDay.day/30)*30-1;
  oneDay=cmd(oneDay,{type:'advance',days:1});
  const afterOneDay=oneDay.models[0].service!;
  expect(afterOneDay.subscriptionUserDays).toBe(0);
