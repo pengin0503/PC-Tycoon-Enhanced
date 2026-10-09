@@ -84,8 +84,12 @@ test('AI Lab requires manufactured player GPU before model training and deployme
  await page.getByRole('button',{name:'AIモデルを設計'}).click();
  await expect(page.getByRole('alert')).toHaveCount(0);
  await page.getByRole('button',{name:'学習を開始'}).click();
- await advanceDays(page,30);await skipDecision(page);
- await page.getByRole('tab',{name:'モデル'}).click();
+ // Decisions can pause the clock before the requested 30 days have elapsed.
+ for(let attempt=0;attempt<8;attempt++){
+  await advanceDays(page,30);await skipDecision(page);
+  await page.getByRole('tab',{name:'モデル'}).click();
+  if((await page.getByTestId('model-status-m-1').textContent())==='評価完了')break;
+ }
  await expect(page.getByTestId('model-status-m-1')).toHaveText('評価完了');
  await page.getByRole('button',{name:'サービスを設定'}).click();
  await page.getByRole('button',{name:'サービスを開始'}).click();
