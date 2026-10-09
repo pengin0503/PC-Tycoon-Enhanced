@@ -178,7 +178,7 @@ export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:Reado
    // Internal assembly takes precedence over retail. Keep a modest hardware reserve for
    // self-supplied AI compute; inventory produced today is not available to retail today.
    const feedsAssembly=s.products.some(device=>(device.kind==='pc'||device.kind==='laptop')&&device.launched&&device.line&&deviceSlots.some(slot=>device.spec[slot]===p.id));
-   const aiReserve=(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'))?Math.min(10,p.inventory):0;
+   const aiReserve=daysPerPeriod>1&&(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'))?Math.min(10,p.inventory):0;
    const retained=feedsAssembly?p.inventory:aiReserve;
    const retailStock=Math.max(0,Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory)-retained);
    const units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):retailStock,allocations[i]);
