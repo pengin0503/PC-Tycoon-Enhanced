@@ -76,6 +76,7 @@ it('assembled PCs accept an optional PSU that must cover the parts with headroom
  // A year-2025 frontier GPU draws far more than a 300W supply can deliver.
  s=researchTo(unlock(s,'gpu-compute-1'),'gpu',.25);const hotSpec=frontierSpec('gpu',s.research.completed);
   while(evaluateHardware('gpu',hotSpec,s.research.completed,{stored:true}).power>Number(hotSpec.cooling)&&Number(hotSpec.units)>1)hotSpec.units=Number(hotSpec.units)/2;
+ s.company.cash=10_000_000_000;
  s=cmd(s,{type:'design',kind:'gpu',name:'Hot',spec:hotSpec,price:evaluateHardware('gpu',hotSpec,s.research.completed).unitCost*2});s=cmd(s,{type:'advance',days:14});
  const hot={...parts,gpu:'p-2'};
  expect(()=>cmd(s,assembly({...hot,psu:'p-1'}))).toThrow(/電源の定格出力が不足/);
