@@ -8,13 +8,14 @@ import {deviceSlots} from '../../content/src/devices';
 import {inventoryValue} from './inventory';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
+import {recordMarketSale} from './market-share';
 import {negotiateAcquisition} from './business';
 import type {GameState,GameCommand} from './types';
 type Rival=GameState['rivals'][number];
 export function newRivals(seed:number,difficulty:'normal'|'hard',mode:GameState['mode']='standard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:(difficulty==='hard'?b.hardEfficiency:1)*(mode==='long'?b.longEfficiency:1),researchLevel:0,researchRemaining:0,products:[],acquired:false}));}
 function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cash)return false;const paid=Math.min(r.cash,amount);r.cash-=paid;r.debt+=amount-paid;return true;}
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
-export function settleProcurement(r:Rival,p:Rival['products'][number],units:number){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}
+export function settleProcurement(r:Rival,p:Rival['products'][number],units:number,s?:GameState){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;if(s)recordMarketSale(s,r.id,p.kind,units);p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}
 export function rivalManufacture(s:GameState){
  // Keep production isolated so manufacturing tests do not run retail transactions.
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
@@ -38,7 +39,7 @@ export function rivalDaily(s:GameState){
    const weeklyExpected=hardwareCatalog[r.focus].demand*r.efficiency*competition*(b.demandFloor+rand*b.demandVariance)*(p.unitCost*b.priceCostMultiple/p.price);
    const dailyExpected=Math.max(0,weeklyExpected/7);
    const count=Math.min(p.inventory,Math.floor(dailyExpected)+(rand<dailyExpected%1?1:0));
-   if(count){p.inventory-=count;p.sold+=count;p.revenue+=count*p.price;p.profit+=count*(p.price-p.unitCost);revenue(r,count*p.price);}
+   if(count){p.inventory-=count;p.sold+=count;recordMarketSale(s,r.id,p.kind,count);p.revenue+=count*p.price;p.profit+=count*(p.price-p.unitCost);revenue(r,count*p.price);}
   }
  }
 }
