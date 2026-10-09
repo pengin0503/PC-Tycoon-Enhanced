@@ -14,6 +14,7 @@ const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,at
 function ready(seed=1){
  let s=createGame({id:'ai',name:'AI社',difficulty:'normal',seed});
   s.company.cash=10_000_000_000;
+ s.day=17*360;s.year=2017;
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
  // Language models need GPUs from around 2030: year-2000 cards are far too slow.
  researchTo(s,'gpu',.35);
