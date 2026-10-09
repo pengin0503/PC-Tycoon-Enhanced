@@ -174,7 +174,7 @@ export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:Reado
   const priority=pool.map((x,i)=>({i,remainder:total?x.demand*budget/total-allocations[i]:0})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i);
   for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
   for(let i=0;i<pool.length;i++){
-   const p=pool[i].p,units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):p.inventory,allocations[i]);
+   const p=pool[i].p,units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory),allocations[i]);
    if(units){
     const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);
     recordProductSale(s,p,units,p.price,actualCost);
