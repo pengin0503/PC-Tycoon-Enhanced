@@ -105,7 +105,7 @@ it('offers arrive monthly for stocked products and expire',()=>{
 it('acquisition offers below valuation succeed with rising odds and impose a cooldown on refusal',()=>{
  expect(acquisitionChance(70,100)).toBeCloseTo(.1);expect(acquisitionChance(100,100)).toBe(1);expect(acquisitionChance(69,100)).toBe(0);
  expect(acquisitionChance(85,100)).toBeGreaterThan(acquisitionChance(75,100));
- const s=start();s.company.cash=100_000_000;const value=valuation(s,'r-1');
+ const s=start();s.company.cash=100_000_000_000;const value=valuation(s,'r-1');
  expect(()=>cmd(s,{type:'acquire',id:'r-1',offer:Math.floor(value*.5)})).toThrow();
  const full=cmd(s,{type:'acquire',id:'r-1',offer:value});expect(full.rivals[0].acquired).toBe(true);
  // find a seed/day where a 70% bid is refused, then confirm the cooldown
@@ -121,19 +121,19 @@ it('candidates refresh monthly, paid searches find stronger talent, traits chang
  let s=start();expect(s.candidates).toHaveLength(3);s.company.cash=1_000_000_000;
  const k=s.candidates[0];const hired=cmd(s,{type:'hireCandidate',id:k.id});
  expect(hired.staff[0]).toMatchObject({role:k.role,skill:k.skill});expect(hired.candidates).toHaveLength(2);
- const premium=cmd(s,{type:'searchCandidates',tier:'premium'});expect(s.company.cash-premium.company.cash).toBe(2000000);
+ const premium=cmd(s,{type:'searchCandidates',tier:'premium'});expect(s.company.cash-premium.company.cash).toBe(3000000);
  expect(premium.candidates.every(c=>c.skill>=70&&c.trait)).toBe(true);
  const month=cmd(s,{type:'advance',days:30});expect(month.candidates.map(c=>c.id)).not.toEqual(s.candidates.map(c=>c.id));
- expect(salaryFor(50,'frugal')).toBe(120000);expect(salaryFor(50)).toBe(150000);
+ expect(salaryFor(50,'frugal')).toBe(360000);expect(salaryFor(50)).toBe(450000);
  expect(traitWorkMultiplier('genius','research')).toBe(1.5);expect(traitWorkMultiplier('ai-specialist','ai')).toBe(1.5);expect(traitWorkMultiplier(undefined,'ai')).toBe(1);
- const g=start();g.staff=[{id:'e-1',role:'research',skill:60,salary:180000,trait:'genius'}];g.staffSeq=1;
- const n=start();n.staff=[{id:'e-1',role:'research',skill:60,salary:180000}];n.staffSeq=1;
+ const g=start();g.staff=[{id:'e-1',role:'research',skill:60,salary:500000,trait:'genius'}];g.staffSeq=1;
+ const n=start();n.staff=[{id:'e-1',role:'research',skill:60,salary:500000}];n.staffSeq=1;
  expect(cmd(g,{type:'advance',days:7}).company.researchPoints).toBeGreaterThan(cmd(n,{type:'advance',days:7}).company.researchPoints);
 });
 
 it('firing pays severance and never reuses staff ids',()=>{
  let s=start();s=cmd(s,{type:'hire',role:'research',skill:50});s=cmd(s,{type:'hire',role:'engineering',skill:50});
- const fired=cmd(s,{type:'fire',id:'e-2'});expect(s.company.cash-fired.company.cash).toBe(150000*3);expect(fired.staff.map(e=>e.id)).toEqual(['e-1']);
+ const fired=cmd(s,{type:'fire',id:'e-2'});expect(s.company.cash-fired.company.cash).toBe(450000*3);expect(fired.staff.map(e=>e.id)).toEqual(['e-1']);
  const again=cmd(fired,{type:'hire',role:'marketing',skill:40});expect(again.staff.map(e=>e.id)).toEqual(['e-1','e-3']);
  expect(()=>cmd(s,{type:'fire',id:'e-9'})).toThrow();
 });

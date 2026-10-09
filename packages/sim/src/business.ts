@@ -25,7 +25,7 @@ export function traitWorkMultiplier(trait:StaffTrait|undefined,role:Role){
 }
 export function traitWork(s:GameState,role:'research'|'engineering'|'ai'){return s.staff.filter(e=>e.role===role).reduce((n,e)=>n+e.skill*managementBalance.workPerSkill*traitWorkMultiplier(e.trait,role),0);}
 export function marketingStrength(s:GameState){return s.staff.filter(e=>e.role==='marketing').reduce((n,e)=>n+e.skill*(e.trait==='charismatic'?2:1),0);}
-export function salaryFor(skill:number,trait?:StaffTrait){return Math.round(skill*managementBalance.salaryPerSkill*(trait==='frugal'?h.frugalSalary:1));}
+export function salaryFor(skill:number,trait?:StaffTrait){return Math.round((managementBalance.salaryBase+skill*managementBalance.salaryPerSkill)*(trait==='frugal'?h.frugalSalary:1));}
 function nextStaffId(s:GameState){
  const used=new Set(s.staff.map(employee=>employee.id));
  do{s.staffSeq++;}while(used.has(`e-${s.staffSeq}`));

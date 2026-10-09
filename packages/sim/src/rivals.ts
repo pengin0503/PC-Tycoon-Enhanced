@@ -44,7 +44,7 @@ export function rivalMonthly(s:GameState){
   cost(r,b.monthlyCost,true);if(r.debt>0)continue;
   // The first level is a quick catch-up to year-2000 technology; each later level is about two years of work.
   if(r.researchRemaining===0&&r.researchLevel<b.maxResearch&&cost(r,b.researchCost*(r.researchLevel+1)))r.researchRemaining=b.work*(r.researchLevel?b.levelWeeks:1);
-  const latest=r.products.at(-1);if(r.researchLevel>0&&(!latest||Number(latest.spec.generation)<r.researchLevel)&&cost(r,b.designCost)){
+  const latest=r.products.at(-1);if(r.researchLevel>0&&(!latest||Number(latest.spec.generation)<r.researchLevel)&&cost(r,hardwareCatalog[r.focus].designCost)){
    // Rivals build the mainstream design of their technology level (level 50 = year-2100 technology).
    const share=Math.min(1,(r.researchLevel-1)/(b.maxResearch-1));
    const spec=typicalSpec(r.focus,share);const metrics=evaluateHardware(r.focus,spec,researchAtShare(r.focus,share),{stored:true});metrics.performance=Math.round(metrics.performance*r.efficiency);

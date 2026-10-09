@@ -1,2 +1,2 @@
 export const marketEvents=[{id:'upgrade-cycle',label:'企業向け更新需要が増加',demand:1.05,production:1},{id:'supply-delay',label:'部材供給に小さな遅延',demand:1,production:.95},{id:'purchase-pause',label:'買い替え需要が一時的に減少',demand:.95,production:1},{id:'factory-learning',label:'製造工程の習熟が進展',demand:1,production:1.05}];
-export const eventBalance={monthlyChance:.25,durationDays:30,supplyBoostCost:250000,demandCampaignCost:300000};
+export const eventBalance={monthlyChance:.25,durationDays:30,supplyBoostCost:20000000,demandCampaignCost:25000000};

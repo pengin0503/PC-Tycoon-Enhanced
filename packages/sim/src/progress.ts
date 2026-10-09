@@ -25,7 +25,7 @@ function milestones(s:GameState):Record<typeof milestoneAchievements[number]['id
   'factory-max':s.factoryLevel>=managementBalance.maxFactoryLevel,
   'distribution-max':s.distributionLevel>=distributionBalance.maxLevel,
   'all-companies':s.rivals.length>0&&s.rivals.every(r=>r.acquired),
-  'mass-production':s.products.some(p=>p.sold+p.inventory>=1000),
+  'mass-production':s.products.some(p=>p.sold+p.inventory>=10000),
   'ai-model':s.models.some(m=>m.status==='ready'),
   'hard-mode':s.difficulty==='hard'&&companyValue(s)>=hardModeGoal,
  };

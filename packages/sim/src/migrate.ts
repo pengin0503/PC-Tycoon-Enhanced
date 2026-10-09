@@ -2,17 +2,36 @@ import {balance} from '../../content/src/balance';
 import {eraBalance} from '../../content/src/era';
 import {eventBalance} from '../../content/src/events';
 import {rivalBalance} from '../../content/src/management';
+import {salaryFor} from './business';
 import type {GameState,Product} from './types';
 
+/** Converts a save from any earlier economy version to the current one (see `toVersion2` and `toVersion3`). */
+export function migrateEconomy(input:GameState):GameState{
+ if(input.economyVersion===balance.economyVersion)return input;
+ const s=structuredClone(input);
+ if(s.economyVersion===undefined)toVersion2(s);
+ toVersion3(s);
+ s.economyVersion=balance.economyVersion;
+ return s;
+}
+/**
+ * Version 2 introduced real-world design, office and salary costs, a venture-funded start and ×10 sales volumes.
+ * A version 2 company keeps what it built and receives the difference in starting capital (rivals likewise), so it
+ * can afford the new design costs; salaries follow the new pay scale.
+ */
+function toVersion3(s:GameState){
+ s.company.cash+=balance.initialCash[s.difficulty]-balance.version2InitialCash[s.difficulty];
+ for(const r of s.rivals)if(!r.acquired)r.cash+=rivalBalance.initialCash-balance.version2RivalCash;
+ for(const e of s.staff)e.salary=salaryFor(e.skill,e.trait);
+}
 /**
  * Converts a save from before economy version 2 (money at 1/100 of today's yen scale, start year chosen freely):
  * every stored amount of money is multiplied by `legacyMoneyScale`, the calendar restarts from 2000 so dates match
  * the technology eras, and rival technology levels are capped to what the calendar allows. AI service prices are
  * kept: they were already at real-world scale. Product specs and metrics are kept as designed.
  */
-export function migrateEconomy(input:GameState):GameState{
- if(input.economyVersion===balance.economyVersion)return input;
- const s=structuredClone(input);const k=balance.legacyMoneyScale;
+function toVersion2(s:GameState){
+ const k=balance.legacyMoneyScale;
  const scale=(n:number)=>Math.round(n*k);
  const product=(p:Product)=>{
   p.unitCost=scale(p.unitCost);p.price=Math.min(1e8,scale(p.price));p.revenue=scale(p.revenue);p.profit=scale(p.profit);
@@ -37,6 +56,4 @@ export function migrateEconomy(input:GameState):GameState{
  for(const c of s.clusters)c.purchaseCost=scale(c.purchaseCost);
  for(const m of s.models){m.trainingCost=scale(m.trainingCost);if(m.service){m.service.revenue=scale(m.service.revenue);m.service.cost=scale(m.service.cost);}}
  s.year=eraBalance.startYear;
- s.economyVersion=balance.economyVersion;
- return s;
 }

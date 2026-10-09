@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 test('company shell saves resumes and imports safely',async({page})=>{
  await page.goto('/');await page.getByLabel('社名').fill('北極テック');await page.getByRole('button',{name:'会社を設立'}).click();
  await expect(page.getByRole('heading',{name:'北極テック'})).toBeVisible();
- await page.getByRole('button',{name:'30日進める'}).click();await expect(page.getByTestId('day')).toHaveText('30');await expect(page.getByTestId('cash')).toHaveText('￥48,800,000');
+ await page.getByRole('button',{name:'30日進める'}).click();await expect(page.getByTestId('day')).toHaveText('30');await expect(page.getByTestId('cash')).toHaveText('￥999,800,000');
  await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('status')).toContainText('保存しました');
  await page.reload();await expect(page.getByTestId('day')).toHaveText('30');
  await page.getByRole('button',{name:'セーブ・設定'}).click();
@@ -11,7 +11,7 @@ test('company shell saves resumes and imports safely',async({page})=>{
  const buffer=await readFile((await exported.path())!);await page.getByRole('button',{name:'1日進める'}).click();
  await page.getByLabel('JSON読み込み').setInputFiles({name:'good.json',mimeType:'application/json',buffer});await expect(page.getByTestId('day')).toHaveText('30');
  await page.getByLabel('JSON読み込み').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('{')});
- await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByTestId('cash')).toHaveText('￥48,800,000');
+ await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByTestId('cash')).toHaveText('￥999,800,000');
 });
 test('hidden page never accumulates real time and visible speed is bounded',async({page})=>{
  await page.clock.install();await page.goto('/');await page.getByRole('button',{name:'会社を設立'}).click();

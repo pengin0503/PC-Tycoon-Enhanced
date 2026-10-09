@@ -37,7 +37,7 @@ test('bulk offer can be accepted from the companies screen',async({page})=>{
 });
 
 test('acquisition negotiation shows odds and completes at full valuation',async({page})=>{
- const s=createGame({id:'ui-buy',name:'買収社',difficulty:'normal',seed:3});s.company.cash=500_000_000;
+ const s=createGame({id:'ui-buy',name:'買収社',difficulty:'normal',seed:3});s.company.cash=100_000_000_000;
  await load(page,s);await nav(page,'企業');
  await page.getByRole('button',{name:'買収交渉'}).first().click();
  const dialog=page.getByRole('dialog',{name:/買収交渉/});
@@ -56,7 +56,7 @@ test('hard-mode bankruptcy shows the game over screen and allows a new game',asy
 
 test('staff search, distribution upgrade and achievements are reachable',async({page})=>{
  await page.setViewportSize({width:844,height:390});await startCompany(page);
- await nav(page,'人事');await page.getByRole('tab',{name:'人材探し'}).click();await page.getByRole('button',{name:'￥2,000,000で探す'}).click();
+ await nav(page,'人事');await page.getByRole('tab',{name:'人材探し'}).click();await page.getByRole('button',{name:'￥3,000,000で探す'}).click();
  await page.getByRole('tab',{name:'候補者'}).click();await expect(page.getByRole('button',{name:'採用する'})).toHaveCount(3);
  await nav(page,'アップグレード');await page.getByRole('tab',{name:'販売店'}).click();await page.getByRole('button',{name:'販売網を拡大'}).click();
  await expect(page.getByTestId('distribution-level')).toHaveText('1 / 10');

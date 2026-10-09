@@ -20,7 +20,7 @@ it('rejects future histories missing clusters and overbooked compute',()=>{
 });
 it('migrates older v1 snapshots with explicit default behavior',()=>{
  const old:any=JSON.parse(exportSave(start()));for(const k of ['officeLevel','factoryLevel','staff','advertising','history','rivals','clusters','models','modifiers'])delete old[k];delete old.company.loan;
- const s=importSave(JSON.stringify(old));expect(s.officeLevel).toBe(1);expect(s.rivals).toEqual([]);expect(s.models).toEqual([]);expect(command(s,{type:'advance',days:30}).company.cash).toBe(48800000);
+ const s=importSave(JSON.stringify(old));expect(s.officeLevel).toBe(1);expect(s.rivals).toEqual([]);expect(s.models).toEqual([]);expect(command(s,{type:'advance',days:30}).company.cash).toBe(999800000);
 });
 it('recovers the last intact slot with an explicit corruption warning',async()=>{
  const repo=new SaveRepository(indexedDB,'corruption-recovery');await repo.save(start());

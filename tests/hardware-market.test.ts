@@ -11,7 +11,7 @@ function developed(kind:any='cpu',difficulty:'normal'|'hard'='normal',mode:'stan
  s=cmd(s,{type:'research',id:`${kind}-compute-1`});s=cmd(s,{type:'advance',days:7});
  const spec=defaultSpec(kind);const metrics=evaluateHardware(kind,spec,[...s.research.completed]);const {max}=priceRange({kind,...metrics});s=cmd(s,{type:'design',kind,name:'第一世代',spec,price:Math.min(Math.round(metrics.unitCost*2),max)});return cmd(s,{type:'advance',days:14});
 }
-function released(difficulty:'normal'|'hard'='normal',mode:'standard'|'tycoon'|'long'|'sandbox'='standard'){let s=cmd(developed('cpu',difficulty,mode),{type:'launch',id:'p-1'});return cmd(s,{type:'line',id:'p-1',target:100});}
+function released(difficulty:'normal'|'hard'='normal',mode:'standard'|'tycoon'|'long'|'sandbox'='standard'){let s=cmd(developed('cpu',difficulty,mode),{type:'launch',id:'p-1'});return cmd(s,{type:'line',id:'p-1',target:2000});}
 function categoryFixture(kind:'cpu'|'os',count:number,difficulty:'normal'|'hard'='normal',mode:'standard'|'long'='standard'){
  let s:GameState;
  if(kind==='cpu'){
@@ -29,7 +29,8 @@ function categoryFixture(kind:'cpu'|'os',count:number,difficulty:'normal'|'hard'
 it('manufactures inventory then sells with positive unit economics',()=>{
  const s=released();const n=cmd(s,{type:'advance',days:7});expect(n.products[0].sold).toBeGreaterThan(0);expect(n.products[0].profit).toBeGreaterThan(0);
  expect(n.products[0].inventory).toBeGreaterThanOrEqual(0);expect(n.finance.revenue).toBe(n.products[0].revenue);
- expect(cmd(s,{type:'advance',days:180}).company.cash).toBeGreaterThan(50000000);
+ // Half a year of sales covers manufacturing and monthly costs with cash to spare.
+ expect(cmd(s,{type:'advance',days:180}).company.cash).toBeGreaterThan(s.company.cash);
 });
 it('rejects developing releases and invalid target or price',()=>{
  const s=developed();for(const c of [{type:'line',id:'p-1',target:100},{type:'price',id:'p-1',price:0},{type:'line',id:'bad',target:2}])expect(()=>cmd(s,c)).toThrow();
