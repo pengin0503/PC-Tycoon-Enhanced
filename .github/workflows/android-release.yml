@@ -51,7 +51,10 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: python3 -m unittest discover -s tests -p '*_test.py'
-      - run: npm run android:build
+      - run: npm run android:sync
+      - name: Build automatically signed Debug APK
+        working-directory: apps/android/android
+        run: ./gradlew --no-daemon assembleDebug
       - run: npx playwright install chromium --only-shell
       - run: npm run test:e2e
       - run: npm run test:pwa
