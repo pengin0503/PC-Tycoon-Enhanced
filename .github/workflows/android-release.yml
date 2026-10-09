@@ -1,20 +1,40 @@
-name: Android release APK
+name: Android signed GitHub Release
+
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v[0-9]*'
+
 permissions:
   contents: read
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-apk:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    permissions:
+      contents: write
     env:
       PCT_VERSION_CODE: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
+      - name: Validate release version against package.json
+        shell: bash
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          VERSION="$(node tools/release_version.mjs "$GITHUB_REF_NAME")"
+          echo "PCT_VERSION_NAME=$VERSION" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,7 +46,7 @@ jobs:
       - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Select isolated runner keystore path
         run: echo "PCT_ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/pct-release.jks" >> "$GITHUB_ENV"
-      - name: Validate signing credentials
+      - name: Validate required signing secrets (fail closed)
         shell: bash
         env:
           PCT_ANDROID_KEYSTORE_BASE64: ${{ secrets.PCT_ANDROID_KEYSTORE_BASE64 }}
@@ -48,7 +68,11 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: python3 -m unittest discover -s tests -p '*_test.py'
       - run: npm run android:sync
+      - run: npx playwright install chromium --only-shell
+      - run: npm run test:e2e
+      - run: npm run test:pwa
       - name: Build signed release APK
         working-directory: apps/android/android
         env:
@@ -56,15 +80,32 @@ jobs:
           PCT_ANDROID_KEY_ALIAS: ${{ secrets.PCT_ANDROID_KEY_ALIAS }}
           PCT_ANDROID_KEY_PASSWORD: ${{ secrets.PCT_ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
-      - name: Verify APK contents and signing
+      - name: Verify APK contents, manifest version, and signing
+        shell: bash
         run: |
-          PCT_VERIFY_APK=apps/android/android/app/build/outputs/apk/release/app-release.apk python3 tools/verify_apk.py
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs apps/android/android/app/build/outputs/apk/release/app-release.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pc-tycoon-signed-release-apk
-          path: apps/android/android/app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
+          APK="apps/android/android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          PCT_VERIFY_APK="$APK" python3 tools/verify_apk.py
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK")"
+          printf '%s\n' "$BADGING" | grep -F "versionCode='$PCT_VERSION_CODE'"
+          printf '%s\n' "$BADGING" | grep -F "versionName='$PCT_VERSION_NAME'"
+      - name: Prepare directly downloadable APK and checksum
+        shell: bash
+        run: |
+          BASENAME="PC-Tycoon-Enhanced-$GITHUB_REF_NAME.apk"
+          cp apps/android/android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$BASENAME"
+          (cd "$RUNNER_TEMP" && sha256sum "$BASENAME" > "$BASENAME.sha256")
+          echo "### Android signed release $GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "Version code: $PCT_VERSION_CODE" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/$BASENAME.sha256" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish GitHub Release with direct APK download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BASENAME="PC-Tycoon-Enhanced-$GITHUB_REF_NAME.apk"
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/$BASENAME" "$RUNNER_TEMP/$BASENAME.sha256" --verify-tag --title "PC Tycoon Enhanced $GITHUB_REF_NAME" --generate-notes
       - name: Erase temporary keystore
         if: always()
         shell: bash
