@@ -4,7 +4,7 @@ import {frontierGrowth,unlockBalance} from '../../content/src/unlocks';
 import {marketShareAt,researchAtShare,unlockedOptions,eraBalance} from '../../content/src/era';
 import {hardwareKinds,type HardwareKind} from '../../content/src/research';
 import {hardwarePerformance} from './hardware';
-import {historicalRange} from '../../content/src/historical-limits';
+import {historicalRange,typicalRetailLimit} from '../../content/src/historical-limits';
 
 const isHardware=(kind:string):kind is HardwareKind=>(hardwareKinds as readonly string[]).includes(kind);
 /**
@@ -24,7 +24,8 @@ export function typicalSpec(kind:HardwareKind,share:number):Spec{
   if(f.values)v=f.lowerIsBetter?Math.min(...f.values.filter(x=>x>=raw-1e-9)):Math.max(...f.values.filter(x=>x<=raw+1e-9));
   else if(f.step)v=Number((min+(f.lowerIsBetter?Math.ceil((raw-min)/f.step-1e-9):Math.floor((raw-min)/f.step+1e-9))*f.step).toFixed(6));
   const physical=historicalRange(kind,key,f,{min,max},calendarYear);
-  spec[key]=f.lowerIsBetter?Math.max(v,physical.min):Math.min(v,physical.max);
+  const mainstream=typicalRetailLimit(kind,key,calendarYear);
+  spec[key]=f.lowerIsBetter?Math.max(v,physical.min):Math.min(v,physical.max,mainstream??max);
  }
  return spec;
 }
