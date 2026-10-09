@@ -1,4 +1,5 @@
-import {vendorParts,deviceSlots,deviceBalance as b,deviceCooling,deviceCoolingCost} from '../../content/src/devices';
+import {deviceSlots,deviceBalance as b,deviceCooling,deviceCoolingCost} from '../../content/src/devices';
+import {findVendorPart} from './vendor-market';
 import type {GameState,GameCommand,Product} from './types';
 import {expense,logEvent} from './finance';
 import {requireRole} from './business';
@@ -16,14 +17,14 @@ export function assemblyOverhead(s:GameState,p:Product):number{
  if(typeof p.spec.assemblyOverhead==='number')return Number(p.spec.assemblyOverhead);
  const ids=deviceSlots;
  const own=ids.reduce((n,k)=>n+(s.products.find(part=>part.id===p.spec[k])?.unitCost??0),0);
- const generic=ids.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0);
+ const generic=ids.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0);
  return Math.max(1,p.unitCost-own-generic-Number(p.spec.procurementCost??0));
 }
 
 /** Own, generic vendor or (unless acquired, when not `allowLegacy`) launched rival part by id. */
 export function findPart(s:GameState,id:string|undefined,allowLegacy=false){
  if(id===undefined)return undefined;
- return s.products.find(p=>p.id===id)??vendorParts.find(p=>p.id===id)??s.rivals.flatMap(r=>(allowLegacy||!r.acquired)?r.products.filter(p=>p.launched):[]).find(p=>p.id===id);
+ return s.products.find(p=>p.id===id)??findVendorPart(id)??s.rivals.flatMap(r=>(allowLegacy||!r.acquired)?r.products.filter(p=>p.launched):[]).find(p=>p.id===id);
 }
 /** Parts referenced by a PC/laptop spec; the optional PSU slot is included only when present. */
 export function deviceParts(spec:Record<string,string|number>):Partial<Record<typeof deviceSlots[number],string>>{
