@@ -23,6 +23,7 @@ export function validateGame(value:unknown):GameState{
  for(const r of s.research.active){const t=techById.get(r.id);if(!t||s.research.completed.includes(r.id)||t.prerequisites.some(id=>!s.research.completed.includes(id)))fail('進行中研究が不正です');}
  const office=offices[s.officeLevel-1];if(s.staff.length>office.staffCapacity||s.research.active.length>office.researchSlots)fail('施設の枠を超えています');
  for(const e of s.events)if(e.day>s.day)fail('未来のイベントが保存されています');
+ for(let i=0;i<s.marketSales.length;i++){const record=s.marketSales[i];if(record.day>s.day||(i>0&&record.day<s.marketSales[i-1].day))fail('販売履歴の日付が不正です');}
  if(s.notificationReadId>s.notificationSeq)fail('通知既読位置が不正です');
  let prevNotice=0;
  for(const notice of s.notifications){
