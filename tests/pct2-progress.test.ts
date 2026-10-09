@@ -4,14 +4,15 @@ import {exportSave,importSave} from '../packages/save/src/index';
 import {companyStats,yearRevenue} from '../packages/sim/src/progress';
 import {researchPointCost} from '../packages/sim/src/business';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
-const start=(mode?:'standard'|'tycoon'|'long'|'sandbox',difficulty:'normal'|'hard'='normal')=>createGame({id:'g5',name:'進行社',year:2026,difficulty,seed:5,...(mode?{mode}:{})});
-const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'};
+const start=(mode?:'standard'|'tycoon'|'long'|'sandbox',difficulty:'normal'|'hard'='normal')=>createGame({id:'g5',name:'進行社',difficulty,seed:5,...(mode?{mode}:{})});
+/** Year-2000 default CPU. */
+const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
 
 it('game modes change research cost, rival speed and demand',()=>{
  expect(start().mode).toBe('standard');
  expect(researchPointCost(start('long'),'cpu-compute-1')).toBe(200);expect(researchPointCost(start('tycoon'),'cpu-compute-1')).toBe(75);
  expect(start('long').rivals[0].efficiency).toBeCloseTo(.7);expect(start('long','hard').rivals[0].efficiency).toBeCloseTo(1.05);
- const sell=(mode:'standard'|'tycoon')=>{let s=start(mode);s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:400});s=cmd(s,{type:'advance',days:14});
+ const sell=(mode:'standard'|'tycoon')=>{let s=start(mode);s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:40000});s=cmd(s,{type:'advance',days:14});
   s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:500});return cmd(s,{type:'advance',days:56}).products[0].sold;};
  expect(sell('tycoon')).toBeGreaterThan(sell('standard'));
 });
@@ -31,13 +32,13 @@ it('hard difficulty ends the company when monthly costs go unpaid; normal keeps 
 });
 
 it('achievements unlock once with their day from stats and milestones',()=>{
- let s=start();s.research.completed.push('cpu-compute-1');s.company.cash=2_000_000;
+ let s=start();s.research.completed.push('cpu-compute-1');s.company.cash=200_000_000;
  s=cmd(s,{type:'advance',days:1});expect(s.achievements.map(a=>a.id)).toContain('cash-1');
- s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:400});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
+ s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:40000});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  const first=s.achievements.find(a=>a.id==='first-launch')!;expect(first.day).toBe(s.day);
  s=cmd(s,{type:'advance',days:3});expect(s.achievements.filter(a=>a.id==='first-launch')).toHaveLength(1);
  expect(s.notifications.some(n=>n.kind==='achievement')).toBe(true);
- const big=start();big.company.cash=50_000_000;let o=big;for(let level=2;level<=10;level++)o=cmd(o,{type:'office',level});expect(o.achievements.map(a=>a.id)).toContain('office-max');
+ const big=start();big.company.cash=100_000_000_000;let o=big;for(let level=2;level<=10;level++)o=cmd(o,{type:'office',level});expect(o.achievements.map(a=>a.id)).toContain('office-max');
 });
 
 it('company stats include yearly revenue from history',()=>{

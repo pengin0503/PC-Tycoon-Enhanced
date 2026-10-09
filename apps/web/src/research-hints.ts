@@ -1,6 +1,7 @@
 import {axisLabels,type Tech} from '../../../packages/content/src/research';
 import {productCatalog,deviceCooling} from '../../../packages/content/src/devices';
-import {hardwareCatalog} from '../../../packages/content/src/hardware';
+import {hardwareCatalog,hardwareTechYear} from '../../../packages/content/src/hardware';
+import {techYear} from '../../../packages/content/src/era';
 import {osSliders} from '../../../packages/content/src/os';
 import {aiDesignSliders} from '../../../packages/content/src/ai';
 import {unlockedRange,type RangeSpec} from '../../../packages/content/src/unlocks';
@@ -15,6 +16,16 @@ export function researchHint(category:string,axes:readonly string[]){
 export function describeWithResearch(description:string|undefined,category:string,axes:readonly string[]|undefined){
  if(!axes)return description;
  return [description,researchHint(category,axes)].filter(Boolean).join(' ');
+}
+
+/**
+ * Technology year a product domain's research has reached (games start with year-2000 technology and full research
+ * reaches 2100). AI and OS sliders are not tied to hardware eras, so they have none.
+ */
+export function domainTechYear(category:string,completed:readonly string[]):number|undefined{
+ if(category in hardwareCatalog)return Math.floor(hardwareTechYear(category as keyof typeof hardwareCatalog,completed));
+ if(category==='pc'||category==='laptop')return Math.floor(techYear(completed,category,deviceCooling[category].unlock.axes));
+ return undefined;
 }
 
 type Slider=RangeSpec&{label:string,format:(n:number)=>string};

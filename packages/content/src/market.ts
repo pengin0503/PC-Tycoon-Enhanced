@@ -26,14 +26,14 @@ export const reviewComments:Record<ReviewAxis,{good:string,bad:string}>={
 
 export const presentations={
  none:{label:'なし',cost:0,hype:0,fans:1,awareness:0},
- online:{label:'オンライン配信',cost:2000,hype:10,fans:1.3,awareness:1},
- event:{label:'発表イベント',cost:15000,hype:25,fans:1.8,awareness:3},
- keynote:{label:'大型基調講演',cost:60000,hype:45,fans:2.5,awareness:6},
+ online:{label:'オンライン配信',cost:200000,hype:10,fans:1.3,awareness:1},
+ event:{label:'発表イベント',cost:1500000,hype:25,fans:1.8,awareness:3},
+ keynote:{label:'大型基調講演',cost:6000000,hype:45,fans:2.5,awareness:6},
 } as const;
 export type PresentationKind=keyof typeof presentations;
 export const presentationKinds=Object.keys(presentations) as PresentationKind[];
 
-export const fanBalance={launchBase:200,awarenessScale:50,perUnit:.05,advertisingRoot:.5,weeklyDecay:.995,demandLog:20,demandCap:1.4,hypeWeeklyDecay:.85,hypeFloor:.5} as const;
+export const fanBalance={launchBase:200,awarenessScale:50,perUnit:.05,advertisingRoot:.05,weeklyDecay:.995,demandLog:20,demandCap:1.4,hypeWeeklyDecay:.85,hypeFloor:.5} as const;
 
 /** Fictional titles used for FPS tests; loads are game units, not real-world requirements. */
 export const benchmarkGames=[

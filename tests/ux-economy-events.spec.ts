@@ -64,12 +64,12 @@ test('the game behaves as an app: no text selection, context menu or page zoom o
  expect(await field.evaluate(e=>{const ev=new Event('selectstart',{bubbles:true,cancelable:true});e.dispatchEvent(ev);return ev.defaultPrevented;})).toBe(false);
 });
 test('choice event uses full-screen modal and selected action changes company cash',async({page})=>{
- const s=createGame({id:'choice-ui',name:'イベント社',year:2026,difficulty:'normal',seed:7});
- s.pendingDecision={id:'supply-boost',title:'追加生産契約',description:'30日の生産能力を上げる',cost:2500};
+ const s=createGame({id:'choice-ui',name:'イベント社',difficulty:'normal',seed:7});
+ s.pendingDecision={id:'supply-boost',title:'追加生産契約',description:'30日の生産能力を上げる',cost:250000};
  await page.goto('/');
  await page.getByLabel('JSON読み込み').setInputFiles({name:'event.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});
  await expect(page.getByRole('dialog',{name:'追加生産契約'})).toBeVisible();
  await page.getByRole('button',{name:'投資する'}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect(page.getByTestId('cash')).toHaveText('￥497,500');
+ await expect(page.getByTestId('cash')).toHaveText('￥49,750,000');
 });

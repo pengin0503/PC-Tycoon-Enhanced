@@ -4,7 +4,7 @@ export const designSchema=z.object({architecture:z.enum(['dense','moe']),total:z
  if(d.architecture==='dense'&&d.total!==d.active||d.active>d.total||d.total/d.active>64)ctx.addIssue({code:'custom',message:'Dense/MoEの稼働パラメータが不正です'});
  const core=d.layers*d.hidden**2;if(d.active<core*b.shapeLower||d.active>core*b.shapeUpper+d.hidden*b.vocabulary)ctx.addIssue({code:'custom',message:'層数・hidden sizeと稼働パラメータ数が整合しません'});
 });
-export const clusterSchema=z.object({id:z.string(),gpuId:z.string(),serverId:z.string(),gpus:z.number().int().min(1).max(256),peakFlops:z.number().positive(),vramBytes:z.number().positive(),powerWatts:z.number().positive(),network:z.number().positive().max(1),cooling:z.number().min(.1).max(1),purchaseCost:z.number().int().nonnegative().max(1e12),purchaseDay:z.number().int().nonnegative().default(0)}).strict();
+export const clusterSchema=z.object({id:z.string(),gpuId:z.string(),serverId:z.string(),gpus:z.number().int().min(1).max(256),peakFlops:z.number().positive(),vramBytes:z.number().positive(),powerWatts:z.number().positive(),network:z.number().positive().max(1),cooling:z.number().min(.1).max(1),purchaseCost:z.number().int().nonnegative().max(1e15),purchaseDay:z.number().int().nonnegative().default(0)}).strict();
 export type LLMDesign=z.infer<typeof designSchema>;
 export type ComputeCluster=z.infer<typeof clusterSchema>;
 export const scoreSchema=z.object({math:z.number().int().min(0).max(99),coding:z.number().int().min(0).max(99),knowledge:z.number().int().min(0).max(99),reasoning:z.number().int().min(0).max(99),multilingual:z.number().int().min(0).max(99)}).strict();

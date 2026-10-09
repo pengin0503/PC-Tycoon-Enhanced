@@ -4,8 +4,8 @@ import {exportSave,importSave} from '../packages/save/src/index';
 import {osApps} from '../packages/sim/src/devices';
 import {attackDamage,osRequirements} from '../packages/sim/src/os';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
-const start=()=>createGame({id:'g4',name:'OS社',year:2026,difficulty:'normal',seed:21});
-const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50};
+const start=()=>createGame({id:'g4',name:'OS社',difficulty:'normal',seed:21});
+const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000};
 const unlock=(s:GameState,...ids:string[])=>{s.research.completed.push(...ids);return s;};
 
 it('extra OS features need their research, raise appeal and requirements, and add apps',()=>{

@@ -1,12 +1,12 @@
-// Achievement thresholds are scaled to this game's economy (start capital 500,000), not the original game's numbers.
+// Achievement thresholds are scaled to this game's economy (start capital ¥50,000,000), not the original game's numbers.
 export type TieredMetric='earned'|'cash'|'sold'|'fans'|'yearRevenue'|'companyValue'|'research';
 export const tieredAchievements:{metric:TieredMetric,label:string,unit:string,tiers:number[]}[]=[
- {metric:'earned',label:'累計売上',unit:'円',tiers:[1e6,1e7,1e8,1e9,1e10,1e11]},
- {metric:'cash',label:'現金残高',unit:'円',tiers:[1e6,1e7,1e8,1e9,1e10]},
+ {metric:'earned',label:'累計売上',unit:'円',tiers:[1e8,1e9,1e10,1e11,1e12,1e13]},
+ {metric:'cash',label:'現金残高',unit:'円',tiers:[1e8,1e9,1e10,1e11,1e12]},
  {metric:'sold',label:'累計販売台数',unit:'台',tiers:[1e3,1e4,1e5,1e6,1e7]},
  {metric:'fans',label:'ファン数',unit:'人',tiers:[1e3,1e4,1e5,1e6,1e7]},
- {metric:'yearRevenue',label:'年間売上',unit:'円',tiers:[1e6,1e7,1e8,1e9,1e10]},
- {metric:'companyValue',label:'企業価値',unit:'円',tiers:[1e6,1e7,1e8,1e9,1e10]},
+ {metric:'yearRevenue',label:'年間売上',unit:'円',tiers:[1e8,1e9,1e10,1e11,1e12]},
+ {metric:'companyValue',label:'企業価値',unit:'円',tiers:[1e8,1e9,1e10,1e11,1e12]},
  {metric:'research',label:'研究完了数',unit:'件',tiers:[10,100,500,1000,3345]},
 ];
 export const milestoneAchievements=[
@@ -19,11 +19,11 @@ export const milestoneAchievements=[
  {id:'all-companies',label:'業界統一',description:'すべての競合を買収する'},
  {id:'mass-production',label:'量産体制',description:'1製品で1,000台以上を生産する'},
  {id:'ai-model',label:'AI参入',description:'AIモデルの評価を完了する'},
- {id:'hard-mode',label:'逆境の覇者',description:'高難度で企業価値10億円に到達する'},
+ {id:'hard-mode',label:'逆境の覇者',description:'高難度で企業価値1000億円に到達する'},
 ] as const;
 export const achievementLabelMap:Record<string,string>={
  ...Object.fromEntries(tieredAchievements.flatMap(t=>t.tiers.map((v,i)=>[`${t.metric}-${i+1}`,`${t.label} ${v.toLocaleString('ja-JP')}${t.unit}`]))),
  ...Object.fromEntries(milestoneAchievements.map(m=>[m.id,m.label])),
 };
-export const hardModeGoal=1e9;
+export const hardModeGoal=1e11;
 export const logoCount=24;

@@ -11,8 +11,8 @@ export function marketMonthly(s:GameState){
  if(choice<.5){
   const id=choice<.25?'supply-boost':'demand-campaign';
   s.pendingDecision=id==='supply-boost'
-   ?{id,title:'追加生産契約',description:'2,500円を支払い、30日間の生産能力を10%増加しますか？',cost:2500}
-   :{id,title:'市場認知度キャンペーン',description:'3,000円を支払い、30日間の需要を10%増加しますか？',cost:3000};
+   ?{id,title:'追加生産契約',description:`${eventBalance.supplyBoostCost.toLocaleString('ja-JP')}円を支払い、30日間の生産能力を10%増加しますか？`,cost:eventBalance.supplyBoostCost}
+   :{id,title:'市場認知度キャンペーン',description:`${eventBalance.demandCampaignCost.toLocaleString('ja-JP')}円を支払い、30日間の需要を10%増加しますか？`,cost:eventBalance.demandCampaignCost};
   logEvent(s,'decisionPending',s.pendingDecision.title);
   return;
  }

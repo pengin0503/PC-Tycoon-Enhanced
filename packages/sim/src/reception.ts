@@ -1,5 +1,5 @@
 import {reviewAxes,reviewBalance as b,reviewOutlets,reviewComments,fanBalance as f,presentations,type ReviewAxis,type PresentationKind} from '../../content/src/market';
-import {productCatalog} from '../../content/src/devices';
+import {marketReference} from './market';
 import {hardwareBalance} from '../../content/src/hardware';
 import {nextRandom} from './random';
 import {expense,logEvent} from './finance';
@@ -10,7 +10,7 @@ const clamp=(v:number,lo=0,hi=100)=>Math.max(lo,Math.min(hi,v));
 
 /** Deterministic review axes and score (no outlet noise); used for the launch review and design-time forecasts. */
 export function estimateReview(s:GameState,p:Pick<Product,'id'|'kind'|'performance'|'price'|'unitCost'|'reliability'|'spec'|'visual'>):{score:number,axes:Record<ReviewAxis,number>}{
- const reference=productCatalog[p.kind].reference;
+ const reference=marketReference(p.kind,s.day);
  const others=[...s.products.filter(o=>o.id!==p.id&&o.launched&&o.kind===p.kind),...s.rivals.flatMap(r=>r.products.filter(o=>o.kind===p.kind&&o.remaining===0))];
  const best=Math.max(reference,...others.map(o=>o.performance));
  const relative=p.performance/best;

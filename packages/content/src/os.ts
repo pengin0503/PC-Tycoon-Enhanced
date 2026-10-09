@@ -15,7 +15,8 @@ export const osSliders={
 } as const;
 export type OSSlider=keyof typeof osSliders;
 export const osBalance={
- requirements:{cpuBase:400,cpuPerFeature:150,cpuPerVersion:50,ramBase:2,ramPerFeature:2,storageBase:32,storagePerFeature:16,storagePerVersion:8},
+ /** Year-2000 scale: a three-feature OS asks for 80MB of RAM and 1.35GB of storage (GB values). */
+ requirements:{cpuBase:400,cpuPerFeature:150,cpuPerVersion:50,ramBase:.032,ramPerFeature:.016,storageBase:.5,storagePerFeature:.25,storagePerVersion:.1},
  unmetPerformance:.75,
  featureDemand:.04,
  attack:{monthlyChance:.2,deadlineDays:7,targets:12,reputationLoss:6,fanLoss:.08,demandPenalty:.3,penaltyDays:30,securityReduction:.5,supportReduction:.3},

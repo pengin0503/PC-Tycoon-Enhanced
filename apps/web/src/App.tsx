@@ -34,7 +34,6 @@ export default function App(){
  const [state,setState]=useState<GameState|null>(null);
  const [loading,setLoading]=useState(true);
  const [name,setName]=useState('新しい技術企業');
- const [year,setYear]=useState(2026);
  const [seed,setSeed]=useState(42);
  const [difficulty,setDifficulty]=useState<'normal'|'hard'>('normal');
  const [mode,setMode]=useState<Mode>('standard');
@@ -81,7 +80,7 @@ export default function App(){
   try{setError('');const next=c.type==='advance'?advanceInteractive(state,c.days):command(state,c);notifyUpdates(state,next);setState(next);return true;}
   catch(e){report(e);return false;}
  }
- function start(){try{let s=createGame({id:crypto.randomUUID(),name,year,difficulty,seed,mode});if(logo)s=command(s,{type:'logo',logo});setState(s);setSpeed(0);setError('');setSlots([]);navigate('home');}catch(e){report(e);}}
+ function start(){try{let s=createGame({id:crypto.randomUUID(),name,difficulty,seed,mode});if(logo)s=command(s,{type:'logo',logo});setState(s);setSpeed(0);setError('');setSlots([]);navigate('home');}catch(e){report(e);}}
  async function readFile(file?:File){if(!file)return;try{if(file.size>5*1024*1024)throw new Error('セーブは5 MiB以内にしてください');const s=importSave(await file.text());setState(s);setSpeed(0);setError('');setNotice('JSONを読み込みました');}catch(e){report(e);}}
  async function download(){if(!state)return;try{await downloadGame(state);setNotice(ja.exported);}catch(e){report(e);}}
  async function list(){try{await writer.current;setSlots(await repo.current.list());if(repo.current.warnings.length)setNotice(repo.current.warnings.join(' / '));}catch(e){report(e);if(repo.current.warnings.length)setNotice(repo.current.warnings.join(' / '));}}
@@ -114,8 +113,8 @@ export default function App(){
    {offlineStatus&&<p className="offline-status">{ja[offlineStatus]}</p>}
    {error&&<div role="alert" className="error"><span>{error}</span><button className="icon-button" aria-label="エラーを閉じる" onClick={()=>setError('')}>×</button></div>}
    <div role="status" className="notice">{notice}</div>
-   {loading?<p>読み込み中…</p>:!state?<section className="start-card"><div className="start-hero"><Logo id={logo} size={64}/><div><p className="eyebrow">PC TYCOON ENHANCED</p><h1>新しい会社を設立</h1><p>ガレージから世界的テック企業へ。部品を設計し、レビューで評価され、ファンを増やしましょう。</p></div></div>
-    <div className="form-grid"><label>{ja.name}<input value={name} maxLength={80} onChange={e=>setName(e.target.value)}/></label><label>{ja.year}<input type="number" min={1970} max={2200} value={year} onChange={e=>setYear(Number(e.target.value))}/></label>
+   {loading?<p>読み込み中…</p>:!state?<section className="start-card"><div className="start-hero"><Logo id={logo} size={64}/><div><p className="eyebrow">PC TYCOON ENHANCED</p><h1>新しい会社を設立</h1><p>ガレージから世界的テック企業へ。部品を設計し、レビューで評価され、ファンを増やしましょう。</p><p className="start-era">{ja.year}：2000年1月1日（技術水準も2000年から。研究を重ねると2100年の技術に到達します）</p></div></div>
+    <div className="form-grid"><label>{ja.name}<input value={name} maxLength={80} onChange={e=>setName(e.target.value)}/></label>
      <label>{ja.difficulty}<select value={difficulty} onChange={e=>setDifficulty(e.target.value as 'normal'|'hard')}><option value="normal">{ja.normal}</option><option value="hard">{ja.hard}（倒産あり）</option></select></label>
      <label>{ja.seed}<input type="number" min={0} max={4294967295} value={seed} onChange={e=>setSeed(Number(e.target.value))}/></label></div>
     <div className="mode-grid" role="radiogroup" aria-label="ゲームモード">{(Object.keys(modeLabels) as Mode[]).map(m=><button key={m} role="radio" aria-checked={mode===m} className={mode===m?'selected':''} onClick={()=>setMode(m)}><strong>{modeLabels[m]}</strong><small>{modeHelp[m]}</small></button>)}</div>
@@ -136,7 +135,7 @@ export default function App(){
   </main>
   {state&&showInbox&&<NotificationCenter state={state} send={send} close={()=>setShowInbox(false)}/>}
   {state?.gameOver?<GameOver state={state} onNewGame={newGame}/>:state?.pendingDecision?<DecisionModal state={state} send={send}/>:state?.pendingAttack?<HackerDefense key={state.pendingAttack.day} state={state} send={send}/>:null}
-  {state&&<nav className="screen-nav" aria-label="ゲームメニュー">{navScreens.map(screen=><button key={screen.id} className={tab===screen.id?'selected':''} aria-current={tab===screen.id?'page':undefined} onClick={()=>navigate(screen.id)}><ScreenIcon id={screen.id}/><span>{screen.label}</span>{(badges[screen.id]??0)>0&&<i className="badge" aria-hidden="true">{badges[screen.id]}</i>}</button>)}</nav>}
+  {state&&<nav className="screen-nav" aria-label="ゲームメニュー">{navScreens.map(screen=><button key={screen.id} data-screen={screen.id} className={tab===screen.id?'selected':''} aria-current={tab===screen.id?'page':undefined} onClick={()=>navigate(screen.id)}><ScreenIcon id={screen.id}/><span>{screen.label}</span>{(badges[screen.id]??0)>0&&<i className="badge" aria-hidden="true">{badges[screen.id]}</i>}</button>)}</nav>}
  </div>;
 }
 

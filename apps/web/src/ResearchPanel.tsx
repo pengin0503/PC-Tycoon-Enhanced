@@ -3,7 +3,7 @@ import {techCatalog,researchDomains,axisLabels} from '../../../packages/content/
 import {researchPointCost,weeklyResearchPoints} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
-import {domainLabel,techEffectText} from './research-hints';
+import {domainLabel,techEffectText,domainTechYear} from './research-hints';
 /** Research tree browser: spend research points to unlock technologies instantly. */
 export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)=>void}){
  const [query,setQuery]=useState('');
@@ -18,11 +18,13 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
  const count=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,count-1);
  const update=(set:(s:string)=>void,value:string)=>{set(value);setPage(0);};
  const income=weeklyResearchPoints(state,hardwareBalance.researchPerWeek);
+ const year=category?domainTechYear(category,state.research.completed):undefined;
  const doneIn=(c:string)=>techCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
  return <section className="screen research-scene">
   <header className="research-head">
    <div className="rp-balance"><span>研究ポイント</span><strong data-testid="rp-balance">{state.company.researchPoints.toLocaleString('ja-JP')} RP</strong><small>+{income.toLocaleString('ja-JP')} RP / 週</small></div>
    <div className="research-progress"><span>解放済み技術</span><strong>{completed.size} / <span data-testid="tech-count">{techCatalog.length}</span></strong></div>
+   {year!==undefined&&<div className="research-progress research-era"><span>{domainLabel(category)} 技術水準</span><strong data-testid="tech-year">{year}年相当</strong><small>2100年が上限</small></div>}
    <div className="pager"><button aria-label="前の研究ページ" disabled={current===0} onClick={()=>setPage(current-1)}>‹</button><span data-testid="research-page">{current+1} / {count} · {filtered.length}件</span><button aria-label="次の研究ページ" disabled={current>=count-1} onClick={()=>setPage(current+1)}>›</button></div>
   </header>
   <div className="chip-row domain-row" role="group" aria-label="研究分野">
