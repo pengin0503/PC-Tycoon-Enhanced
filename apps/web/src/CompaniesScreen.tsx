@@ -23,7 +23,7 @@ export function CompaniesScreen({state,send}:{state:GameState,send:Send}){
  const rival=state.rivals.find(r=>r.id===target);
  const cap=state.difficulty==='hard'?managementBalance.hardLoanCap:managementBalance.normalLoanCap;
  return <section className="screen companies-screen">
-  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア <span data-testid="player-market-share">{shares.player===null?'—':shares.player.toFixed(1)}%</span>（ゲーム内観測販売台数）</small></h2></header>
+  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア <span data-testid="player-market-share">{shares.player===null?'データなし':`${shares.player.toFixed(1)}%`}</span>（ゲーム内観測販売台数）</small></h2></header>
   <PanelPages labels={['競合',`取引${state.offers.length?`（${state.offers.length}）`:''}`,'資金']}>
    <div><div className="research-filters" aria-label="市場シェア分析条件">
     <label>集計期間<select aria-label="シェア集計期間" value={period} onChange={e=>setPeriod(e.target.value==='all'?'all':Number(e.target.value) as 30|360)}><option value="30">直近30日</option><option value="360">直近360日</option><option value="all">累計</option></select></label>
