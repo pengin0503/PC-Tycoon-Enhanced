@@ -89,7 +89,7 @@ it('manufacturing a PC consumes own PSU stock',()=>{
 });
 
 it('factory expands to level 13 and no further',()=>{
- let s=start();s.company.cash=10_000_000_000;
+ let s=start();s.company.cash=100_000_000_000;
  for(let level=2;level<=13;level++)s=cmd(s,{type:'factory',level});
  expect(s.factoryLevel).toBe(13);expect(()=>cmd(s,{type:'factory',level:14})).toThrow();
 });

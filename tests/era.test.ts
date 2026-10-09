@@ -11,7 +11,7 @@ import {researchTo,frontierSpec} from './research-helpers';
 const start=()=>createGame({id:'era',name:'年代社',difficulty:'normal',seed:2});
 
 it('games start on 1 January 2000 with year-2000 technology',()=>{
- const s=start();expect(s.year).toBe(2000);expect(s.day).toBe(0);expect(s.economyVersion).toBe(2);
+ const s=start();expect(s.year).toBe(2000);expect(s.day).toBe(0);expect(s.economyVersion).toBe(3);
  expect(hardwareTechYear('cpu',[])).toBe(2000);expect(domainTechYear('pc',[])).toBe(2000);expect(domainTechYear('ai',[])).toBeUndefined();
  expect(fieldRange('cpu','cores',['cpu-compute-1'])).toEqual({min:1,max:1});
  expect(fieldRange('cpu','process',['cpu-compute-1']).min).toBe(180);
@@ -45,11 +45,18 @@ it('market expectations rise with the calendar so products age',()=>{
  expect(sold(eraBalance.daysPerYear*10)).toBeLessThan(sold(30));
 });
 
+it('economy version 2 saves receive the larger starting capital and the new pay scale',()=>{
+ const s=start();s.company.cash=30_000_000;s.economyVersion=2 as any;s.staff=[{id:'e-1',role:'research',skill:50,salary:150000}];s.staffSeq=1;
+ const rival=s.rivals[0].cash;
+ const loaded=importSave(exportSave(s));
+ expect(loaded.company.cash).toBe(30_000_000+950_000_000);expect(loaded.staff[0].salary).toBe(450000);
+ expect(loaded.rivals[0].cash).toBe(rival+1_980_000_000);expect(loaded.economyVersion).toBe(3);
+});
 it('economy version 1 saves are migrated to real-world yen and the 2000 calendar once',()=>{
  const s=start();s.company.cash=500000;s.finance.revenue=1234;s.year=2026;delete (s as any).economyVersion;
  s.staff=[{id:'e-1',role:'research',skill:50,salary:1500}];s.staffSeq=1;
  const loaded=importSave(exportSave(s));
- expect(loaded.company.cash).toBe(50000000);expect(loaded.finance.revenue).toBe(123400);expect(loaded.staff[0].salary).toBe(150000);
- expect(loaded.year).toBe(2000);expect(loaded.economyVersion).toBe(2);
+ expect(loaded.company.cash).toBe(1_000_000_000);expect(loaded.finance.revenue).toBe(123400);expect(loaded.staff[0].salary).toBe(450000);
+ expect(loaded.year).toBe(2000);expect(loaded.economyVersion).toBe(3);
  expect(migrateEconomy(loaded)).toBe(loaded);expect(importSave(exportSave(loaded))).toEqual(loaded);
 });

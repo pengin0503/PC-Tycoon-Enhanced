@@ -12,7 +12,7 @@ import {yen} from './i18n';
 type Send=(c:GameCommand)=>boolean;
 export function CompaniesScreen({state,send}:{state:GameState,send:Send}){
  const [target,setTarget]=useState<string|null>(null);
- const [amount,setAmount]=useState(5000000);
+ const [amount,setAmount]=useState(100000000);
  const sold=(r:GameState['rivals'][number])=>r.products.reduce((n,p)=>n+p.sold,0);
  const total=state.products.reduce((n,p)=>n+p.sold,0)+state.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+sold(r),0);
  const rival=state.rivals.find(r=>r.id===target);

@@ -7,7 +7,7 @@ const cmd=(s:any,c:any)=>command(s,c);
 const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
 it('research spends research points, not cash, and completes immediately',()=>{
  const before=start();expect(before.company.researchPoints).toBe(100);
- const s=cmd(before,{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(50000000);
+ const s=cmd(before,{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(1000000000);
  expect(s.company.researchPoints).toBe(0);expect(s.research.completed).toContain('cpu-compute-1');expect(before.research.completed).toEqual([]);
  const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(100);
 });

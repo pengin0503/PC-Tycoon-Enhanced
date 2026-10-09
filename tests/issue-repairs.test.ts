@@ -24,7 +24,8 @@ function assembled(){
 }
 it('#3 selling variable-cost purchased competitor parts uses realized inventory costs, not design estimates',()=>{
  const s=assembled();s.day=15;
- s.rivals[0].products[0].price=700;const oldCash=s.company.cash;
+ // Restock the supplier: market sales during development may have emptied it.
+ s.rivals[0].products[0].inventory=20;s.rivals[0].products[0].price=700;const oldCash=s.company.cash;
  manufacture(s);
  expect(s.products[0].inventory).toBe(2);
  const paid=oldCash-s.company.cash;
@@ -40,7 +41,7 @@ it('#3 selling variable-cost purchased competitor parts uses realized inventory 
  expect(importSave(exportSave(s))).toEqual(s);
 });
 it('#5 competitor acquisition relinks existing PC BOM to own inventory without duplicate sourcing',()=>{
- let s=assembled();s.company.cash=200000000;s.products[0].target=10;
+ let s=assembled();s.company.cash=100_000_000_000;s.products[0].target=10;s.rivals[0].products[0].inventory=20;
  const inputId=s.products[0].spec.cpu;
  const rivalStock=s.rivals[0].products[0].inventory;
  s=commandAny(s,{type:'acquire',id:s.rivals[0].id});

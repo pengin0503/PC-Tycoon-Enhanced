@@ -29,6 +29,8 @@ it('rival parts are bought from limited stock and revenue goes to supplier',()=>
  const parts={cpu:'rival-cpu-1',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
  s=cmd(s,{type:'assemble',kind:'pc',name:'Rival workstation',parts,purpose:'server',appearance:'graphite',price:300000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:10});
+ // Restock the supplier: market sales during development may have emptied it.
+ s.rivals[0].products[0].inventory=3;
  const stock=s.rivals[0].products[0].inventory;
  const before=s.rivals[0].cash;
  const n=structuredClone(s);n.day++;manufacture(n);

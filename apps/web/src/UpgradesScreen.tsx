@@ -46,7 +46,7 @@ export function UpgradesScreen({state,send}:{state:GameState,send:Send}){
   <div className="upgrade-panel">
    <header><h2>マーケティング</h2><p>認知度 {state.company.awareness.toFixed(0)} / 100 · 評判 {state.company.reputation.toFixed(0)} / 100 · ファン {state.company.fans.toLocaleString('ja-JP')}人</p></header>
    <div className="form-grid"><label>週次広告予算<input type="number" min={0} max={100000000} value={budget} onChange={e=>setBudget(Number(e.target.value))}/></label></div>
-   <div className="button-row">{[0,200000,1000000,5000000].map(v=><button key={v} onClick={()=>setBudget(v)}>{v?yen(v):'停止'}</button>)}<button className="primary" onClick={()=>send({type:'marketing',budget})}>広告予算を設定</button></div>
+   <div className="button-row">{[0,1000000,5000000,20000000].map(v=><button key={v} onClick={()=>setBudget(v)}>{v?yen(v):'停止'}</button>)}<button className="primary" onClick={()=>send({type:'marketing',budget})}>広告予算を設定</button></div>
    <p className="hint">広告は毎週支払われ、認知度・評判・ファンを高めます。マーケティング担当者（カリスマは2倍）が効果を伸ばします。現在の設定：{yen(state.advertising)}/週</p>
   </div>
  </PanelPages></section>;

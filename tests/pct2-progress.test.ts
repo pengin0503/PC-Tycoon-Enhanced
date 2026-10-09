@@ -13,7 +13,7 @@ it('game modes change research cost, rival speed and demand',()=>{
  expect(researchPointCost(start('long'),'cpu-compute-1')).toBe(200);expect(researchPointCost(start('tycoon'),'cpu-compute-1')).toBe(75);
  expect(start('long').rivals[0].efficiency).toBeCloseTo(.7);expect(start('long','hard').rivals[0].efficiency).toBeCloseTo(1.05);
  const sell=(mode:'standard'|'tycoon')=>{let s=start(mode);s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:40000});s=cmd(s,{type:'advance',days:14});
-  s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:500});return cmd(s,{type:'advance',days:56}).products[0].sold;};
+  s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:20000});return cmd(s,{type:'advance',days:56}).products[0].sold;};
  expect(sell('tycoon')).toBeGreaterThan(sell('standard'));
 });
 
@@ -32,7 +32,7 @@ it('hard difficulty ends the company when monthly costs go unpaid; normal keeps 
 });
 
 it('achievements unlock once with their day from stats and milestones',()=>{
- let s=start();s.research.completed.push('cpu-compute-1');s.company.cash=200_000_000;
+ let s=start();s.research.completed.push('cpu-compute-1');s.company.cash=3_000_000_000;
  s=cmd(s,{type:'advance',days:1});expect(s.achievements.map(a=>a.id)).toContain('cash-1');
  s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:40000});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  const first=s.achievements.find(a=>a.id==='first-launch')!;expect(first.day).toBe(s.day);

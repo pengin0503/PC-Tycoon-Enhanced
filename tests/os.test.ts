@@ -8,7 +8,7 @@ it('develops and sells software with licensing and support expenses',()=>{
  const n=cmd(s,{type:'advance',days:60});expect(n.products[0].sold).toBeGreaterThan(0);expect(n.products[0].inventory).toBe(0);expect(n.products[0].profit).toBeGreaterThan(0);expect(n.finance.expenses).toBeGreaterThan(24000);
 });
 it('rejects OS research versions duplicate features and invalid quality',()=>{
- const s=ready();const designed=cmd(s,os);
+ const s=ready();s.company.cash=1e10;const designed=cmd(s,os);
  for(const change of [{quality:2},{version:0},{features:['calculator','calculator']},{features:['host-shell']}])expect(()=>cmd(s,{...os,...change})).toThrow();
  expect(()=>cmd(designed,os)).toThrow();expect(cmd(designed,{...os,version:2}).products).toHaveLength(2);
 });

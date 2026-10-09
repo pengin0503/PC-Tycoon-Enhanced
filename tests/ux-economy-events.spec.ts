@@ -71,5 +71,5 @@ test('choice event uses full-screen modal and selected action changes company ca
  await expect(page.getByRole('dialog',{name:'追加生産契約'})).toBeVisible();
  await page.getByRole('button',{name:'投資する'}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect(page.getByTestId('cash')).toHaveText('￥49,750,000');
+ await expect(page.getByTestId('cash')).toHaveText('￥999,750,000');
 });
