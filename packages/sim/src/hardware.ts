@@ -1,5 +1,5 @@
 import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,fieldOptions,fieldGrowth,coolingReliability,type Spec} from '../../content/src/hardware';
-import {techById,type HardwareKind,techEffect} from '../../content/src/research';
+import {techById,researchIsAvailable,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
 import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
@@ -10,11 +10,13 @@ import {competitorPressure,settleProcurement} from './rivals';
 import {assertProductPrice} from './pricing';
 import {aiHardwareBoost,founderProjects} from './ai';
 import {osIncidentFactor} from './os';
-import {researchPointCost,weeklyResearchPoints,distributionDemand} from './business';
+import {researchPointCost,weeklyResearchPoints,distributionDemand,requireRole,hasRole} from './business';
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
 import {marketReference} from './market';
+import {developmentCost} from './development-cost';
+import {eraDemandFactor} from './events';
 import type {GameState,GameCommand} from './types';
 /** Performance score of a component specification (no research or validation involved). */
 export function hardwarePerformance(kind:HardwareKind,spec:Spec){
@@ -81,6 +83,8 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='research'){
   const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
+  requireRole(s,'research');
+  if(!researchIsAvailable(t.category,t.axis))throw new Error('この研究系統は廃止されました');
   if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
   if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
   const points=researchPointCost(s,c.id);
@@ -88,10 +92,11 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
   s.company.researchPoints-=points;s.research.completed.push(c.id);logEvent(s,'researchComplete',t.label);return true;
  }
  if(c.type==='design'){
+  requireRole(s,'engineering');
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
   for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
-  expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
+  expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
  if(c.type==='launch'||c.type==='line'||c.type==='price'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
@@ -123,14 +128,28 @@ export function manufacture(s:GameState){
   }
  }
 }
-export function sellProducts(s:GameState){
- const candidates=s.products.filter(p=>p.launched).map(p=>{
-  const [r,next]=nextRandom(s.seed);s.seed=next;const def=productCatalog[p.kind];
+/** Weekly expected interest before inventory constraints and competition between own models of the same category. */
+export function productDemandForecast(s:GameState,p:GameState['products'][number],variance=1){
+ if(!p.launched)return 0;
+ const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
   const value=Math.min(b.valueCeiling,p.performance/marketReference(p.kind,s.day))*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
-  const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
-  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*(p.kind==='os'?osIncidentFactor(s):1)*distributionDemand(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1)*(s.mode==='tycoon'?b.tycoonDemand:1));
-  return {p,demand:Math.max(0,demand)};
+  const age=Math.max(.08,Math.exp(-Math.max(0,s.day-p.releaseDay)/720));
+  const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*eraDemandFactor(p.kind,s.day)*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*(p.kind==='os'?osIncidentFactor(s):1)*distributionDemand(s)*hypeFactor(p)*(variance)*(s.difficulty==='hard'?b.hardDemand:1)*(s.mode==='tycoon'?b.tycoonDemand:1));
+  return Math.max(0,demand);
+}
+/** Forecasted weekly units available to this one product after other owned models split category demand. */
+export function productDemandForecast(s:GameState,p:GameState['products'][number]){
+ if(!p.launched)return 0;
+ const peers=s.products.filter(x=>x.launched&&x.kind===p.kind);
+ const interests=peers.map(x=>productDemandForecast(s,x));
+ const total=interests.reduce((a,b)=>a+b,0);
+ return total?Math.floor(productDemandForecast(s,p)*Math.max(...interests)/total):0;
+}
+export function sellProducts(s:GameState){
+ const candidates=s.products.filter(p=>p.launched).map(p=>{
+  const [r,next]=nextRandom(s.seed);s.seed=next;
+  return {p,demand:productDemandForecast(s,p,1-b.weeklyVariance/2+r*b.weeklyVariance)};
  });
  const pools=new Map<string,typeof candidates>();
  for(const candidate of candidates){const pool=pools.get(candidate.p.kind)??[];pool.push(candidate);pools.set(candidate.p.kind,pool);}
@@ -154,10 +173,10 @@ export function sellProducts(s:GameState){
 }
 export function researchAndDevelopment(s:GameState){
  s.company.researchPoints+=weeklyResearchPoints(s,b.researchPerWeek);
- for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek/founderProjects(s)+workBonus(s,'research'))/s.research.active.length);
+ if(hasRole(s,'research'))for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek/founderProjects(s)+workBonus(s,'research'))/s.research.active.length);
  for(const r of s.research.active.filter(r=>r.remaining===0)){s.research.completed.push(r.id);logEvent(s,'researchComplete',techById.get(r.id)?.label??r.id);}
  s.research.active=s.research.active.filter(r=>r.remaining>0);
  const developing=s.products.filter(p=>p.remaining>0);
- for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
+ if(hasRole(s,'engineering'))for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
 }
 

@@ -1,5 +1,6 @@
 import {reviewAxes,reviewBalance as b,reviewOutlets,reviewComments,fanBalance as f,presentations,type ReviewAxis,type PresentationKind} from '../../content/src/market';
 import {marketReference} from './market';
+import {requireRole} from './business';
 import {hardwareBalance} from '../../content/src/hardware';
 import {nextRandom} from './random';
 import {expense,logEvent} from './finance';
@@ -44,6 +45,7 @@ export function hypeFactor(p:Pick<Product,'hype'>){return 1+(p.hype??0)/100;}
 /** Launch: pay for the presentation, publish the review, gain fans and awareness. */
 export function launchReception(s:GameState,p:Product,kind:PresentationKind){
  const show=presentations[kind];
+ if(kind!=='none')requireRole(s,'marketing');
  if(show.cost)expense(s,show.cost);
  const review=computeReview(s,p);p.review=review;
  if(show.hype)p.hype=show.hype;

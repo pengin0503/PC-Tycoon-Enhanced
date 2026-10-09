@@ -1,6 +1,8 @@
 import {vendorParts,deviceSlots,deviceBalance as b,deviceCooling,deviceCoolingCost} from '../../content/src/devices';
 import type {GameState,GameCommand,Product} from './types';
 import {expense,logEvent} from './finance';
+import {requireRole} from './business';
+import {developmentCost} from './development-cost';
 import {hardwareBalance,coolingReliability} from '../../content/src/hardware';
 import {unlockedRange,unlockProgress,frontierGrowth} from '../../content/src/unlocks';
 import {marketReference} from './market';
@@ -75,13 +77,15 @@ export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'
 }
 export function deviceCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='assemble'){
+  requireRole(s,'engineering');
   if(!s.research.completed.includes(`${c.kind}-compute-1`))throw new Error('端末の基盤研究が必要です');
   const cooling=c.cooling??deviceCooling[c.kind].default;
   const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId,false,cooling);const tier=validateVisual(s.research.completed,c.kind,c.visual);
-  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));expense(s,b.designCost);
+  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));expense(s,developmentCost(c.kind,result.performance,s.day,b.designCost));
   appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,cooling,procurementCost:Object.values(c.parts).reduce((n,id)=>n+s.rivals.reduce((total,r)=>total+(r.products.find(p=>p.id===id)?.price??0),0),0),...(c.osId?{osId:c.osId}:{})},...result,unitCost:result.unitCost+visualFinishCost(tier),...(c.visual?{visual:c.visual}:{})},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
  }
  if(c.type==='developOS'){
+  requireRole(s,'engineering');
   if(s.products.some(p=>p.kind==='os'&&p.name===c.name&&Number(p.spec.version)>=c.version))throw new Error('新しいバージョン番号が必要です');
   const {designCost,...result}=evaluateOS(s,c);
   expense(s,designCost);assertProductPrice(c.price,result);appendProduct(s,result,b.os.work);return true;
