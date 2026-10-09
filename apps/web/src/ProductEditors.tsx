@@ -17,7 +17,7 @@ export function ProductionEditor({product:p,state,send}:{product:Product,state:G
     const [target,setTarget]=useState(p.target||100);
     // Inventory already paid for remains selectable; the remaining budget is current cash / per-unit cost.
     const affordable=Math.floor(state.company.cash/Math.max(1,p.unitCost));
-    const max=Math.max(0,Math.min(1000000,Math.max(p.target,p.inventory,p.inventory+affordable)));
+    const max=Math.max(0,Math.min(1000000,p.inventory+affordable));
     const value=Math.max(0,Math.min(max,target));
     const change=(next:number)=>setTarget(Math.max(0,Math.min(max,Math.round(next))));
     return <div className="inventory-target">
