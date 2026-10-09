@@ -60,3 +60,19 @@ it('calendar release gates prevent premature multi-core and Transformer research
  const future=structuredClone(unlocked);future.day=5*360;future.year=2005;
  expect(command(future,{type:'research',id:'cpu-capacity-1'}).research.completed).toContain('cpu-capacity-1');
 });
+
+it('small GPU production lines still make daily retail sales before AI research is unlocked',()=>{
+ let s=withTestStaff(start());
+ s.research.completed.push('gpu-compute-1');
+ s=command(s,{type:'design',kind:'gpu',name:'Entry GPU',spec:defaultSpec('gpu'),price:20000});
+ s=command(s,{type:'advance',days:14});
+ s=command(s,{type:'launch',id:'p-1'});
+ s.products[0].inventory=4;
+ s.products[0].inventoryValue=4*s.products[0].unitCost;
+ s.products[0].target=4;
+ s.products[0].line=true;
+ s.company.awareness=100;
+ s.company.reputation=100;
+ const next=command(s,{type:'advance',days:1});
+ expect(next.products[0].sold).toBeGreaterThan(0);
+});
