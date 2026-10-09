@@ -12,7 +12,7 @@ export function recordMarketSale(s:GameState,company:string,kind:Product['kind']
  const entry=ledger.at(-1);
  if(entry&&entry.day===s.day&&entry.company===company&&entry.kind===kind)entry.units+=units;
  else ledger.push({day:s.day,company,kind,units});
- if(ledger.length>12000||s.day%30===0){
+ if(ledger.length>12000||ledger[0]?.day<s.day-marketLedgerDays+1){
   const cutoff=s.day-marketLedgerDays+1;
   const first=ledger.findIndex(x=>x.day>=cutoff);
   if(first===-1)ledger.length=0;
