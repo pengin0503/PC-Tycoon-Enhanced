@@ -34,3 +34,9 @@ Test at minimum 844×390 and 960×540 equivalent landscape layouts, plus narrow 
 - Device captures and test observations recorded in Issue #4.
 
 Until all these are met, the release should remain debug/QA status and #4 must remain open.
+
+## Android emulator regression QA (PR #36, 2026-10-09)
+
+`.github/workflows/android-emulator-qa.yml` runs an API 35 emulator for Android app, web, or simulation changes. It builds a **debug** APK with versionCode 1001, installs and launches it, writes a sentinel inside the app-private files directory, then builds 1002 with the same runner's temporary debug signing key and installs it **with `adb install -r` (no uninstall)**. It verifies sentinel retention, force-stops/relaunches, dispatches Android Back, disables Wi-Fi/data, and checks offline relaunch. Screenshots, package metadata and logcat tails are uploaded as CI artifacts.
+
+This verifies platform install/lifecycle behaviour within that one CI runner; it does **not** guarantee UI accessibility, game-save JSON correctness, document picker operation, WebView IME handling, background task timing, or actual phone/tablet touch performance. The temporary runner debug signing key will **not** match the key from other CI runs; permanent key ownership and release upgrades remain an outstanding separate requirement. Treat emulator failure as a blocker for affected PRs, and do not close Issue #4 until the real-device evidence checklist above is fulfilled.
