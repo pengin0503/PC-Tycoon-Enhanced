@@ -16,6 +16,7 @@ function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cas
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
 export function settleProcurement(r:Rival,p:Rival['products'][number],units:number){if(units>p.inventory||units<0||r.acquired)throw new Error('競合部品の在庫が不足しています');p.inventory-=units;p.sold+=units;p.revenue+=units*p.price;p.profit+=units*(p.price-p.unitCost);revenue(r,units*p.price);}
 export function rivalDaily(s:GameState){
+ // Manufacture first, then sell a share of weekly demand every day.
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
   const products=r.products.filter(p=>p.remaining===0);let available=b.capacity;
   if(!products.length)continue;
@@ -26,16 +27,25 @@ export function rivalDaily(s:GameState){
    if(count){cost(r,count*p.unitCost);p.inventory+=count;available-=count;}
   }
  }
+ for(const r of s.rivals.filter(r=>!r.acquired)){
+  for(const p of r.products.filter(p=>p.remaining===0)){
+   const [rand,seed]=nextRandom(r.seed);r.seed=seed;
+   const player=s.products.filter(v=>v.launched&&v.kind===p.kind).reduce((n,v)=>n+v.performance/v.price,0);
+   const competition=1/(1+player/(p.performance/p.price)*b.playerPressure);
+   const weeklyExpected=hardwareCatalog[r.focus].demand*r.efficiency*competition*(b.demandFloor+rand*b.demandVariance)*(p.unitCost*b.priceCostMultiple/p.price);
+   const dailyExpected=Math.max(0,weeklyExpected/7);
+   const count=Math.min(p.inventory,Math.floor(dailyExpected)+(rand<dailyExpected%1?1:0));
+   if(count){p.inventory-=count;p.sold+=count;p.revenue+=count*p.price;p.profit+=count*(p.price-p.unitCost);revenue(r,count*p.price);}
+  }
+ }
 }
 export function rivalWeekly(s:GameState){
  for(const r of s.rivals.filter(r=>!r.acquired)){
   if(r.researchRemaining>0){r.researchRemaining=Math.max(0,r.researchRemaining-b.work*r.efficiency);if(r.researchRemaining===0)r.researchLevel++;}
-  for(const p of r.products){const wasDeveloping=p.remaining>0;p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);if(p.remaining>0)continue;
-   if(wasDeveloping)logEvent(s,'rivalLaunch',`${r.name}: ${p.name}`);
-   const [rand,seed]=nextRandom(r.seed);r.seed=seed;const player=s.products.filter(v=>v.launched&&v.kind===p.kind).reduce((n,v)=>n+v.performance/v.price,0);
-   const competition=1/(1+player/(p.performance/p.price)*b.playerPressure);
-   const count=Math.min(p.inventory,Math.floor(hardwareCatalog[r.focus].demand*r.efficiency*competition*(b.demandFloor+rand*b.demandVariance)*(p.unitCost*b.priceCostMultiple/p.price)));
-   if(count){p.inventory-=count;p.sold+=count;p.revenue+=count*p.price;p.profit+=count*(p.price-p.unitCost);revenue(r,count*p.price);}
+  for(const p of r.products){
+   const wasDeveloping=p.remaining>0;
+   p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);
+   if(wasDeveloping&&p.remaining===0)logEvent(s,'rivalLaunch',`${r.name}: ${p.name}`);
   }
  }
 }
@@ -54,7 +64,7 @@ export function rivalMonthly(s:GameState){
  }
 }
 export function competitorPressure(s:GameState,kind:string){return 1/(1+s.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+r.products.filter(p=>p.kind===kind&&p.remaining===0&&p.inventory>0).length*b.pressure,0));}
-export function marketShare(s:GameState){const own=s.products.reduce((n,p)=>n+p.sold,0);const other=s.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+r.products.reduce((v,p)=>v+p.sold,0),0);return own+other?own/(own+other):0;}
+export function marketShare(s:GameState){const own=s.products.reduce((n,p)=>n+p.sold,0);const other=s.rivals.reduce((n,r)=>n+r.products.reduce((v,p)=>v+p.sold,0),0);return own+other?own/(own+other):0;}
 export function valuation(s:GameState,id:string){const r=s.rivals.find(r=>r.id===id);if(!r)throw new Error('競合が存在しません');return Math.max(b.valuationBase,Math.round(r.cash-r.debt+r.researchLevel*b.valuationPerTech+b.valuationBase+r.products.reduce((n,p)=>n+p.inventory*p.unitCost,0)));}
 export function rivalCommand(s:GameState,c:GameCommand):boolean{
  if(c.type!=='acquire')return false;const r=s.rivals.find(r=>r.id===c.id);if(!r||r.acquired)throw new Error('買収対象を確認してください');
