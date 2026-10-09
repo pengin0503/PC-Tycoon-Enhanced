@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args));
 import {it,expect} from 'vitest';
-import {createGame,command,advanceInteractive,type GameState} from '../packages/sim/src/index';
+import {createGame as baseGame,command,advanceInteractive,type GameState} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
 import {osApps} from '../packages/sim/src/devices';
 import {attackDamage,osRequirements} from '../packages/sim/src/os';
