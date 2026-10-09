@@ -61,7 +61,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
  const sender=send as (c:GameCommand)=>void;
  const cooling=typeof p.spec.cooling==='number'?p.spec.cooling:undefined;
  const expectedDemand=productDemandForecast(state,p);
- return <Modal title={p.name} onClose={close} onBack={desktop?()=>{setDesktop(false);return true;}:undefined} wide>
+ return <Modal title={p.name} onClose={close} onBack={desktop?()=>{setDesktop(false);return true;}:undefined} wide className="product-detail-modal">
   <PanelPages labels={labels}>
    <div className="detail-overview"><ProductVisual product={p}/>
     <dl className="stat-grid"><dt>カテゴリ</dt><dd>{productCatalog[p.kind].label}</dd><dt>性能スコア</dt><dd>{p.performance.toLocaleString('ja-JP')}</dd>
