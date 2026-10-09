@@ -134,7 +134,11 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const [visual,setVisual]=useState<VisualChoice>({tier:0,color:'graphite'});
  const [price,setPrice]=useState(0);
  const [osId,setOS]=useState('');
- const [parts,setParts]=useState<Record<string,string>>({cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage',psu:''});
+ const availableVendors=vendorPartsAt(state.day);
+ const [parts,setParts]=useState<Record<string,string>>(()=>{
+  const vendor=(kind:string)=>availableVendors.find(p=>p.kind===kind)?.id??'';
+  return {cpu:vendor('cpu'),gpu:vendor('gpu'),motherboard:vendor('motherboard'),ram:vendor('ram'),storage:vendor('storage'),psu:''};
+ });
  const coolingField=deviceCooling[kind],coolingRange=unlockedRange(coolingField,kind,state.research.completed);
  const [coolingChoice,setCooling]=useState<number>(coolingField.default);
  const cooling=Math.max(coolingRange.min,Math.min(coolingRange.max,coolingChoice));
