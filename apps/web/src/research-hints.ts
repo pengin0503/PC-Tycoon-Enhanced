@@ -39,8 +39,7 @@ function slidersFor(category:string):Slider[]{
  return [];
 }
 /** Branches whose research still applies a direct bonus (the others only widen sliders). OS capacity only widens support. */
-const directAxes=new Set(['power','cost','reliability','capacity']);
-const hasDirectEffect=(t:Tech)=>t.category==='ai'||(directAxes.has(t.axis)&&!(t.category==='os'&&t.axis==='capacity'));
+const hasDirectEffect=(t:Tech)=>t.category==='ai';
 /** Appearance research unlocks one grade per stage up to this tier (`unlockedVisualTier`); later stages add nothing. */
 const maxVisualTier=5;
 /**
@@ -59,5 +58,5 @@ export function techEffectText(t:Tech,completed:readonly string[]){
  });
  const direct=hasDirectEffect(t)?[`${t.axis==='capacity'&&t.category!=='ai'?'開発速度':axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`]:[];
  if(t.axis==='compute'&&t.level===1&&t.category!=='ai')return `${domainLabel(t.category)}の開発を解放`;
- return [...sliders,...direct].join(' / ')||`${axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`;
+ return [...sliders,...direct].join(' / ')||'設計可能な技術領域を解放';
 }
