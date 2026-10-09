@@ -378,6 +378,6 @@ progress{width:100%;accent-color:var(--accent)}
  .game-main{padding:5px 10px 4px}.product-illustration{max-height:170px}.product-stage .product-illustration{max-height:120px}
  .product-stage{position:sticky;top:0}.preview-metrics span{padding:4px 6px}.forecast{padding:6px 8px}.axis-list{gap:2px}.axis-list li{font-size:11px}
  .home-screen{grid-template-columns:minmax(0,1.2fr) minmax(250px,1fr)}
- .research-head .research-progress:not(.research-era){display:none}.research-era small{display:none}.research-filters label{font-size:0;gap:0}.research-filters label input,.research-filters label select{font-size:12px}
+ .research-head .research-progress:not(.research-era){display:none}.research-filters label{font-size:0;gap:0}.research-filters label input,.research-filters label select{font-size:12px}
  .workspace-tabs button{min-height:30px;padding:3px 14px}
 }

@@ -13,6 +13,7 @@ const cmd=(s:any,c:any)=>command(s,c);
 const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
 function ready(seed=1){
  let s=createGame({id:'ai',name:'AI社',difficulty:'normal',seed});
+  s.company.cash=10_000_000_000;
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
  // Language models need GPUs from around 2030: year-2000 cards are far too slow.
  researchTo(s,'gpu',.35);

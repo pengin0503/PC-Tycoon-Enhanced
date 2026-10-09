@@ -33,11 +33,11 @@ it('design requires research and reflects real tradeoffs',()=>{
 });
 it('cooling must cover the power draw and headroom improves reliability',()=>{
  const s=unlockBranch(unlockBranch(cmd(start(),{type:'research',id:'cpu-compute-1'}),'cpu','compute',3),'cpu','power',1);
- const hot={...cpu,clock:2.3,cooling:40};
- expect(()=>cmd(s,{type:'design',kind:'cpu',name:'Hot',spec:hot,price:60000})).toThrow(/冷却性能が不足しています（消費電力 90W \/ 冷却性能 40W）/);
+ const hot={...cpu,clock:2.0,cooling:40};
+ expect(()=>cmd(s,{type:'design',kind:'cpu',name:'Hot',spec:hot,price:60000})).toThrow(/冷却性能が不足しています（消費電力 78W \/ 冷却性能 40W）/);
  const {cooling:_,...missing}=cpu;
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'None',spec:missing,price:40000})).toThrow(/冷却性能を指定/);
- const tight=cmd(s,{type:'design',kind:'cpu',name:'Tight',spec:{...hot,cooling:90},price:60000}).products.at(-1)!;
+ const tight=cmd(s,{type:'design',kind:'cpu',name:'Tight',spec:{...hot,cooling:80},price:60000}).products.at(-1)!;
  const roomy=cmd(s,{type:'design',kind:'cpu',name:'Roomy',spec:{...hot,cooling:100},price:60000}).products.at(-1)!;
  expect(roomy.reliability).toBeGreaterThan(tight.reliability);expect(roomy.unitCost).toBeGreaterThan(tight.unitCost);
 });

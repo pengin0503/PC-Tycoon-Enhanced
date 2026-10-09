@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {activeTechCatalog,researchDomains,axisLabels} from '../../../packages/content/src/research';
+import {activeTechCatalog,researchDomains,axisLabels,hardwareKinds} from '../../../packages/content/src/research';
 import {researchPointCost,weeklyResearchPoints,hasRole} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
 import {marketYear} from '../../../packages/sim/src/market';
@@ -19,7 +19,8 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
  const count=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,count-1);
  const update=(set:(s:string)=>void,value:string)=>{set(value);setPage(0);};
  const income=weeklyResearchPoints(state,hardwareBalance.researchPerWeek);
- const year=category?domainTechYear(category,state.research.completed):undefined;
+ const selectedYear=category?domainTechYear(category,state.research.completed):undefined;
+ const year=selectedYear??Math.round(hardwareKinds.reduce((total,kind)=>total+(domainTechYear(kind,state.research.completed)??2000),0)/hardwareKinds.length);
  const market=marketYear(state.day),gap=year===undefined?undefined:year-market,canResearch=hasRole(state,'research');
  const doneIn=(c:string)=>activeTechCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
  return <section className="screen research-scene">
@@ -27,7 +28,7 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
    <div className="rp-balance"><span>研究ポイント</span><strong data-testid="rp-balance">{state.company.researchPoints.toLocaleString('ja-JP')} RP</strong><small>+{income.toLocaleString('ja-JP')} RP / 週</small></div>
    <div className="research-progress"><span>市場年</span><strong data-testid="market-year">{market}年</strong></div>
    <div className="research-progress"><span>解放済み技術</span><strong>{completed.size} / <span data-testid="tech-count">{activeTechCatalog.length}</span></strong></div>
-   {year!==undefined&&<div className="research-progress research-era"><span>{domainLabel(category)} 技術水準</span><strong data-testid="tech-year">{year}年相当</strong><small data-testid="tech-gap">{gap===undefined?'':gap<0?`市場より${-gap}年遅れ`:gap>0?`市場より${gap}年先行`:'市場と同水準'}</small></div>}
+   {year!==undefined&&<div className="research-progress research-era"><span>{selectedYear===undefined?'総合':domainLabel(category)} 技術水準</span><strong data-testid="tech-year">{year}年相当</strong><small data-testid="tech-gap">{gap===undefined?'':gap<0?`市場より${-gap}年遅れ`:gap>0?`市場より${gap}年先行`:'市場と同水準'}</small></div>}
    <div className="pager"><button aria-label="前の研究ページ" disabled={current===0} onClick={()=>setPage(current-1)}>‹</button><span data-testid="research-page">{current+1} / {count} · {filtered.length}件</span><button aria-label="次の研究ページ" disabled={current>=count-1} onClick={()=>setPage(current+1)}>›</button></div>
   </header>
   {!canResearch&&<p className="warning" role="status">研究を行うには研究担当を1名以上採用してください。</p>}

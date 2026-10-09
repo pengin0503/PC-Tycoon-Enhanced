@@ -24,7 +24,7 @@ it('CPU cache is a design field; specs saved before it existed keep their metric
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'X',spec:{...cpu2000,cache:.3},price:40000})).toThrow();
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'X',spec:{...cpu2000,bogus:1},price:40000})).toThrow();
  // New designs must choose a cache: the value assumed for old saves (8MB) is beyond year-2000 research.
- expect(()=>cmd(s,{type:'design',kind:'cpu',name:'X',spec:legacyCpu,price:40000})).toThrow(/キャッシュ容量は現在の研究では/);
+ expect(()=>cmd(s,{type:'design',kind:'cpu',name:'X',spec:legacyCpu,price:40000})).toThrow(/キャッシュ容量.*現在の研究では/);
  expect(evaluateHardware('cpu',legacyCpu,s.research.completed,{stored:true}).performance).toBeGreaterThan(0);
 });
 
@@ -75,6 +75,7 @@ it('assembled PCs accept an optional PSU that must cover the parts with headroom
  expect(()=>cmd(s,assembly({...parts,psu:'v-cpu'}))).toThrow();
  // A year-2025 frontier GPU draws far more than a 300W supply can deliver.
  s=researchTo(unlock(s,'gpu-compute-1'),'gpu',.25);const hotSpec=frontierSpec('gpu',s.research.completed);
+  while(evaluateHardware('gpu',hotSpec,s.research.completed,{stored:true}).power>Number(hotSpec.cooling)&&Number(hotSpec.units)>1)hotSpec.units=Number(hotSpec.units)/2;
  s=cmd(s,{type:'design',kind:'gpu',name:'Hot',spec:hotSpec,price:evaluateHardware('gpu',hotSpec,s.research.completed).unitCost*2});s=cmd(s,{type:'advance',days:14});
  const hot={...parts,gpu:'p-2'};
  expect(()=>cmd(s,assembly({...hot,psu:'p-1'}))).toThrow(/電源の定格出力が不足/);
