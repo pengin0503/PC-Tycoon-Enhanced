@@ -9,6 +9,7 @@ import {PanelPages} from './PanelPages';
 import {Modal,Meter,Chip,Empty,compact} from './ui';
 import {Logo} from './Logo';
 import {yen} from './i18n';
+import {availableForRetail} from '../../../packages/sim/src/inventory-allocation';
 
 type Send=(c:GameCommand)=>boolean;
 export function CompaniesScreen({state,send}:{state:GameState,send:Send}){
@@ -71,10 +72,10 @@ function OfferCard({state,offer,send}:{state:GameState,offer:GameState['offers']
  const [markup,setMarkup]=useState(5);
  const p=state.products.find(x=>x.id===offer.productId);
  if(!p)return null;
- const enough=p.inventory>=offer.quantity;
+ const retailStock=availableForRetail(state,p);const enough=retailStock>=offer.quantity;
  return <article className="offer-card"><header><strong>{offer.buyer}</strong><Chip tone="warn">残り {offer.expiresDay-state.day}日</Chip></header>
   <p>{p.name} を <b>{offer.quantity.toLocaleString('ja-JP')}台</b>、1台 <b>{yen(offer.unitPrice)}</b>（定価 {yen(p.price)}）で購入したい。合計 {compact(offer.quantity*offer.unitPrice)}円</p>
-  {!enough&&<p className="warning">在庫が不足しています（在庫 {p.inventory}台）</p>}
+  {!enough&&<p className="warning">在庫が不足しています（通常販売可能 {retailStock}台（総在庫 {p.inventory}台））</p>}
   <div className="button-row"><button className="primary" disabled={!enough} onClick={()=>send({type:'respondOffer',id:offer.id,action:'accept'})}>承諾</button><button onClick={()=>send({type:'respondOffer',id:offer.id,action:'decline'})}>見送り</button></div>
   <label className="range-field"><span className="range-label"><span>値上げ交渉</span><output>+{markup}% · {yen(Math.round(offer.unitPrice*(1+markup/100)))} · 成功 {Math.round(offerSuccessChance(markup)*100)}%</output></span>
    <input type="range" aria-label={`${offer.buyer} 上乗せ率`} min={1} max={30} step={1} value={markup} onChange={e=>setMarkup(Number(e.target.value))}/></label>
