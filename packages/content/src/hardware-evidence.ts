@@ -10,7 +10,7 @@ export type HardwareEvidence={
 };
 export const verifiedHardwareAnchors:readonly HardwareEvidence[]=[
  {kind:'cpu',year:2000,product:'Intel Pentium III 1GHz',metric:'clock',value:1,unit:'GHz',referenceField:'clock',
-  source:'https://www.intel.com/pressroom/archive/releases/2000/sp030800.htm',note:'最高級PC用モデルの公表クロック。ゲームのIPC相当との互換性はない'},
+  source:'https://www.intel.com/pressroom/archive/releases/2000/sp030800.htm',note:'最高級PC用モデルの公表クロック。ゲームのIPC相当とは非互換'},
  {kind:'cpu',year:2002,product:'Intel Pentium 4 3.06GHz HT',metric:'clock',value:3.06,unit:'GHz',referenceField:'clock',
   source:'https://www.intel.com/pressroom/archive/releases/2002/20021114comp.htm',note:'製造元の発表。ゲームのシミュレーション性能値は非対応'},
  {kind:'cpu',year:2025,product:'AMD Ryzen 9 9950X3D',metric:'cores',value:16,unit:'cores',referenceField:'cores',
