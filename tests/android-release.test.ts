@@ -34,3 +34,13 @@ it('tag pushes publish verified signed APK files directly to GitHub Releases',()
  expect(workflow).toMatch(/gh release create[\s\S]*?--verify-tag/);
  expect(gradle).toContain('PCT_VERSION_NAME');
 });
+
+it('keeps the keystore unavailable during dependency installs/tests and makes the release public only after assets upload',()=>{
+ const workflow=load('.github/workflows/android-release.yml');
+ const index=(text:string)=>workflow.indexOf(text);
+ expect(index('Decode signing keystore securely')).toBeGreaterThan(index('npm run test:pwa'));
+ expect(index('Decode signing keystore securely')).toBeLessThan(index('assembleRelease'));
+ expect(workflow).toContain('--draft');
+ expect(workflow).toContain('gh release edit');
+ expect(workflow).toContain('--draft=false');
+});
