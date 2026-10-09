@@ -24,7 +24,7 @@ it('design requires research and reflects real tradeoffs',()=>{
  const p=cmd(s,{type:'design',kind:'cpu',name:'C1',spec:cpu,price:40000}).products[0];
  expect(p.performance).toBe(1200);expect(p.unitCost).toBe(19000);expect(p.power).toBe(31);expect(p.remaining).toBe(20);
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'C2',spec:{...cpu,cores:2},price:50000})).toThrow(/コア数は現在の研究では1～1コア/);
- const researched=unlockBranch(structuredClone(s),'cpu','capacity',1);
+ const researched=unlockBranch(structuredClone(s),'cpu','capacity',1);researched.day=5*360;researched.year=2005;
  const single=cmd(researched,{type:'design',kind:'cpu',name:'C1b',spec:{...cpu,clock:.7,cooling:60},price:50000}).products[0];
  const better=cmd(researched,{type:'design',kind:'cpu',name:'C2',spec:{...cpu,cores:2,clock:.7,cooling:60},price:50000}).products[0];
  expect(better.performance).toBeGreaterThan(single.performance);expect(better.unitCost).toBeGreaterThan(single.unitCost);expect(better.power).toBeGreaterThan(single.power);
@@ -33,6 +33,7 @@ it('design requires research and reflects real tradeoffs',()=>{
 });
 it('cooling must cover the power draw and headroom improves reliability',()=>{
  const s=unlockBranch(unlockBranch(cmd(start(),{type:'research',id:'cpu-compute-1'}),'cpu','compute',3),'cpu','power',1);
+ s.day=2*360;s.year=2002;
  const hot={...cpu,clock:2.0,cooling:40};
  expect(()=>cmd(s,{type:'design',kind:'cpu',name:'Hot',spec:hot,price:60000})).toThrow(/冷却性能が不足しています（消費電力 78W \/ 冷却性能 40W）/);
  const {cooling:_,...missing}=cpu;
