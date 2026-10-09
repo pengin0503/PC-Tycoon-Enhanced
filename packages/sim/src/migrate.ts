@@ -3,15 +3,26 @@ import {eraBalance} from '../../content/src/era';
 import {eventBalance} from '../../content/src/events';
 import {rivalBalance} from '../../content/src/management';
 import {salaryFor} from './business';
+import {newRivals} from './rivals';
 import type {GameState,Product} from './types';
 
 /** Converts a save from any earlier economy version to the current one (see `toVersion2` and `toVersion3`). */
 export function migrateEconomy(input:GameState):GameState{
- if(input.economyVersion===balance.economyVersion)return input;
+ const legacyRivalRoster=input.rivals.length===3&&input.rivals.every((r,i)=>r.id===`r-${i+1}`);
+ const needsEconomyMigration=input.economyVersion!==balance.economyVersion;
+ if(!needsEconomyMigration&&!legacyRivalRoster)return input;
  const s=structuredClone(input);
- if(s.economyVersion===undefined)toVersion2(s);
- toVersion3(s);
- s.economyVersion=balance.economyVersion;
+ if(needsEconomyMigration){
+  if(s.economyVersion===undefined)toVersion2(s);
+  toVersion3(s);
+  s.economyVersion=balance.economyVersion;
+ }
+ // Preserve the original companies' state, ownership, inventory, and seed when upgrading a 3-rival save.
+ // Expand only known legacy rosters; custom rosters must never be silently replaced.
+ if(legacyRivalRoster){
+  const existing=new Set(s.rivals.map(r=>r.id));
+  s.rivals.push(...newRivals(s.initialSeed,s.difficulty,s.mode).filter(r=>!existing.has(r.id)));
+ }
  return s;
 }
 /**
