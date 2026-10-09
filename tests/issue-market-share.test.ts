@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame} from '../packages/sim/src/index';
 import {marketShareSummary,recordMarketSale} from '../packages/sim/src/market-share';
 import {exportSave,importSave} from '../packages/save/src/index';
 const sample=()=>createGame({id:'shares',name:'自社',difficulty:'normal',seed:4});
