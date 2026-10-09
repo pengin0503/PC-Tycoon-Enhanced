@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {importSave,exportSave} from '../packages/save/src/index';
-import {rivalDaily} from '../packages/sim/src/rivals';
+import {rivalManufacture} from '../packages/sim/src/rivals';
 const start=(difficulty:any='normal')=>createGame({id:'rival',name:'競争社',difficulty,seed:8});const cmd=(s:any,c:any)=>command(s,c);
 it('rivals independently research develop manufacture and sell',()=>{
  const s=start();const n=cmd(s,{type:'advance',days:180});expect(n.rivals).toHaveLength(9);
@@ -28,18 +28,18 @@ it('rival production uses all available lines, rotates priority, and respects st
   r.products=Array.from({length:count},(_,i)=>({...structuredClone(source),id:`test-${i}`,name:`製品${i}`,remaining:0,inventory:0,target:1000}));
   return s;
  };
- const one=fixture(1);rivalDaily(one);expect(one.rivals[0].products[0].inventory).toBe(120);
- const two=fixture(2);rivalDaily(two);expect(two.rivals[0].products.map(p=>p.inventory)).toEqual([60,60]);
- const four=fixture(4);rivalDaily(four);expect(four.rivals[0].products.map(p=>p.inventory)).toEqual([30,30,30,30]);
- const many=fixture(15);rivalDaily(many);expect(many.rivals[0].products.reduce((sum,p)=>sum+p.inventory,0)).toBe(120);
- for(let day=0;day<15;day++){many.day++;rivalDaily(many);}
+ const one=fixture(1);rivalManufacture(one);expect(one.rivals[0].products[0].inventory).toBe(120);
+ const two=fixture(2);rivalManufacture(two);expect(two.rivals[0].products.map(p=>p.inventory)).toEqual([60,60]);
+ const four=fixture(4);rivalManufacture(four);expect(four.rivals[0].products.map(p=>p.inventory)).toEqual([30,30,30,30]);
+ const many=fixture(15);rivalManufacture(many);expect(many.rivals[0].products.reduce((sum,p)=>sum+p.inventory,0)).toBe(120);
+ for(let day=0;day<15;day++){many.day++;rivalManufacture(many);}
  expect(many.rivals[0].products.every(p=>p.inventory>0)).toBe(true);
- const capped=fixture(4);capped.rivals[0].products[0].inventory=1000;rivalDaily(capped);
+ const capped=fixture(4);capped.rivals[0].products[0].inventory=1000;rivalManufacture(capped);
  expect(capped.rivals[0].products.slice(1).reduce((sum,p)=>sum+p.inventory,0)).toBe(120);
- const poor=fixture(4);poor.rivals[0].cash=poor.rivals[0].products[0].unitCost*3;rivalDaily(poor);
+ const poor=fixture(4);poor.rivals[0].cash=poor.rivals[0].products[0].unitCost*3;rivalManufacture(poor);
  expect(poor.rivals[0].products.reduce((sum,p)=>sum+p.inventory,0)).toBe(3);expect(poor.rivals[0].debt).toBe(0);
- const indebted=fixture(4);indebted.rivals[0].debt=1;rivalDaily(indebted);
+ const indebted=fixture(4);indebted.rivals[0].debt=1;rivalManufacture(indebted);
  expect(indebted.rivals[0].products.every(p=>p.inventory===0)).toBe(true);
- const repeat=fixture(4);rivalDaily(repeat);expect(repeat.rivals[0].products.map(p=>p.inventory)).toEqual(four.rivals[0].products.map(p=>p.inventory));
+ const repeat=fixture(4);rivalManufacture(repeat);expect(repeat.rivals[0].products.map(p=>p.inventory)).toEqual(four.rivals[0].products.map(p=>p.inventory));
 });
 
