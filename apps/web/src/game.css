@@ -328,6 +328,16 @@ progress{width:100%;accent-color:var(--accent)}
 .modal-overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:12px;background:#0d1626b3}
 .modal{width:min(560px,100%);max-height:100%;overflow:auto;background:var(--panel);border-radius:20px;box-shadow:0 20px 60px #0006;padding:14px 16px;outline:none}
 .modal.wide{width:min(900px,100%)}
+
+/* Product detail: keep the header/tabs visible and scroll only the bounded page.
+   Without a definite modal-body height, the nested grid extends below the dialog;
+   overscroll containment then traps touch/wheel input before the controls can be reached. */
+.modal.product-detail-modal{display:flex;flex-direction:column;overflow:hidden}
+.product-detail-modal>.modal-header{flex:0 0 auto}
+.product-detail-modal>.modal-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;min-width:0}
+.product-detail-modal>.modal-body>.panel-pages{flex:1 1 auto;min-height:0}
+.product-detail-modal .workspace-content{touch-action:pan-y}
+
 .modal-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .modal-header h2{font-size:19px}
 .modal.decision,.modal.game-over{border-top:6px solid var(--gold)}
