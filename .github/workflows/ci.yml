@@ -1,5 +1,15 @@
 name: verify
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A PR branch gets one verification per commit, not duplicate push+PR runs.
+# Superseded PR checks are cancelled; releases from main must not be cancelled.
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
