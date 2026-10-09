@@ -157,7 +157,7 @@ export function productDemandForecast(s:GameState,p:GameState['products'][number
  return total?Math.floor(productDemandInterest(s,p)*Math.max(...interests)/total):0;
 }
 /** Direct calls keep weekly demand; passing 7 settles a daily share without inflating total volume. */
-export function sellProducts(s:GameState,daysPerPeriod=1){
+export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:ReadonlyMap<string,number>){
  const candidates=s.products.filter(p=>p.launched).map(p=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;
   return {p,demand:productDemandInterest(s,p,1-b.weeklyVariance/2+r*b.weeklyVariance)};
