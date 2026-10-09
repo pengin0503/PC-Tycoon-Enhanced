@@ -29,3 +29,18 @@ export function ProductionEditor({product:p,state,send}:{product:Product,state:G
       <button onClick={()=>send({type:'line',id:p.id,target:p.line?0:value})}>{p.line?uiText("ui_3e9e944ff26b"):uiText("ui_f59c0c5a321e")}</button></div>
     </div>;
 }
+
+/** Per-product routing: the external sale pool excludes assembly and AI allocations.
+ * Assembly/AI consumption separately protects the retail reserve.
+ */
+export function StockAllocationEditor({product:p,send}:{product:Product,send:(c:GameCommand)=>void}){
+ const [draft,setDraft]=useState(p.stockAllocation??{retail:0,assembly:0,ai:0});
+ const fields=[['retail','外販用最低確保'],['assembly','PC組立用引当'],['ai','AI Lab用引当']] as const;
+ const change=(key:keyof typeof draft,raw:string)=>setDraft({...draft,[key]:Math.max(0,Math.min(1000000,Math.round(Number(raw)||0)))});
+ return <div className="inventory-target"><h3>在庫の用途別引当</h3>
+  <p className="hint">外販用は組立・AI調達から保護し、組立用・AI用の引当は日次の通常販売から保護します。数量は各在庫に対する上限で、在庫自体は増えません。</p>
+  <div className="form-grid">{fields.map(([key,label])=><label key={key}>{label}
+   <input type="number" min={0} max={1000000} step={1} aria-label={`${p.name} ${label}`} value={draft[key]} onChange={e=>change(key,e.target.value)}/></label>)}</div>
+  <button onClick={()=>send({type:'allocateStock',id:p.id,...draft})}>引当設定を保存</button>
+ </div>;
+}
