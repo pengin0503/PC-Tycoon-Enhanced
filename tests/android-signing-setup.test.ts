@@ -20,5 +20,8 @@ it('keeps credentials outside Git and GitHub workflow logs',()=>{
  expect(script).toContain('MyDocuments');
  expect(script).not.toContain('Set-Clipboard');
  expect(script).not.toMatch(/gh secret set[^\n]*--body/i);
- expect(script).not.toContain('storepass $');
+ expect(script).not.toContain('storepass 
+});
+);
+ expect(readFileSync(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8')).toContain('pwsh -NoProfile -File tools/setup-android-signing.ps1 -ValidateOnly');
 });
