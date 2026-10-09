@@ -1,9 +1,11 @@
+import {withTestStaff} from './staff-fixture';
+import {advanceDays,nav,prepareTeam,startCompany} from './ui-helpers';
 import {test,expect} from '@playwright/test';
 import {createGame,command} from '../packages/sim/src/index';
 import {exportSave} from '../packages/save/src/index';
 
 function hackerDefenseSave(){
- let state=createGame({id:'hacker-pause',name:'防御試験社',difficulty:'normal',seed:12});
+ let state=withTestStaff(createGame({id:'hacker-pause',name:'防御試験社',difficulty:'normal',seed:12}));
  state.research.completed.push('os-compute-1','cpu-compute-1','ai-compute-1');
  state=command(state,{type:'developOS',name:'Shield OS',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  state=command(state,{type:'advance',days:14});
@@ -37,10 +39,9 @@ async function loadHackerDefense(page:import('@playwright/test').Page,startDefen
 }
 test('notification inbox categorizes and acknowledges durable notices',async({page})=>{
  await page.setViewportSize({width:844,height:390});
- await page.goto('/');await page.getByRole('button',{name:'会社を設立'}).click();
- await page.getByRole('button',{name:'研究',exact:true}).click();
+ await startCompany(page);await prepareTeam(page);await nav(page,'研究');
  await page.getByRole('button',{name:'CPU 基盤技術 1 を研究'}).click();
- await page.getByRole('button',{name:'30日進める'}).click();
+ await advanceDays(page,30);
  const bell=page.getByRole('button',{name:/^通知センター（未読/});
  await expect(bell).toHaveAccessibleName(/未読[1-9][0-9]*件/);
  await bell.click();
