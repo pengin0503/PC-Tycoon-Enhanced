@@ -68,7 +68,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(afterOneDay.revenue).toBe(Math.round(afterOneDay.users*500/30*(1-aiBalance.fee-aiBalance.refund)));
 
  let partial=cmd(trained,{...deploy,mode:'subscription'});
- partial.day=30;
+ partial.day=Math.ceil(partial.day/30)*30;
  partial=cmd(partial,{type:'advance',days:29});
  partial=importSave(exportSave(partial));
  const accrued=partial.models[0].service!.subscriptionUserDays;
