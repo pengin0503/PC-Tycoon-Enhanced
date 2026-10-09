@@ -2,7 +2,6 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {hardwareTechYear} from '../packages/content/src/hardware';
 import {marketYear} from '../packages/sim/src/market';
-import {earliestResearchYear} from '../packages/content/src/era';
 import {techById} from '../packages/content/src/research';
 import {researchPointCost} from '../packages/sim/src/business';
 
@@ -15,7 +14,7 @@ it('keeps 30-year and 100-year economy progression finite and auditable (#25)',(
  let next=1;
  for(let year=1;year<=100;year++){
   const t=techById.get(`cpu-compute-${next}`);
-  if(t&&s.company.researchPoints>=researchPointCost(s,t.id)&&marketYear(s.day)>=earliestResearchYear(t)){
+  if(t&&s.company.researchPoints>=researchPointCost(s,t.id)){
    s=command(s,{type:'research',id:t.id});next++;
   }
   s=command(s,{type:'advance',days:360});
