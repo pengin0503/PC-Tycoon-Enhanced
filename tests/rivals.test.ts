@@ -4,7 +4,7 @@ import {importSave,exportSave} from '../packages/save/src/index';
 import {rivalDaily} from '../packages/sim/src/rivals';
 const start=(difficulty:any='normal')=>createGame({id:'rival',name:'競争社',difficulty,seed:8});const cmd=(s:any,c:any)=>command(s,c);
 it('rivals independently research develop manufacture and sell',()=>{
- const s=start();const n=cmd(s,{type:'advance',days:180});expect(n.rivals).toHaveLength(3);
+ const s=start();const n=cmd(s,{type:'advance',days:180});expect(n.rivals).toHaveLength(9);
  for(const r of n.rivals){expect(r.researchLevel).toBeGreaterThan(0);expect(r.products.length).toBeGreaterThan(0);expect(r.products.reduce((v:any,p:any)=>v+p.sold,0)).toBeGreaterThan(0);expect(r.cash).toBeGreaterThanOrEqual(0);for(const p of r.products)expect(p.inventory).toBeGreaterThanOrEqual(0);}
  expect(s.company.cash-n.company.cash).toBe(1200000);
  expect(n).toEqual(cmd(cmd(importSave(exportSave(s)),{type:'advance',days:90}),{type:'advance',days:90}));
