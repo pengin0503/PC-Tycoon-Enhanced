@@ -21,7 +21,8 @@ export async function advanceDays(page:Page,days:number){
   if(await page.getByRole('dialog').count())break;
   await page.clock.runFor(1000);
  }
- await page.getByRole('button',{name:'一時停止'}).click();
+ // Decisions and game-over dialogs already pause the simulation and block the HUD.
+ if(!(await page.locator('.modal-overlay').count()))await page.getByRole('button',{name:'一時停止'}).click();
 }
 export async function nav(page:Page,name:string){await page.getByRole('navigation',{name:'ゲームメニュー'}).getByRole('button',{name,exact:true}).click();}
 export async function openDesigner(page:Page,category:string){
