@@ -9,7 +9,7 @@ import {companyValue} from '../packages/sim/src/management';
 const cmd=(s:any,c:any)=>command(s,c);
 function ownGPUReady(){
  let s=createGame({id:'own',name:'AI社',difficulty:'normal',seed:1});
- s.research.completed=['ai-compute-1','gpu-compute-1'];unlockBranch(s,'gpu','capacity',5);
+ s.day=12*360;s.year=2012;s.research.completed=['ai-compute-1','gpu-compute-1'];unlockBranch(s,'gpu','capacity',5);
  s=cmd(s,{type:'design',kind:'gpu',name:'Own GPU',spec:{...defaultSpec('gpu'),vram:1},price:20000});
  s=cmd(s,{type:'advance',days:14});
  s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:100});
@@ -23,7 +23,7 @@ it('buys finite compute with capital cost and rejects bad counts',()=>{
  expect(()=>cmd(s,{...c,gpus:0})).toThrow();expect(()=>cmd(s,{...c,gpuId:'missing'})).toThrow();expect(s.clusters).toEqual([]);
 });
 it('own GPU transfers stock once and retains its asset value for operating cost',()=>{
- let s=createGame({id:'own',name:'統合社',difficulty:'normal',seed:1});s.research.completed=['ai-compute-1','gpu-compute-1'];
+ let s=createGame({id:'own',name:'統合社',difficulty:'normal',seed:1});s.day=17*360;s.year=2017;s.research.completed=['ai-compute-1','gpu-compute-1'];
  s=cmd(s,{type:'design',kind:'gpu',name:'Own GPU',spec:defaultSpec('gpu'),price:20000});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:100});s=cmd(s,{type:'advance',days:1});
  const n=cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});expect(n.products[0].inventory).toBe(s.products[0].inventory-1);expect(n.clusters[0].purchaseCost).toBe(200000+s.products[0].unitCost);expect(n.finance.capital).toBe(200000);
 });

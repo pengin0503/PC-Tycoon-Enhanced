@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {hardwareKinds,unlockedVisualTier,techById,type HardwareKind} from '../../../packages/content/src/research';
 import {defaultSpec,hardwareCatalog,fieldRange,fieldOptions,hardwareBalance,type Spec} from '../../../packages/content/src/hardware';
-import {productCatalog,vendorParts,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
+import {productCatalog,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
 import {osFeatures,osFeatureLabels,osFeatureResearch,lockScreens,lockScreenLabels,osThemes,osSliders,type OSFeature,type OSSlider} from '../../../packages/content/src/os';
 import {unlockedRange,canUnlockMore,type RangeSpec} from '../../../packages/content/src/unlocks';
 import {reviewAxisLabels,reviewAxes} from '../../../packages/content/src/market';
@@ -14,6 +14,8 @@ import {researchPointCost,hasRole} from '../../../packages/sim/src/business';
 import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
 import {priceRange} from '../../../packages/sim/src/pricing';
+import {marketYear} from '../../../packages/sim/src/market';
+import {vendorPartsAt} from '../../../packages/sim/src/vendor-market';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {PanelPages} from './PanelPages';
@@ -87,7 +89,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  const tier=Math.min(visual.tier,unlockedVisualTier(state.research.completed,kind));
  // Metrics are previewed even for an invalid draft (e.g. too little cooling); the problem blocks the start button.
  const preview=evaluateHardware(kind,spec,state.research.completed,{stored:true});
- let problem='';try{evaluateHardware(kind,spec,state.research.completed);}catch(e){problem=e instanceof Error?e.message:String(e);}
+ let problem='';try{evaluateHardware(kind,spec,state.research.completed,{year:marketYear(state.day)});}catch(e){problem=e instanceof Error?e.message:String(e);}
  const cooling=typeof spec.cooling==='number'?spec.cooling:undefined;
  const unitCost=preview.unitCost+visualFinishCost(tier);
  const range=priceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}});
@@ -108,16 +110,16 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
      <div className="range-grid">{Object.entries(definition.fields).filter(([key])=>key!=='cache').map(([key,field])=>{
-      if(field.options){const open=fieldOptions(kind,key,state.research.completed);
+      if(field.options){const open=fieldOptions(kind,key,state.research.completed,marketYear(state.day));
        return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
         return <option key={v} value={v} disabled={locked}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}{locked?` 🔒 ${field.optionUnlock?.years[v]??''}年の技術`:''}</option>;})}</select></label>;}
-      const range=fieldRange(kind,key,state.research.completed);
+      const range=fieldRange(kind,key,state.research.completed,marketYear(state.day));
       return <RangeField key={key} label={field.label} unit={field.unit} description={describeWithResearch(hardwareExplanations[key],kind,field.unlock?.axes)} min={range.min} max={range.max} step={field.step??1} values={field.values} value={Number(spec[key])} onChange={v=>setSpec({...spec,[key]:v})}
        researchLimit={lockFor(field,range,kind)}/>;
      })}</div>
      <VisualPicker state={state} kind={kind} visual={{...visual,tier}} setVisual={setVisual}/>
      <div className="sales-form"><label>製品名<input maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
-      <RangeField label="販売価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>
+      <RangeField label="販売価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>
       <p className="hint">原価の約2倍（{yen(suggested)}）が標準的な価格です。設定範囲：{yen(range.min)}～{yen(range.max)}</p></div>
     </PanelPages>
    </section>
@@ -133,7 +135,11 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const [visual,setVisual]=useState<VisualChoice>({tier:0,color:'graphite'});
  const [price,setPrice]=useState(0);
  const [osId,setOS]=useState('');
- const [parts,setParts]=useState<Record<string,string>>({cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage',psu:''});
+ const availableVendors=vendorPartsAt(state.day);
+ const [parts,setParts]=useState<Record<string,string>>(()=>{
+  const vendor=(kind:string)=>availableVendors.find(p=>p.kind===kind)?.id??'';
+  return {cpu:vendor('cpu'),gpu:vendor('gpu'),motherboard:vendor('motherboard'),ram:vendor('ram'),storage:vendor('storage'),psu:''};
+ });
  const coolingField=deviceCooling[kind],coolingRange=unlockedRange(coolingField,kind,state.research.completed);
  const [coolingChoice,setCooling]=useState<number>(coolingField.default);
  const cooling=Math.max(coolingRange.min,Math.min(coolingRange.max,coolingChoice));
@@ -151,7 +157,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const bench=synthetic?benchmarkDevice(state,synthetic):null;
  // PSUs list their rated output; other parts their power draw, which the case cooling has to cover.
  const watts=(p:{kind:string,power:number,spec:Spec})=>p.kind==='psu'?`${p.spec.wattage}W出力`:`${p.power}W`;
- const options=(slot:string)=>[...vendorParts.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.name}（${yen(p.unitCost)} / ${watts(p)}）`})),
+ const options=(slot:string)=>[...availableVendors.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.name}（${yen(p.unitCost)} / ${watts(p)}）`})),
   ...state.products.filter(p=>p.kind===slot&&p.remaining===0).map(p=>({id:p.id,label:`自社 ${p.name}（在庫 ${p.inventory} / ${watts(p)}）`})),
   ...competitor.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.supplier} ${p.name}（${yen(p.price)} / 在庫${p.inventory} / ${watts(p)}）`}))];
  const submit=()=>{if(send({type:'assemble',kind,name,parts:chosen as {cpu:string,gpu:string,motherboard:string,ram:string,storage:string,psu?:string},purpose,appearance:visual.color,price:currentPrice,cooling,...(osId?{osId}:{}),visual:{tier,color:visual.color}}))done();};
@@ -176,7 +182,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
       min={coolingRange.min} max={coolingRange.max} step={coolingField.step} value={cooling} onChange={setCooling} researchLimit={lockFor(coolingField,coolingRange,kind)}/></div>
      <VisualPicker state={state} kind={kind} visual={{...visual,tier}} setVisual={setVisual}/>
      <div className="sales-form"><label>製品名<input maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
-      {estimate&&<RangeField label="販売価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}
+      {estimate&&<RangeField label="販売価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}
       <p className="hint">競合部品は製造時に在庫を購入します。電源を指定すると品質が上がり、出力不足は組立できません。</p></div>
     </PanelPages>
    </section>
@@ -225,7 +231,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
      <div className="design-picker"><h3>ロック画面</h3><div className="wallpaper-row" role="group" aria-label="ロック画面">{lockScreens.map(w=><button key={w} type="button" className={`wallpaper ${w}`} aria-pressed={lockScreen===w} onClick={()=>setLock(w)}><span>{lockScreenLabels[w]}</span></button>)}</div>
       <h3>テーマカラー</h3><div className="swatch-row" role="group" aria-label="テーマカラー">{osThemes.map(t=><button key={t} type="button" className={`swatch theme-${t}`} aria-pressed={theme===t} onClick={()=>setTheme(t)}>{t}</button>)}</div></div>
      <div className="sales-form"><div className="form-grid"><label>OS名<input value={name} maxLength={80} onChange={e=>setName(e.target.value)}/></label><label>バージョン<input type="number" min={1} max={100} value={version} onChange={e=>setVersion(Number(e.target.value))}/></label></div>
-      {result&&<RangeField label="ライセンス価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}</div>
+      {result&&<RangeField label="ライセンス価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}</div>
     </PanelPages>
    </section>
   </div>

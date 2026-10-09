@@ -53,7 +53,7 @@ it('PSU is a researched component with wattage, efficiency and cable tradeoffs',
  expect(large.performance).toBeGreaterThan(base.performance);
  // Modular cables are 2004 (semi) and 2008 (full) technology.
  expect(()=>d(psuSpec(300,70,'semi'))).toThrow(/研究が必要/);
- const later=researchTo(structuredClone(s),'psu',.08);
+ const later=researchTo(structuredClone(s),'psu',.08);later.day=8*360;later.year=2008;
  const full=d(psuSpec(300,70,'full'),later),plain=d(psuSpec(300),later);
  expect(full.performance).toBeGreaterThan(plain.performance);expect(full.unitCost).toBeGreaterThan(plain.unitCost);
  expect(()=>d(psuSpec(125))).toThrow();expect(()=>d({...psuSpec(300),modular:'magic'})).toThrow();
@@ -74,7 +74,7 @@ it('assembled PCs accept an optional PSU that must cover the parts with headroom
  expect(()=>cmd(s,assembly({...parts,psu:'p-1'}))).not.toThrow();
  expect(()=>cmd(s,assembly({...parts,psu:'v-cpu'}))).toThrow();
  // A year-2025 frontier GPU draws far more than a 300W supply can deliver.
- s=researchTo(unlock(s,'gpu-compute-1'),'gpu',.25);const hotSpec=frontierSpec('gpu',s.research.completed);
+ s=researchTo(unlock(s,'gpu-compute-1'),'gpu',.25);s.day=25*360;s.year=2025;const hotSpec=frontierSpec('gpu',s.research.completed);
   while(evaluateHardware('gpu',hotSpec,s.research.completed,{stored:true}).power>Number(hotSpec.cooling)&&Number(hotSpec.units)>1)hotSpec.units=Number(hotSpec.units)/2;
  s.company.cash=10_000_000_000;
  s=cmd(s,{type:'design',kind:'gpu',name:'Hot',spec:hotSpec,price:evaluateHardware('gpu',hotSpec,s.research.completed).unitCost*2});s=cmd(s,{type:'advance',days:14});

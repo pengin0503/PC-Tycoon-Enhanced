@@ -2,8 +2,9 @@ import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,fieldOptio
 import {techById,researchIsAvailable,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
-import {productCatalog,vendorParts,deviceSlots} from '../../content/src/devices';
+import {productCatalog,deviceSlots} from '../../content/src/devices';
 import {assemblyOverhead} from './devices';
+import {findVendorPart} from './vendor-market';
 import {addStock,removeStock} from './inventory';
 import {workBonus} from './management';
 import {competitorPressure,settleProcurement} from './rivals';
@@ -14,6 +15,7 @@ import {researchPointCost,weeklyResearchPoints,distributionDemand,requireRole,ha
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
+import {availableForRetail,availableForAssembly} from './inventory-allocation';
 import {marketReference,marketYear} from './market';
 import {earliestResearchYear} from '../../content/src/era';
 import {developmentCost} from './development-cost';
@@ -43,7 +45,7 @@ export function hardwarePerformance(kind:HardwareKind,spec:Spec){
  * Costs use each value divided by its field's research frontier growth (mass production follows the frontier), so the
  * same specification gets cheaper with research; performance and power use the designed values.
  */
-export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false,year}:{stored?:boolean,year?:number}={}){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
  if(!stored&&'cooling' in def.fields&&input.cooling===undefined)throw new Error('冷却性能を指定してください');
@@ -51,11 +53,11 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);
-   if(!stored&&!fieldOptions(kind,key,completed).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
+   if(!stored&&!fieldOptions(kind,key,completed,year).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
   if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
   if(stored)continue;
   if(field.values&&!field.values.some(x=>Math.abs(x-v)<1e-9))throw new Error(`${field.label}が不正です`);
-  const range=fieldRange(kind,key,completed);
+  const range=fieldRange(kind,key,completed,year);
   if(v<range.min-1e-9||v>range.max+1e-9){
    const unit=field.unit??'';
    throw new Error(v<Number(field.min)||v>Number(field.max)?`${field.label}が不正です`:`${field.label}は現在の研究では${range.min}～${range.max}${unit}の範囲で設計できます`);
@@ -104,15 +106,16 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='design'){
   requireRole(s,'engineering');
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
-  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed,{year:marketYear(s.day)});const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
- if(c.type==='launch'||c.type==='line'||c.type==='price'){
+ if(c.type==='launch'||c.type==='line'||c.type==='price'||c.type==='allocateStock'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
   if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);launchReception(s,p,c.presentation??'none');}
   if(c.type==='line'){if(!p.launched||p.kind==='os')throw new Error('発売済みハードウェアを選択してください');p.target=c.target;p.line=c.target>0;}
   if(c.type==='price'){assertProductPrice(c.price,p,marketReference(p.kind,s.day));p.price=c.price;}
+  if(c.type==='allocateStock'){if(p.kind==='os'||!p.launched)throw new Error('発売済みハードウェアを選択してください');p.stockAllocation={retail:c.retail,assembly:c.assembly,ai:c.ai};}
   return true;
  }
  return false;
@@ -127,13 +130,13 @@ export function manufacture(s:GameState){
   const device=p.kind==='pc'||p.kind==='laptop';
   const keys=deviceSlots;
   const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
-  const generic=device?keys.reduce((n,k)=>n+(vendorParts.find(part=>part.id===p.spec[k])?.unitCost??0),0):0;
+  const generic=device?keys.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0):0;
   const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
-  const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>part.inventory),...sourced.map(x=>x.part.inventory));
+  const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>availableForAssembly(part)),...sourced.map(x=>x.part.inventory));
   if(units>0){
    expense(s,units*cashCost);
    const transfers=own.reduce((n,part)=>n+removeStock(part,units),0);
-   for(const x of sourced)settleProcurement(x.owner,x.part,units);
+   for(const x of sourced)settleProcurement(x.owner,x.part,units,s);
    addStock(p,units,units*cashCost+transfers);capacity-=units;
   }
  }
@@ -175,13 +178,8 @@ export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:Reado
   for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
   for(let i=0;i<pool.length;i++){
    const p=pool[i].p;
-   // Internal assembly takes precedence over retail. Keep a modest hardware reserve for
-   // self-supplied AI compute; inventory produced today is not available to retail today.
-   const feedsAssembly=s.products.some(device=>(device.kind==='pc'||device.kind==='laptop')&&device.launched&&device.line&&deviceSlots.some(slot=>device.spec[slot]===p.id));
-   const canSupplyAi=s.research.completed.includes('ai-compute-1')&&(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'));
-   const aiReserve=daysPerPeriod>1&&canSupplyAi&&p.line?Math.min(2,Math.max(0,p.target-1),p.inventory):0;
-   const retained=feedsAssembly?p.inventory:aiReserve;
-   const retailStock=Math.max(0,Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory)-retained);
+   // Existing products retain legacy prioritization until a custom allocation is configured.
+   const retailStock=p.stockAllocation||daysPerPeriod>1?availableForRetail(s,p,openingInventory?.get(p.id)??p.inventory):p.inventory;
    const units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):retailStock,allocations[i]);
    if(units){
     const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);

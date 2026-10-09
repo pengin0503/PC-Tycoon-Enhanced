@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {TermHelp} from './HardwareTerms';
 const plain=(value:number,unit:string)=>value.toLocaleString('ja-JP',{maximumFractionDigits:2})+unit;
 /** Sizes ship in binary (1,536GB = 1.5TB) or decimal (4,000GB = 4TB) steps; pick the one that gives a round figure. */
@@ -39,8 +40,9 @@ type Props={label:string,value:number,min:number,max:number,step:number,onChange
  /** Absolute bound still locked behind research, shown next to the current limit. */
  researchLimit?:{value:number,side:'max'|'min',hint?:string},
  /** Discrete values (e.g. model sizes): the slider walks the list instead of `min`..`max`. */
- values?:readonly number[]};
-export function RangeField({label,value,min,max,step,onChange,unit='',disabled=false,description,format,researchLimit,values}:Props){
+ values?:readonly number[],exactInput?:boolean};
+export function RangeField({label,value,min,max,step,onChange,unit='',disabled=false,description,format,researchLimit,values,exactInput=false}:Props){
+ const [exactDraft,setExactDraft]=useState<string|null>(null);
  const show=format??((n:number)=>formatValue(n,unit));
  // A value saved before the list existed (e.g. an older service's context length) stays selectable and shown as is.
  const inRange=(v:number)=>v>=min-1e-9&&v<=max+1e-9;
@@ -53,6 +55,9 @@ export function RangeField({label,value,min,max,step,onChange,unit='',disabled=f
  return <label className="range-field"><span className="range-label"><span>{label}<TermHelp label={label} description={description}/></span><output>{show(shown)}</output></span>
  {list?.length?<input type="range" aria-label={label} aria-valuetext={show(shown)} min={0} max={list.length-1} step={1} value={index} disabled={disabled} onChange={e=>onChange(list[Number(e.currentTarget.value)])}/>
   :<input type="range" aria-label={label} aria-valuetext={show(shown)} min={min} max={max} step={step} value={shown} disabled={disabled} onChange={e=>onChange(Number(e.currentTarget.value))}/>}
+ {exactInput&&<input type="number" aria-label={`${label}を直接入力`} min={min} max={max} step={1} value={exactDraft??String(shown)} disabled={disabled}
+  onChange={e=>{const text=e.currentTarget.value;setExactDraft(text);const n=Number(text);if(text!==''&&Number.isSafeInteger(n)&&n>=min&&n<=max)onChange(n);}}
+  onBlur={()=>setExactDraft(null)}/>}
  <span className="range-endpoints"><small>{show(lower)}</small><small>{show(upper)}</small></span>
  {researchLimit&&<span className={`range-lock ${researchLimit.side}`}>{lock}</span>}</label>;
 }

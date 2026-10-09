@@ -4,6 +4,7 @@ import {frontierGrowth,unlockBalance} from '../../content/src/unlocks';
 import {marketShareAt,researchAtShare,unlockedOptions,eraBalance} from '../../content/src/era';
 import {hardwareKinds,type HardwareKind} from '../../content/src/research';
 import {hardwarePerformance} from './hardware';
+import {historicalRange} from '../../content/src/historical-limits';
 
 const isHardware=(kind:string):kind is HardwareKind=>(hardwareKinds as readonly string[]).includes(kind);
 /**
@@ -13,15 +14,17 @@ const isHardware=(kind:string):kind is HardwareKind=>(hardwareKinds as readonly 
  */
 export function typicalSpec(kind:HardwareKind,share:number):Spec{
  const p=Math.min(1,Math.max(0,share))**unlockBalance.exponent;const spec=defaultSpec(kind);
+ const calendarYear=eraBalance.startYear+Math.floor(Math.min(1,Math.max(0,share))*100);
  for(const [key,f] of Object.entries(hardwareCatalog[kind].fields)){
-  if(f.options){if(f.optionUnlock)spec[key]=unlockedOptions(f.options,f.optionUnlock,kind,researchAtShare(kind,share)).at(-1)??f.default;continue;}
+  if(f.options){if(f.optionUnlock)spec[key]=unlockedOptions(f.options,f.optionUnlock,kind,researchAtShare(kind,share)).filter(v=>(f.optionUnlock!.years[v]??2000)<=calendarYear).at(-1)??f.default;continue;}
   if(!f.unlock)continue;
   const growth=frontierGrowth(f,p),min=Number(f.min),max=Number(f.max),base=Number(f.default);
   const raw=Math.min(max,Math.max(min,f.lowerIsBetter?base/growth:base*growth));
   let v=raw;
   if(f.values)v=f.lowerIsBetter?Math.min(...f.values.filter(x=>x>=raw-1e-9)):Math.max(...f.values.filter(x=>x<=raw+1e-9));
   else if(f.step)v=Number((min+(f.lowerIsBetter?Math.ceil((raw-min)/f.step-1e-9):Math.floor((raw-min)/f.step+1e-9))*f.step).toFixed(6));
-  spec[key]=v;
+  const physical=historicalRange(kind,key,f,{min,max},calendarYear);
+  spec[key]=f.lowerIsBetter?Math.max(v,physical.min):Math.min(v,physical.max);
  }
  return spec;
 }

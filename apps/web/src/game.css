@@ -372,6 +372,8 @@ progress{width:100%;accent-color:var(--accent)}
  .time-controls{margin-left:auto}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:600px){
+ .notice{top:auto;bottom:calc(var(--dock-h, 116px) + 16px);max-width:calc(100vw - 24px);border-radius:12px}
+
  .home-screen,.workbench,.detail-overview{grid-template-columns:1fr}
  .form-grid,.range-grid,.compare-grid,.research-filters{grid-template-columns:1fr}.stat-grid{grid-template-columns:auto 1fr}
  /* Portrait phones: the dock wraps into two rows of compact icons. */
