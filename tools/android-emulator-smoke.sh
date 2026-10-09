@@ -19,6 +19,8 @@ adb shell pidof "$PACKAGE" || fail "process exited after first launch"
 adb exec-out screencap -p >"$OUT/first-launch.png" || fail "initial screenshot failed"
 
 # Marker in the app-private data directory verifies an *in-place* upgrade retains Android app data.
+# A clean WebView launch may not create the standard files directory yet.
+adb shell run-as "$PACKAGE" mkdir -p files || fail "cannot prepare app-private files directory"
 adb shell run-as "$PACKAGE" sh -c 'echo keep-save-data > files/pct-emulator-upgrade-marker.txt' || fail "cannot persist debug marker"
 adb shell run-as "$PACKAGE" cat files/pct-emulator-upgrade-marker.txt | grep -Fx 'keep-save-data' || fail "marker read failed"
 
