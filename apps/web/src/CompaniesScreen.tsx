@@ -1,7 +1,8 @@
 import {useState} from 'react';
 import {managementBalance,acquisitionBalance} from '../../../packages/content/src/management';
 import {productCatalog} from '../../../packages/content/src/devices';
-import {valuation,marketShare} from '../../../packages/sim/src/rivals';
+import {valuation} from '../../../packages/sim/src/rivals';
+import {marketShareSummary,type MarketPeriod,type MarketKind} from '../../../packages/sim/src/market-share';
 import {acquisitionChance,offerSuccessChance} from '../../../packages/sim/src/business';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {PanelPages} from './PanelPages';
@@ -12,22 +13,31 @@ import {yen} from './i18n';
 type Send=(c:GameCommand)=>boolean;
 export function CompaniesScreen({state,send}:{state:GameState,send:Send}){
  const [target,setTarget]=useState<string|null>(null);
+ const [period,setPeriod]=useState<MarketPeriod>('all');
+ const [category,setCategory]=useState<MarketKind>('all');
+ const shares=marketShareSummary(state,period,category);
+ const pct=(id:string)=>shares.total?`${(shares.shares[id]??0).toFixed(1)}%`:'データなし';
  const [amount,setAmount]=useState(100000000);
  const sold=(r:GameState['rivals'][number])=>r.products.reduce((n,p)=>n+p.sold,0);
- const total=state.products.reduce((n,p)=>n+p.sold,0)+state.rivals.reduce((n,r)=>n+sold(r),0);
+
  const rival=state.rivals.find(r=>r.id===target);
  const cap=state.difficulty==='hard'?managementBalance.hardLoanCap:managementBalance.normalLoanCap;
  return <section className="screen companies-screen">
-  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア <span data-testid="player-market-share">{(marketShare(state)*100).toFixed(1)}%</span>（累計販売台数）</small></h2></header>
+  <header className="screen-title"><h2>企業 <small>競合 <span data-testid="competitor-count">{state.rivals.filter(r=>!r.acquired).length}</span>社 · 自社シェア <span data-testid="player-market-share">{shares.player===null?'—':shares.player.toFixed(1)}%</span>（ゲーム内観測販売台数）</small></h2></header>
   <PanelPages labels={['競合',`取引${state.offers.length?`（${state.offers.length}）`:''}`,'資金']}>
-   <div className="rival-grid">{state.rivals.map((r,i)=>{const value=valuation(state,r.id);const latest=r.products.filter(p=>p.remaining===0).at(-1);
+   <div><div className="research-filters" aria-label="市場シェア分析条件">
+    <label>集計期間<select aria-label="シェア集計期間" value={period} onChange={e=>setPeriod(e.target.value==='all'?'all':Number(e.target.value) as 30|360)}><option value="30">直近30日</option><option value="360">直近360日</option><option value="all">累計</option></select></label>
+    <label>製品カテゴリ<select aria-label="シェア製品カテゴリ" value={category} onChange={e=>setCategory(e.target.value as MarketKind)}><option value="all">全製品</option>{Object.entries(productCatalog).map(([key,value])=><option key={key} value={key}>{value.label}</option>)}</select></label>
+    <p>観測対象：自社とゲーム内競合のみ（世界市場のシェアではありません）。集計 {shares.total.toLocaleString('ja-JP')}台。旧セーブの期間別履歴は更新後から記録します。</p>
+   </div><div className="rival-grid">{state.rivals.map((r,i)=>{const value=valuation(state,r.id);const latest=r.products.filter(p=>p.remaining===0).at(-1);
     return <article key={r.id} className={`rival-card ${r.acquired?'acquired':''}`}>
      <header><Logo id={(i*7+3)%24} size={40}/><div><h3>{r.name}</h3><small>{productCatalog[r.focus].label}専業 · 技術 Lv.{r.researchLevel}</small></div>{r.acquired&&<Chip tone="good">買収済み</Chip>}</header>
      <dl><dt>現金</dt><dd>{yen(r.cash)}</dd><dt>販売台数</dt><dd>{sold(r).toLocaleString('ja-JP')}</dd><dt>最新製品</dt><dd>{latest?`${latest.name}（性能 ${latest.performance} / ${yen(latest.price)}）`:'なし'}</dd><dt>評価額</dt><dd>{yen(value)}</dd></dl>
-     {!r.acquired&&<><div className="share"><span>市場シェア（累計） <b>{(total?sold(r)/total*100:0).toFixed(1)}%</b></span><Meter value={total?sold(r)/total*100:0} label={`${r.name} シェア`}/></div>
+     <div className="share"><span>市場シェア（{period==='all'?'累計':`直近${period}日`}） <b>{pct(r.id)}</b></span><Meter value={shares.shares[r.id]??0} label={`${r.name} シェア`}/></div>
+     {!r.acquired&&<>
       {r.negotiationDay!==undefined&&state.day<r.negotiationDay&&<p className="hint">交渉決裂：{r.negotiationDay}日目まで再交渉できません</p>}
       <button className="primary" onClick={()=>setTarget(r.id)}>買収交渉</button></>}
-    </article>;})}</div>
+    </article>;})}</div></div>
    <div>{state.offers.length?<div className="offer-list">{state.offers.map(o=><OfferCard key={o.id} state={state} offer={o} send={send}/>)}</div>
     :<Empty>現在、大口取引の打診はありません。在庫のある製品があると、毎月の確率で買い手から連絡が来ます。</Empty>}</div>
    <div className="upgrade-panel"><h2>資金調達</h2><p>借入残高 {yen(state.company.loan)} / 上限 {yen(cap)} · 月利 {((state.difficulty==='hard'?managementBalance.hardInterest:managementBalance.normalInterest)*100).toFixed(0)}%{state.company.debt>0&&<> · <span className="bad">未払債務 {yen(state.company.debt)}</span></>}</p>
