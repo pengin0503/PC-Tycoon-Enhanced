@@ -174,7 +174,14 @@ export function sellProducts(s:GameState,daysPerPeriod=1,openingInventory?:Reado
   const priority=pool.map((x,i)=>({i,remainder:total?x.demand*budget/total-allocations[i]:0})).sort((a,b)=>b.remainder-a.remainder||a.i-b.i);
   for(let i=0;i<unallocated;i++)allocations[priority[i%priority.length].i]++;
   for(let i=0;i<pool.length;i++){
-   const p=pool[i].p,units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory),allocations[i]);
+   const p=pool[i].p;
+   // Internal assembly takes precedence over retail. Keep a modest hardware reserve for
+   // self-supplied AI compute; inventory produced today is not available to retail today.
+   const feedsAssembly=s.products.some(device=>(device.kind==='pc'||device.kind==='laptop')&&device.launched&&device.line&&deviceSlots.some(slot=>device.spec[slot]===p.id));
+   const aiReserve=(p.kind==='gpu'||(p.kind==='pc'&&p.spec.purpose==='server'))?Math.min(10,p.inventory):0;
+   const retained=feedsAssembly?p.inventory:aiReserve;
+   const retailStock=Math.max(0,Math.min(p.inventory,openingInventory?.get(p.id)??p.inventory)-retained);
+   const units=Math.min(p.kind==='os'?Math.ceil(b.osWeeklyLimit/daysPerPeriod):retailStock,allocations[i]);
    if(units){
     const actualCost=p.kind==='os'?units*p.unitCost:removeStock(p,units);
     recordProductSale(s,p,units,p.price,actualCost);
