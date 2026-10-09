@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {hardwareKinds,unlockedVisualTier,techById,type HardwareKind} from '../../../packages/content/src/research';
-import {defaultSpec,hardwareCatalog,fieldRange,type Spec} from '../../../packages/content/src/hardware';
+import {defaultSpec,hardwareCatalog,fieldRange,fieldOptions,hardwareBalance,type Spec} from '../../../packages/content/src/hardware';
 import {productCatalog,vendorParts,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
 import {osFeatures,osFeatureLabels,osFeatureResearch,lockScreens,lockScreenLabels,osThemes,osSliders,type OSFeature,type OSSlider} from '../../../packages/content/src/os';
 import {unlockedRange,canUnlockMore,type RangeSpec} from '../../../packages/content/src/unlocks';
@@ -17,11 +17,11 @@ import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {PanelPages} from './PanelPages';
 import {ProductIllustration} from './ProductIllustration';
-import {RangeField} from './RangeField';
+import {RangeField,formatValue,formatScore} from './RangeField';
 import {TermHelp,hardwareExplanations} from './HardwareTerms';
 import {Stars,Meter,Chip} from './ui';
 import {yen} from './i18n';
-import {describeWithResearch,researchHint} from './research-hints';
+import {describeWithResearch,researchHint,domainTechYear} from './research-hints';
 import {useBackHandler} from './app-gestures';
 
 type Send=(c:GameCommand)=>boolean;
@@ -71,7 +71,7 @@ function VisualPicker({state,kind,visual,setVisual}:{state:GameState,kind:string
   <h3>外観グレード</h3>
   <div className="tier-row" role="group" aria-label="外観グレード">{Array.from({length:6},(_,i)=><button key={i} type="button" disabled={i>available} aria-pressed={visual.tier===i} onClick={()=>setVisual({...visual,tier:i})}>
    <ProductIllustration kind={kind} tier={i} color={visual.color}/><span>グレード {i}{i>available?' 🔒':''}</span></button>)}</div>
-  {available<5&&<p className="hint">「{kind.toUpperCase()} 外観」研究で次のグレードが解放されます（+{visualFinishCost(1)}円/台）。</p>}
+  {available<5&&<p className="hint">「{kind.toUpperCase()} 外観」研究で次のグレードが解放されます（+{yen(visualFinishCost(1))}/台）。</p>}
   <h3>カラー</h3>
   <div className="swatch-row" role="group" aria-label="外装カラー">{colors.map(([c,label])=><button key={c} type="button" className={`swatch ${c}`} aria-pressed={visual.color===c} onClick={()=>setVisual({...visual,color:c})}>{label}</button>)}</div>
  </div>;
@@ -96,19 +96,21 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  const submit=()=>{if(send({type:'design',kind,name,spec,price:currentPrice,visual:{...visual,tier}}))done();};
  return <section className="screen designer">
   <div className="workbench">
-   <section className="card product-stage"><p className="eyebrow">DESIGN STUDIO / {definition.label}</p>
+   <section className="card product-stage"><p className="eyebrow">DESIGN STUDIO / {definition.label} · <span data-testid="tech-year">技術水準 {domainTechYear(kind,state.research.completed)}年相当</span></p>
     <ProductIllustration kind={kind} tier={tier} color={visual.color} spec={spec}/>
     <h2>{name||definition.label}</h2>
-    <div className="preview-metrics"><span>性能スコア<strong>{preview.performance.toLocaleString('ja-JP')}</strong></span><span>消費電力<strong>{preview.power}W</strong></span>
+    <div className="preview-metrics"><span>性能スコア<strong>{formatScore(preview.performance)}</strong></span><span>消費電力<strong>{preview.power}W</strong></span>
      {cooling!==undefined&&<span className={preview.power>cooling?'over':''}>冷却性能<strong>{cooling}W</strong></span>}<span>製造原価<strong>{yen(unitCost)}</strong></span><span>品質<strong>{Math.round(preview.reliability*100)}%</strong></span></div>
     {problem?<p role="alert" className="warning">{problem}</p>:<Forecast state={state} draft={draft}/>}
    </section>
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
      <div className="range-grid">{Object.entries(definition.fields).map(([key,field])=>{
-      if(field.options)return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={hardwareExplanations[key]}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=><option key={v} value={v}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}</option>)}</select></label>;
+      if(field.options){const open=fieldOptions(kind,key,state.research.completed);
+       return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
+        return <option key={v} value={v} disabled={locked}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}{locked?` 🔒 ${field.optionUnlock?.years[v]??''}年の技術`:''}</option>;})}</select></label>;}
       const range=fieldRange(kind,key,state.research.completed);
-      return <RangeField key={key} label={field.label} unit={field.unit} description={describeWithResearch(hardwareExplanations[key],kind,field.unlock?.axes)} min={range.min} max={range.max} step={field.step??1} value={Number(spec[key])} onChange={v=>setSpec({...spec,[key]:v})}
+      return <RangeField key={key} label={field.label} unit={field.unit} description={describeWithResearch(hardwareExplanations[key],kind,field.unlock?.axes)} min={range.min} max={range.max} step={field.step??1} values={field.values} value={Number(spec[key])} onChange={v=>setSpec({...spec,[key]:v})}
        researchLimit={lockFor(field,range,kind)}/>;
      })}</div>
      <VisualPicker state={state} kind={kind} visual={{...visual,tier}} setVisual={setVisual}/>
@@ -152,10 +154,10 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const submit=()=>{if(send({type:'assemble',kind,name,parts:chosen as {cpu:string,gpu:string,motherboard:string,ram:string,storage:string,psu?:string},purpose,appearance:visual.color,price:currentPrice,cooling,...(osId?{osId}:{}),visual:{tier,color:visual.color}}))done();};
  return <section className="screen designer">
   <div className="workbench">
-   <section className="card product-stage"><p className="eyebrow">PC BUILDER / {productCatalog[kind].label}</p>
+   <section className="card product-stage"><p className="eyebrow">PC BUILDER / {productCatalog[kind].label} · <span data-testid="tech-year">技術水準 {domainTechYear(kind,state.research.completed)}年相当</span></p>
     <ProductIllustration kind={kind} color={visual.color} tier={tier}/>
     <h2>{name}</h2>
-    {estimate?<><div className="preview-metrics"><span>総合性能<strong>{estimate.performance.toLocaleString('ja-JP')}</strong></span><span>消費電力<strong>{estimate.power}W</strong></span><span className={estimate.power>cooling?'over':''}>冷却性能<strong>{cooling}W</strong></span><span>製造原価<strong>{yen(unitCost)}</strong></span><span>品質<strong>{Math.round(estimate.reliability*100)}%</strong></span></div>
+    {estimate?<><div className="preview-metrics"><span>総合性能<strong>{formatScore(estimate.performance)}</strong></span><span>消費電力<strong>{estimate.power}W</strong></span><span className={estimate.power>cooling?'over':''}>冷却性能<strong>{cooling}W</strong></span><span>製造原価<strong>{yen(unitCost)}</strong></span><span>品質<strong>{Math.round(estimate.reliability*100)}%</strong></span></div>
      {coolingIssue?<p role="alert" className="warning">{coolingIssue}</p>:<Forecast state={state} draft={synthetic!}/>}
      {bench&&<div className="bench-mini"><span>ゲーム性能（高設定）</span>{bench.games.slice(0,3).map(g=><Chip key={g.id} tone={g.playable?'good':'bad'}>{g.name} {g.fps.high}fps</Chip>)}</div>}</>
      :<p role="alert" className="warning">{problem||'部品を確認してください'}</p>}
@@ -197,7 +199,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
  let result:ReturnType<typeof evaluateOS>|null=null,problem='';
  try{result=evaluateOS(state,{name,version,features,quality,compatibility,support,price:1,lockScreen,theme});}catch(e){problem=e instanceof Error?e.message:String(e);}
  const range=result?priceRange(result):{min:1,max:1};
- const currentPrice=Math.max(range.min,Math.min(range.max,price||50));
+ const currentPrice=Math.max(range.min,Math.min(range.max,price||hardwareBalance.osReferencePrice));
  const req=osRequirements({spec:{features:features.join(','),version}});
  const toggle=(f:OSFeature)=>setFeatures(features.includes(f)?features.filter(x=>x!==f):[...features,f]);
  const submit=()=>{if(send({type:'developOS',name,version,features,quality,compatibility,support,price:currentPrice,lockScreen,theme}))done();};
@@ -208,7 +210,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
     <h2>{name} v{version}</h2>
     {result?<><div className="preview-metrics"><span>OS評価<strong>{result.performance.toLocaleString('ja-JP')}</strong></span><span>ライセンス原価<strong>{yen(result.unitCost)}</strong></span><span>開発費<strong>{yen(result.designCost)}</strong></span></div>
      <Forecast state={state} draft={{id:'draft',...result,price:currentPrice}}/></>:<p role="alert" className="warning">{problem}</p>}
-    <p className="hint">動作要件：CPU性能 {req.cpu} / RAM {req.ram}GB / ストレージ {req.storage}GB。満たさないPCに搭載すると性能が下がります。</p>
+    <p className="hint">動作要件：CPU性能 {req.cpu} / RAM {formatValue(req.ram,'GB')} / ストレージ {formatValue(req.storage,'GB')}。満たさないPCに搭載すると性能が下がります。</p>
    </section>
    <section className="card design-controls">
     <PanelPages labels={['機能','品質','デザイン','販売']}>

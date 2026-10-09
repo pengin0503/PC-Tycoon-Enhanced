@@ -9,9 +9,10 @@ export function osFeatureList(os:Pick<Product,'spec'>):string[]{return String(os
 /** Minimum fictional CPU score, RAM (GB) and storage (GB) an OS asks of the PC it ships with. */
 export function osRequirements(os:Pick<Product,'spec'>):OSRequirements{
  const features=osFeatureList(os).length,version=Number(os.spec.version)||1;
+ const tidy=(n:number)=>Number(n.toFixed(6));
  return {cpu:b.requirements.cpuBase+b.requirements.cpuPerFeature*features+b.requirements.cpuPerVersion*version,
-  ram:b.requirements.ramBase+b.requirements.ramPerFeature*features,
-  storage:b.requirements.storageBase+b.requirements.storagePerFeature*features+b.requirements.storagePerVersion*version};
+  ram:tidy(b.requirements.ramBase+b.requirements.ramPerFeature*features),
+  storage:tidy(b.requirements.storageBase+b.requirements.storagePerFeature*features+b.requirements.storagePerVersion*version)};
 }
 export function meetsOSRequirements(s:GameState,spec:Record<string,string|number>,req:OSRequirements):boolean{
  const parts=deviceParts(spec);

@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {createGame} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
 import {writeGameExport} from '../apps/web/src/save-export';
-const game=(id='g')=>createGame({id,name:'保存試験',year:2026,difficulty:'normal',seed:42});
+const game=(id='g')=>createGame({id,name:'保存試験',difficulty:'normal',seed:42});
 describe('native JSON export transport',()=>{
  it('uses the same canonical JSON and safe filename as the browser',async()=>{
   const state=game('game-1');const transport={write:vi.fn(async(_payload:{filename:string,json:string})=>{})};

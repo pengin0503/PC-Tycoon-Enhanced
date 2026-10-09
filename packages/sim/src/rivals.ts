@@ -1,5 +1,7 @@
 import {rivalBalance as b,rivalTemplates} from '../../content/src/management';
 import {defaultSpec,hardwareCatalog} from '../../content/src/hardware';
+import {researchAtShare} from '../../content/src/era';
+import {typicalSpec} from './market';
 import {evaluateHardware} from './hardware';
 import {assemblyOverhead} from './devices';
 import {deviceSlots} from '../../content/src/devices';
@@ -40,9 +42,12 @@ export function rivalWeekly(s:GameState){
 export function rivalMonthly(s:GameState){
  for(const r of s.rivals.filter(r=>!r.acquired)){
   cost(r,b.monthlyCost,true);if(r.debt>0)continue;
-  if(r.researchRemaining===0&&r.researchLevel<b.maxResearch&&cost(r,b.researchCost*(r.researchLevel+1)))r.researchRemaining=b.work*(r.researchLevel+1);
+  // The first level is a quick catch-up to year-2000 technology; each later level is about two years of work.
+  if(r.researchRemaining===0&&r.researchLevel<b.maxResearch&&cost(r,b.researchCost*(r.researchLevel+1)))r.researchRemaining=b.work*(r.researchLevel?b.levelWeeks:1);
   const latest=r.products.at(-1);if(r.researchLevel>0&&(!latest||Number(latest.spec.generation)<r.researchLevel)&&cost(r,b.designCost)){
-   const spec=defaultSpec(r.focus);const metrics=evaluateHardware(r.focus,spec,[`${r.focus}-compute-1`]);metrics.performance=Math.round(metrics.performance*(1+b.generationPerformance*r.researchLevel)*r.efficiency);
+   // Rivals build the mainstream design of their technology level (level 50 = year-2100 technology).
+   const share=Math.min(1,(r.researchLevel-1)/(b.maxResearch-1));
+   const spec=typicalSpec(r.focus,share);const metrics=evaluateHardware(r.focus,spec,researchAtShare(r.focus,share),{stored:true});metrics.performance=Math.round(metrics.performance*r.efficiency);
    r.products.push({id:`${r.id}-p-${r.products.length+1}`,name:`${r.name} ${r.researchLevel}`,kind:r.focus,spec:{...spec,generation:r.researchLevel},...metrics,remaining:b.developmentWork,price:metrics.unitCost*b.priceCostMultiple,inventory:0,target:b.inventoryTarget,line:true,launched:true,sold:0,revenue:0,profit:0,releaseDay:s.day});
   }
   for(const p of r.products){const alternatives=s.products.filter(v=>v.kind===p.kind&&v.launched);const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*b.priceUndercut:p.unitCost*b.priceCostMultiple;p.price=Math.max(Math.ceil(p.unitCost*b.minimumPriceCostMultiple),Math.round(price));}
@@ -62,7 +67,8 @@ export function rivalCommand(s:GameState,c:GameCommand):boolean{
  const overheads=new Map(affected.map(p=>[p.id,assemblyOverhead(s,p)]));
  for(const p of products){
   const id=`p-${s.products.length+1}`;mapping.set(p.id,id);
-  s.products.push({...p,id,spec:defaultSpec(r.focus),inventoryValue:inventoryValue(p),remaining:0,line:false,sold:0,revenue:0,profit:0});
+  const {generation:_generation,...spec}=p.spec;
+  s.products.push({...p,id,spec:hardwareCatalog[r.focus]&&Object.keys(spec).every(k=>k in hardwareCatalog[r.focus].fields)?spec:defaultSpec(r.focus),inventoryValue:inventoryValue(p),remaining:0,line:false,sold:0,revenue:0,profit:0});
   p.inventory=0;p.inventoryValue=0;
  }
  for(const p of affected){

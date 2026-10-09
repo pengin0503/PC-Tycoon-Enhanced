@@ -15,7 +15,7 @@ it('a completed card keeps showing what its own stage unlocked after later stage
  const before=techEffectText(level1,['cpu-compute-1']);
  const maxed=unlockBranch({research:{completed:['cpu-compute-1']}},'cpu','capacity',50).research.completed;
  expect(techEffectText(level1,maxed)).toBe(before);
- expect(techEffectText(techById.get('cpu-capacity-50')!,maxed)).toContain('コア数上限 32コア');
+ expect(techEffectText(techById.get('cpu-capacity-50')!,maxed)).toContain('コア数上限 4,096コア');
 });
 
 it('cards only promise percentage bonuses that the simulation applies',()=>{

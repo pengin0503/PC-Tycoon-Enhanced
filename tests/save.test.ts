@@ -4,7 +4,7 @@ import {createGame,command} from '../packages/sim/src/index';
 import * as raw from '../packages/save/src/index';
 import * as repoApi from '../packages/save/src/repository';
 const api=raw as any; const repository=repoApi as any;
-const s=createGame({id:'slot',name:'テスト',year:2026,difficulty:'normal',seed:42});
+const s=createGame({id:'slot',name:'テスト',difficulty:'normal',seed:42});
 it('exports validated snapshots and resumes exactly',()=>{
  expect(api.exportSave).toBeTypeOf('function');
  const restored=api.importSave(api.exportSave(s));

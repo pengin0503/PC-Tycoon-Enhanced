@@ -1,4 +1,4 @@
-import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,coolingReliability,type Spec} from '../../content/src/hardware';
+import {hardwareCatalog,hardwareBalance as b,normalizeSpec,fieldRange,fieldOptions,fieldGrowth,coolingReliability,type Spec} from '../../content/src/hardware';
 import {techById,type HardwareKind,techEffect} from '../../content/src/research';
 import {expense,logEvent} from './finance';
 import {nextRandom} from './random';
@@ -14,11 +14,27 @@ import {researchPointCost,weeklyResearchPoints,distributionDemand} from './busin
 import {validateVisual,visualFinishCost,visualDemandFactor} from './visual';
 import {launchReception,reviewDemandFactor,fanDemandFactor,hypeFactor,weeklyFans,decayHype} from './reception';
 import {recordProductSale} from './sales';
+import {marketReference} from './market';
 import type {GameState,GameCommand} from './types';
+/** Performance score of a component specification (no research or validation involved). */
+export function hardwarePerformance(kind:HardwareKind,spec:Spec){
+ const n=(k:string)=>Number(spec[k]);
+ switch(kind){
+  case'cpu':return n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient*(n('cache')/b.cpu.cacheReference)**b.cpu.cacheExponent;
+  case'gpu':{const ops=n('units')*n('clock');return ops*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/(ops*b.gpu.bandwidthPerOp));}
+  case'motherboard':return (n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore)*(n('bus')/b.motherboard.busReference)**b.motherboard.busExponent;
+  case'ram':return n('capacity')*n('speed')/b.ram.scoreDivisor;
+  case'storage':return Math.sqrt(n('capacity')*n('speed'))*b.storage.scoreCoefficient;
+  case'psu':return n('wattage')*n('efficiency')/100*b.psu.modularScore[String(spec.modular) as 'none'|'semi'|'full'];
+  case'monitor':return n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;
+ }
+}
 /**
- * Metrics of a component design. New designs must stay inside the research-unlocked slider ranges and need
- * cooling at least equal to their power draw. `stored` re-checks an already designed (possibly older) product:
+ * Metrics of a component design. New designs must stay inside the research-unlocked slider ranges and options and
+ * need cooling at least equal to their power draw. `stored` re-checks an already designed (possibly older) product:
  * its values were accepted under the rules of its time, so research ranges and cooling are not re-applied.
+ * Costs use each value divided by its field's research frontier growth (mass production follows the frontier), so the
+ * same specification gets cheaper with research; performance and power use the designed values.
  */
 export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
  const def=hardwareCatalog[kind];
@@ -27,34 +43,40 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  const spec=normalizeSpec(kind,input);
  for(const [key,field]of Object.entries(def.fields)){
   const v=spec[key];
-  if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);continue;}
+  if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);
+   if(!stored&&!fieldOptions(kind,key,completed).includes(v))throw new Error(`${field.label}「${v}」は研究が必要です`);continue;}
   if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
   if(stored)continue;
+  if(field.values&&!field.values.some(x=>Math.abs(x-v)<1e-9))throw new Error(`${field.label}が不正です`);
   const range=fieldRange(kind,key,completed);
-  if(v<range.min||v>range.max){
+  if(v<range.min-1e-9||v>range.max+1e-9){
    const unit=field.unit??'';
    throw new Error(v<Number(field.min)||v>Number(field.max)?`${field.label}が不正です`:`${field.label}は現在の研究では${range.min}～${range.max}${unit}の範囲で設計できます`);
   }
  }
- const n=(k:string)=>Number(spec[k]);let performance=0,power=0,unitCost=0;
+ const n=(k:string)=>Number(spec[k]);
+ /** Value in production-cost terms: divided by how far research has moved this field's frontier. */
+ const c=(k:string)=>n(k)/fieldGrowth(kind,k,completed);
+ const node=(k='process')=>(n(k)/b.referenceProcess)**b.processExponent;
+ const performance=hardwarePerformance(kind,spec);let power=0,unitCost=0;
  switch(kind){
-  case'cpu':performance=n('cores')*n('clock')*n('ipc')*b.cpu.scoreCoefficient*(n('cache')/b.cpu.cacheReference)**b.cpu.cacheExponent;power=n('cores')*n('clock')**2*n('process')/b.cpu.referenceProcess*b.cpu.powerCoefficient;unitCost=n('cores')*b.cpu.coreCost+n('clock')*b.cpu.clockCost+n('ipc')*b.cpu.ipcCost+(n('cache')-b.cpu.cacheReference)*b.cpu.cacheCost;break;
-  case'gpu':performance=n('units')*n('clock')*b.gpu.scoreCoefficient*Math.min(1,n('bandwidth')/b.gpu.referenceBandwidth);power=n('units')*n('clock')**2*b.gpu.powerCoefficient;unitCost=n('units')*b.gpu.unitCost+n('vram')*b.gpu.vramCost+n('bandwidth')*b.gpu.bandwidthCost;break;
-  case'motherboard':performance=n('slots')*b.motherboard.slotScore+n('features')*b.motherboard.featureScore;power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost;break;
-  case'ram':performance=n('capacity')*n('speed')/b.ram.scoreDivisor;power=n('capacity')*b.ram.powerCoefficient;unitCost=n('capacity')*b.ram.capacityCost+n('speed')*b.ram.speedCost;break;
-  case'storage':performance=n('capacity')*b.storage.capacityScore+n('speed')*b.storage.speedScore;power=n('speed')*b.storage.powerCoefficient;unitCost=n('capacity')*b.storage.capacityCost+n('speed')*b.storage.speedCost;break;
-  case'psu':{const m=String(spec.modular) as 'none'|'semi'|'full';performance=n('wattage')*n('efficiency')/100*b.psu.modularScore[m];power=n('wattage')*(1-n('efficiency')/100)*b.psu.lossCoefficient;unitCost=n('wattage')*b.psu.wattageCost+(n('efficiency')-b.psu.efficiencyBase)*b.psu.efficiencyCost+b.psu.modularCost[m];break;}
-  case'monitor':performance=n('resolution')*n('refresh')*n('gamut')*b.monitor.scoreCoefficient;power=n('resolution')*b.monitor.powerCoefficient;unitCost=n('resolution')*b.monitor.resolutionCost+n('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
+  case'cpu':power=n('cores')*n('clock')*node()*b.cpu.powerCoefficient;unitCost=b.cpu.baseCost+c('cores')*b.cpu.coreCost+c('clock')*b.cpu.clockCost+c('ipc')*b.cpu.ipcCost+c('cache')*b.cpu.cacheCost;break;
+  case'gpu':power=n('units')**b.gpu.unitsPowerExponent*n('clock')*node()*b.gpu.powerCoefficient;unitCost=b.gpu.baseCost+c('units')*b.gpu.unitCost+c('clock')*b.gpu.clockCost+c('vram')*b.gpu.vramCost+c('bandwidth')*b.gpu.bandwidthCost;break;
+  case'motherboard':power=b.motherboard.basePower+n('features')*b.motherboard.featurePower;unitCost=b.motherboard.baseCost+n('slots')*b.motherboard.slotCost+n('features')*b.motherboard.featureCost+c('bus')*b.motherboard.busCost;break;
+  case'ram':power=b.ram.basePower+c('capacity')*b.ram.powerCoefficient;unitCost=b.ram.baseCost+c('capacity')*b.ram.capacityCost+c('speed')*b.ram.speedCost;break;
+  case'storage':power=b.storage.basePower+c('speed')*b.storage.speedPower;unitCost=b.storage.baseCost+c('capacity')*b.storage.capacityCost+c('speed')*b.storage.speedCost;break;
+  case'psu':{const m=String(spec.modular) as 'none'|'semi'|'full';power=n('wattage')*(1-n('efficiency')/100)*b.psu.lossCoefficient;unitCost=b.psu.baseCost+c('wattage')*b.psu.wattageCost+Math.max(0,n('efficiency')-b.psu.efficiencyBase)*b.psu.efficiencyCost/fieldGrowth(kind,'efficiency',completed)+b.psu.modularCost[m];break;}
+  case'monitor':power=c('resolution')*b.monitor.powerCoefficient*c('refresh')/b.monitor.referenceRefresh;unitCost=b.monitor.baseCost+c('resolution')*b.monitor.resolutionCost+c('refresh')*b.monitor.refreshCost+n('gamut')*b.monitor.gamutCost;break;
  }
  // Compute/compatibility/capacity research widen the slider ranges above instead of multiplying performance.
  power*=Math.exp(-techEffect(completed,kind,'power'));
  const cooling='cooling' in def.fields?n('cooling'):undefined;
- if(cooling!==undefined)unitCost+=cooling*(b.cooling.cost[kind]??0);
+ if(cooling!==undefined)unitCost+=c('cooling')*(b.cooling.cost[kind]??0);
  unitCost*=Math.exp(-techEffect(completed,kind,'cost')*b.costResearchScale);
  power=Math.round(power);
  if(cooling!==undefined&&!stored&&power>cooling)throw new Error(`冷却性能が不足しています（消費電力 ${power}W / 冷却性能 ${cooling}W）`);
  const reliability=b.reliabilityBase+b.reliabilityGain*(1-Math.exp(-techEffect(completed,kind,'reliability')))+(cooling?coolingReliability(power,cooling):0);
- return{performance:Math.round(performance),power,unitCost:Math.max(1,Math.round(unitCost)),reliability:Math.min(1,reliability)};
+ return{performance:Math.max(1,Math.round(performance)),power,unitCost:Math.max(1,Math.round(unitCost)),reliability:Math.min(1,reliability)};
 }
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='research'){
@@ -68,14 +90,14 @@ export function hardwareCommand(s:GameState,c:GameCommand):boolean{
  if(c.type==='design'){
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
   for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
-  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual});
+  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,def.designCost);s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work/(1+techEffect(s.research.completed,c.kind,'capacity')),price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
  if(c.type==='launch'||c.type==='line'||c.type==='price'){
   const p=s.products.find(p=>p.id===c.id);if(!p)throw new Error('製品が存在しません');
   if(c.type==='launch'){if(p.remaining>0||p.launched)throw new Error('発売できません');p.launched=true;p.releaseDay=s.day;logEvent(s,'launched',p.name);launchReception(s,p,c.presentation??'none');}
   if(c.type==='line'){if(!p.launched||p.kind==='os')throw new Error('発売済みハードウェアを選択してください');p.target=c.target;p.line=c.target>0;}
-  if(c.type==='price'){assertProductPrice(c.price,p);p.price=c.price;}
+  if(c.type==='price'){assertProductPrice(c.price,p,marketReference(p.kind,s.day));p.price=c.price;}
   return true;
  }
  return false;
@@ -105,7 +127,7 @@ export function sellProducts(s:GameState){
  const candidates=s.products.filter(p=>p.launched).map(p=>{
   const [r,next]=nextRandom(s.seed);s.seed=next;const def=productCatalog[p.kind];
   const quality=b.qualityFloor+s.company.reputation/100;const awareness=b.awarenessFloor+s.company.awareness/100;
-  const value=Math.min(b.valueCeiling,p.performance/def.reference)*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
+  const value=Math.min(b.valueCeiling,p.performance/marketReference(p.kind,s.day))*((p.kind==='os'?b.osReferencePrice:p.unitCost*b.priceCostMultiple)/p.price)**b.priceElasticity;
   const age=Math.max(b.minimumAgeFactor,1-(s.day-p.releaseDay)/b.ageDecay);
   const demand=Math.floor(def.demand*value*quality*awareness*age*s.modifiers.demand*(p.reliability/b.reliabilityBase)*visualDemandFactor(p.visual?.tier??0)*(1+(p.kind==='gpu'||p.spec.purpose==='server'?aiHardwareBoost(s):0))*competitorPressure(s,p.kind)*reviewDemandFactor(p)*fanDemandFactor(s)*(p.kind==='os'?osIncidentFactor(s):1)*distributionDemand(s)*hypeFactor(p)*(1-b.weeklyVariance/2+r*b.weeklyVariance)*(s.difficulty==='hard'?b.hardDemand:1)*(s.mode==='tycoon'?b.tycoonDemand:1));
   return {p,demand:Math.max(0,demand)};

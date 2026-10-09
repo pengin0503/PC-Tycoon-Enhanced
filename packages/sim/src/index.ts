@@ -1,4 +1,5 @@
 import { balance } from '../../content/src/balance';
+import {eraBalance} from '../../content/src/era';
 import { gameSchema, newGameSchema, gameCommandSchema } from './schema';
 import {hardwareCommand,researchAndDevelopment,manufacture,sellProducts} from './hardware';
 import {deviceCommand} from './devices';
@@ -19,7 +20,7 @@ export { nextRandom } from './random';
 export { gameSchema } from './schema';
 export function createGame(options: NewGameOptions): GameState {
   const o = newGameSchema.parse(options);
-  const s=gameSchema.parse({version:1,id:o.id,seed:o.seed,initialSeed:o.seed,day:0,year:o.year,difficulty:o.difficulty,mode:o.mode??'standard',
+  const s=gameSchema.parse({version:1,economyVersion:balance.economyVersion,id:o.id,seed:o.seed,initialSeed:o.seed,day:0,year:eraBalance.startYear,difficulty:o.difficulty,mode:o.mode??'standard',
     company:{name:o.name,cash:balance.initialCash[o.difficulty],debt:0,reputation:20,awareness:10,researchPoints:researchPointBalance.initial},
     finance:{revenue:0,expenses:0,capital:0},rivals:newRivals(o.seed,o.difficulty,o.mode??'standard'),events:[]});
   generateCandidates(s,'free');

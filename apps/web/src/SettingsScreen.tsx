@@ -7,7 +7,7 @@ const modeLabels={standard:'標準',tycoon:'タイクーン（簡易）',long:'�
 export function SettingsScreen({state,send,uiScale,setUIScale,list,slots,load,download,readFile,newGame}:{state:GameState,send:(c:GameCommand)=>boolean,uiScale:number,setUIScale:(n:number)=>void,
  list:()=>void,slots:{id:string,day:number,name:string}[],load:(id:string)=>void,download:()=>void,readFile:(f?:File)=>void,newGame:()=>void}){
  const [name,setName]=useState(state.company.name);
- const [cash,setCash]=useState(10_000_000);const [rp,setRP]=useState(10000);const [fans,setFans]=useState(100000);
+ const [cash,setCash]=useState(1_000_000_000);const [rp,setRP]=useState(10000);const [fans,setFans]=useState(100000);
  return <section className="screen settings-screen">
   <section className="card"><h2>セーブ・設定</h2>
    <div className="button-row"><button onClick={list}>{ja.load}</button><button onClick={download}>{ja.export}</button><button className="danger" onClick={newGame}>{ja.newGame}</button></div>

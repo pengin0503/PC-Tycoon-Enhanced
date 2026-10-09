@@ -5,13 +5,13 @@ import {startCompany,nav,openDesigner} from './ui-helpers';
 const cmd=(s:GameState,c:any)=>command(s,c);
 async function load(page:Page,s:GameState){await page.goto('/');await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});}
 function withOS(){
- let s=createGame({id:'ui-os',name:'OS社',year:2026,difficulty:'normal',seed:9});s.research.completed.push('os-compute-1');
- s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50});
+ let s=createGame({id:'ui-os',name:'OS社',difficulty:'normal',seed:9});s.research.completed.push('os-compute-1');
+ s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  s=cmd(s,{type:'advance',days:21});return cmd(s,{type:'launch',id:'p-1'});
 }
 function withCPU(){
- let s=createGame({id:'ui-cpu',name:'部品社',year:2026,difficulty:'normal',seed:9});s.research.completed.push('cpu-compute-1');
- s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'},price:400});
+ let s=createGame({id:'ui-cpu',name:'部品社',difficulty:'normal',seed:9});s.research.completed.push('cpu-compute-1');
+ s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:50});return cmd(s,{type:'advance',days:2});
 }
 
@@ -29,15 +29,15 @@ test('hacker attack pauses time and the defence minigame resolves it',async({pag
 });
 
 test('bulk offer can be accepted from the companies screen',async({page})=>{
- const s=withCPU();s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity:10,unitPrice:350,expiresDay:s.day+14}];
+ const s=withCPU();s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity:10,unitPrice:35000,expiresDay:s.day+14}];
  await load(page,s);await nav(page,'企業');await page.getByRole('tab',{name:/^取引/}).click();
  await expect(page.getByText('Helix 物流')).toBeVisible();await page.getByRole('button',{name:'承諾'}).click();
  await expect(page.getByText('現在、大口取引の打診はありません。',{exact:false})).toBeVisible();
- await expect(page.getByTestId('cash')).toHaveText(new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(s.company.cash+3500));
+ await expect(page.getByTestId('cash')).toHaveText(new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(s.company.cash+350000));
 });
 
 test('acquisition negotiation shows odds and completes at full valuation',async({page})=>{
- const s=createGame({id:'ui-buy',name:'買収社',year:2026,difficulty:'normal',seed:3});s.company.cash=5_000_000;
+ const s=createGame({id:'ui-buy',name:'買収社',difficulty:'normal',seed:3});s.company.cash=500_000_000;
  await load(page,s);await nav(page,'企業');
  await page.getByRole('button',{name:'買収交渉'}).first().click();
  const dialog=page.getByRole('dialog',{name:/買収交渉/});
@@ -48,7 +48,7 @@ test('acquisition negotiation shows odds and completes at full valuation',async(
 });
 
 test('hard-mode bankruptcy shows the game over screen and allows a new game',async({page})=>{
- const s=createGame({id:'ui-over',name:'倒産社',year:2026,difficulty:'hard',seed:3});s.company.cash=10;
+ const s=createGame({id:'ui-over',name:'倒産社',difficulty:'hard',seed:3});s.company.cash=10;
  await load(page,s);await page.getByRole('button',{name:'30日進める'}).click();
  const dialog=page.getByRole('dialog',{name:'ゲームオーバー'});await expect(dialog).toBeVisible();
  await dialog.getByRole('button',{name:'新しいゲーム'}).click();await expect(page.getByRole('button',{name:'会社を設立'})).toBeVisible();
@@ -56,7 +56,7 @@ test('hard-mode bankruptcy shows the game over screen and allows a new game',asy
 
 test('staff search, distribution upgrade and achievements are reachable',async({page})=>{
  await page.setViewportSize({width:844,height:390});await startCompany(page);
- await nav(page,'人事');await page.getByRole('tab',{name:'人材探し'}).click();await page.getByRole('button',{name:'￥20,000で探す'}).click();
+ await nav(page,'人事');await page.getByRole('tab',{name:'人材探し'}).click();await page.getByRole('button',{name:'￥2,000,000で探す'}).click();
  await page.getByRole('tab',{name:'候補者'}).click();await expect(page.getByRole('button',{name:'採用する'})).toHaveCount(3);
  await nav(page,'アップグレード');await page.getByRole('tab',{name:'販売店'}).click();await page.getByRole('button',{name:'販売網を拡大'}).click();
  await expect(page.getByTestId('distribution-level')).toHaveText('1 / 10');

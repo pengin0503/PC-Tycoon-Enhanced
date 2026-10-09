@@ -15,6 +15,8 @@ export function assertAIDesignUnlocked(d:LLMDesign,completed:readonly string[]){
   if(value>range.max+1e-9)throw new Error(`${slider.label}は現在の研究では${range.max.toLocaleString('ja-JP')}${slider.unit}までです`);
  }
 }
+/** FLOPS of one own GPU: grows with the square of its score, so year-2000 cards are far too slow for language models. */
+export function gpuFlops(score:number){return b.gpuFlopsAtReference*(score/b.gpuReferenceScore)**b.gpuFlopsExponent;}
 export function aiEffects(s:GameState):AIResearchEffects{return Object.fromEntries(['compute','architecture','quantization','data','context','economics'].map(axis=>[axis,techEffect(s.research.completed,'ai',axis)]));}
 import type {GameState,GameCommand} from './types';
 function settleSubscription(s:GameState,service:NonNullable<GameState['models'][number]['service']>){
@@ -35,7 +37,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   if(c.serverId!=='vendor'&&(!server||server.inventory<1))throw new Error('自社サーバー在庫が必要です');
   const cost=server?0:b.serverCost;expense(s,cost,false,true);
   const ownGpuValue=removeStock(own,c.gpus);const ownServerValue=server?removeStock(server,1):0;
-  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:own.performance*b.ownGpuFlopsPerScore*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
+  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:gpuFlops(own.performance)*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){

@@ -2,7 +2,8 @@ import {vendorParts,deviceSlots,deviceBalance as b,deviceCooling,deviceCoolingCo
 import type {GameState,GameCommand,Product} from './types';
 import {expense,logEvent} from './finance';
 import {hardwareBalance,coolingReliability} from '../../content/src/hardware';
-import {unlockedRange} from '../../content/src/unlocks';
+import {unlockedRange,unlockProgress,frontierGrowth} from '../../content/src/unlocks';
+import {marketReference} from './market';
 import {techEffect} from '../../content/src/research';
 import {validateVisual,visualFinishCost} from './visual';
 import {assertProductPrice} from './pricing';
@@ -45,7 +46,8 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
   if(!p||p.kind!==k||('remaining'in p&&p.remaining>0))throw new Error('利用可能な部品を選択してください');return p;};
  const resolved=(['cpu','gpu','motherboard','ram','storage'] as const).map(resolve);
  const [cpu,gpu,board,ram,storage]=resolved;
- if(cpu.spec.socket!==board.spec.socket||ram.spec.memoryGen!==board.spec.memoryGen)throw new Error('ソケットまたはメモリ世代が非互換です');
+ // Stored builds were accepted when designed (older saves may reference parts whose generic specs were updated since).
+ if(!allowLegacy&&(cpu.spec.socket!==board.spec.socket||ram.spec.memoryGen!==board.spec.memoryGen))throw new Error('ソケットまたはメモリ世代が非互換です');
  const psu=parts.psu===undefined?undefined:resolve('psu');
  const draw=resolved.reduce((n,p)=>n+p.power,0);
  if(psu&&Number(psu.spec.wattage)<draw*hardwareBalance.psu.headroom)throw new Error(`電源の定格出力が不足しています（必要 ${Math.ceil(draw*hardwareBalance.psu.headroom)}W 以上）`);
@@ -53,7 +55,8 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
  const priced=psu?[...resolved,psu]:resolved;
  const os=osId?s.products.find(p=>p.id===osId&&p.kind==='os'&&p.launched):undefined;if(osId&&!os)throw new Error('発売済みOSが必要です');
  const factors=[cpu,gpu,ram,storage].map((p,i)=>p.performance/b.referencePerformance[i]);
- const score=factors.reduce((sum,x,i)=>sum+x*b.purposeWeights[purpose][i],0)*b.scoreScale;
+ // Weighted geometric mean: one part from a far later era cannot carry the whole machine.
+ const score=factors.reduce((n,x,i)=>n*Math.max(1e-6,x)**b.purposeWeights[purpose][i],1)*b.scoreScale;
  const unmet=os&&!meetsOSRequirements(s,parts as Record<string,string>,osRequirements(os))?osBalance.unmetPerformance:1;
  const osFactor=os?(b.os.baseCompatibility+Number(os.spec.compatibility)*b.os.compatibilityWeight)*(b.os.qualityFloor+Number(os.spec.quality)*b.os.qualityWeight)*unmet:b.os.withoutOS;
  const e=(axis:string)=>techEffect(s.research.completed,kind,axis);
@@ -62,7 +65,8 @@ export function evaluateDevice(s:GameState,parts:Partial<Record<string,string>>,
  const power=Math.round((draw+(psu?.power??0))*Math.exp(-e('power')));
  if(!allowLegacy&&!previewOnly){const problem=deviceCoolingProblem(s,kind,power,cooling);if(problem)throw new Error(problem);}
  // Case cooling is part of the case overhead, so cost research discounts it like the CPU/GPU cooler cost.
- const overhead=b.caseCost+(kind==='laptop'?b.laptopPackaging:0)+(cooling===undefined?0:cooling*deviceCoolingCost[kind]);
+ // Case cooling is priced in production terms: research that widens the cooling range also makes each W cheaper.
+ const overhead=b.caseCost+(kind==='laptop'?b.laptopPackaging:0)+(cooling===undefined?0:cooling/frontierGrowth(deviceCooling[kind],unlockProgress(s.research.completed,kind,deviceCooling[kind].unlock.axes))*deviceCoolingCost[kind]);
  return {reliability:Math.min(1,hardwareBalance.reliabilityBase+hardwareBalance.reliabilityGain*(1-Math.exp(-e('reliability')))+psuReliability+(cooling?coolingReliability(power,cooling):0)),performance:Math.round(score*osFactor*(kind==='laptop'?b.laptopCooling:1)),power,unitCost:priced.reduce((n,p)=>n+(rivals.find(x=>x.part.id===p.id)?.part.price??p.unitCost),0)+Math.round(overhead*Math.exp(-e('cost')*b.packagingResearchScale))+(os?os.unitCost:0)};
 }
 export function appendProduct(s:GameState,data:Pick<Product,'name'|'kind'|'spec'|'price'|'performance'|'power'|'unitCost'> & {reliability?:number,visual?:Product['visual']},work:number){
@@ -74,7 +78,7 @@ export function deviceCommand(s:GameState,c:GameCommand):boolean{
   if(!s.research.completed.includes(`${c.kind}-compute-1`))throw new Error('端末の基盤研究が必要です');
   const cooling=c.cooling??deviceCooling[c.kind].default;
   const result=evaluateDevice(s,c.parts,c.purpose,c.kind,c.osId,false,cooling);const tier=validateVisual(s.research.completed,c.kind,c.visual);
-  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual});expense(s,b.designCost);
+  assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));expense(s,b.designCost);
   appendProduct(s,{name:c.name,kind:c.kind,price:c.price,spec:{...c.parts,purpose:c.purpose,appearance:c.appearance,cooling,procurementCost:Object.values(c.parts).reduce((n,id)=>n+s.rivals.reduce((total,r)=>total+(r.products.find(p=>p.id===id)?.price??0),0),0),...(c.osId?{osId:c.osId}:{})},...result,unitCost:result.unitCost+visualFinishCost(tier),...(c.visual?{visual:c.visual}:{})},b.work/(1+techEffect(s.research.completed,c.kind,'capacity')));return true;
  }
  if(c.type==='developOS'){

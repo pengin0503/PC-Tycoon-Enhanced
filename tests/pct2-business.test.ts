@@ -6,8 +6,9 @@ import {valuation} from '../packages/sim/src/rivals';
 import {monthlyCosts} from '../packages/sim/src/management';
 import {derivedRandom} from '../packages/sim/src/random';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
-const start=(difficulty:'normal'|'hard'='normal',seed=11)=>createGame({id:'g3',name:'経営社',year:2026,difficulty,seed});
-const cpu={cores:4,clock:3,ipc:1,process:14,cache:8,cooling:40,socket:'Atlas'};
+const start=(difficulty:'normal'|'hard'='normal',seed=11)=>createGame({id:'g3',name:'経営社',difficulty,seed});
+/** Year-2000 default CPU. */
+const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
 
 it('research point costs scale with level and difficulty; points accrue weekly with staff and office',()=>{
  const s=start();expect(researchPointCost(s,'cpu-compute-1')).toBe(100);
@@ -16,7 +17,7 @@ it('research point costs scale with level and difficulty; points accrue weekly w
  const base=cmd(s,{type:'advance',days:7}).company.researchPoints-s.company.researchPoints;
  const staffed=cmd(cmd(s,{type:'hire',role:'research',skill:80}),{type:'advance',days:7});
  expect(staffed.company.researchPoints-s.company.researchPoints).toBeGreaterThan(base);
- const office=start();office.company.cash=10_000_000;const big=cmd(office,{type:'office',level:2});
+ const office=start();office.company.cash=1_000_000_000;const big=cmd(office,{type:'office',level:2});
  expect(cmd(big,{type:'advance',days:7}).company.researchPoints).toBeGreaterThan(cmd(office,{type:'advance',days:7}).company.researchPoints);
 });
 
@@ -27,7 +28,7 @@ it('legacy in-progress research still completes from saved work',()=>{
 });
 
 it('distribution network raises demand and fans at a monthly cost',()=>{
- let s=start();s.company.cash=10_000_000;
+ let s=start();s.company.cash=1_000_000_000;
  expect(()=>cmd(s,{type:'distribution',level:2})).toThrow();
  const d=cmd(s,{type:'distribution',level:1});expect(s.company.cash-d.company.cash).toBe(distributionCost(1));
  expect(monthlyCosts(d)).toBeGreaterThan(monthlyCosts(s));
@@ -36,18 +37,18 @@ it('distribution network raises demand and fans at a monthly cost',()=>{
 });
 
 function stocked(){
- let s=start();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:900});
+ let s=start();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec:cpu,price:60000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:300});
  s=cmd(s,{type:'advance',days:6});return s;
 }
-const withOffer=(s:GameState,quantity=10)=>{s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity,unitPrice:800,expiresDay:s.day+14}];return s;};
-function bundledOffer({price=2800,osPrice=50,includeOS=true}:{price?:number,osPrice?:number,includeOS?:boolean}={}){
+const withOffer=(s:GameState,quantity=10)=>{s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity,unitPrice:50000,expiresDay:s.day+14}];return s;};
+function bundledOffer({price=280000,osPrice=5000,includeOS=true}:{price?:number,osPrice?:number,includeOS?:boolean}={}){
  let s=start();s.research.completed.push('os-compute-1','pc-compute-1');
- s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50});
+ s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
- s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:3000,...(includeOS?{osId:'p-1'}:{})});
+ s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:300000,...(includeOS?{osId:'p-1'}:{})});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});
- const pc=s.products.find(p=>p.id==='p-2')!;pc.inventory=2;pc.inventoryValue=1800;
+ const pc=s.products.find(p=>p.id==='p-2')!;pc.inventory=2;pc.inventoryValue=180000;
  s.products.find(p=>p.id==='p-1')!.price=osPrice;
  s.offerSeq=1;s.offers=[{id:1,productId:'p-2',buyer:'大型法人',quantity:2,unitPrice:price,expiresDay:s.day+14}];
  return s;
@@ -56,7 +57,7 @@ function bundledOffer({price=2800,osPrice=50,includeOS=true}:{price?:number,osPr
 it('bulk offers can be accepted, declined or countered with markup-dependent odds',()=>{
  const s=withOffer(stocked());const inv=s.products[0].inventory;
  const ok=cmd(s,{type:'respondOffer',id:1,action:'accept'});
- expect(ok.products[0].inventory).toBe(inv-10);expect(ok.company.cash-s.company.cash).toBe(8000);expect(ok.offers).toEqual([]);
+ expect(ok.products[0].inventory).toBe(inv-10);expect(ok.company.cash-s.company.cash).toBe(500000);expect(ok.offers).toEqual([]);
  const no=cmd(s,{type:'respondOffer',id:1,action:'decline'});expect(no.company.cash).toBe(s.company.cash);expect(no.offers).toEqual([]);
  const sure=cmd(s,{type:'respondOffer',id:1,action:'counter',markup:1});expect(sure.company.cash).toBeGreaterThan(ok.company.cash-1);
  const greedy=cmd(s,{type:'respondOffer',id:1,action:'counter',markup:30});expect(greedy.company.cash).toBe(s.company.cash);expect(greedy.offers).toEqual([]);
@@ -69,29 +70,29 @@ it('bulk PC sales split bundled OS revenue and consume weighted inventory cost e
  const before={cash:s.company.cash,pcRevenue:pc.revenue,pcProfit:pc.profit,osSold:os.sold,osRevenue:os.revenue,osProfit:os.profit,osCost:os.unitCost};
  const sold=cmd(s,{type:'respondOffer',id:1,action:'accept'});
  const soldPC=sold.products.find(p=>p.id==='p-2')!;const soldOS=sold.products.find(p=>p.id==='p-1')!;
- expect(sold.company.cash-before.cash).toBe(5600);
- expect(soldPC.revenue-before.pcRevenue).toBe(5500);
+ expect(sold.company.cash-before.cash).toBe(560000);
+ expect(soldPC.revenue-before.pcRevenue).toBe(550000);
  expect(soldOS.sold-before.osSold).toBe(2);
- expect(soldOS.revenue-before.osRevenue).toBe(100);
- expect((soldPC.profit-before.pcProfit)+(soldOS.profit-before.osProfit)).toBe(5600-1800);
+ expect(soldOS.revenue-before.osRevenue).toBe(10000);
+ expect((soldPC.profit-before.pcProfit)+(soldOS.profit-before.osProfit)).toBe(560000-180000);
  expect(soldPC.inventory).toBe(0);expect(soldPC.inventoryValue).toBe(0);
 
- const highLicense=bundledOffer({osPrice:4000});
+ const highLicense=bundledOffer({osPrice:400000});
  const highLicenseOSRevenue=highLicense.products.find(p=>p.id==='p-1')!.revenue;
  const highSold=cmd(highLicense,{type:'respondOffer',id:1,action:'accept'});
  expect(highSold.products.find(p=>p.id==='p-2')!.revenue).toBe(0);
- expect(highSold.products.find(p=>p.id==='p-1')!.revenue-highLicenseOSRevenue).toBe(5600);
+ expect(highSold.products.find(p=>p.id==='p-1')!.revenue-highLicenseOSRevenue).toBe(560000);
  const plain=bundledOffer({includeOS:false});
  const plainOSSold=plain.products.find(p=>p.id==='p-1')!.sold;
  const plainSold=cmd(plain,{type:'respondOffer',id:1,action:'accept'});
- expect(plainSold.products.find(p=>p.id==='p-2')!.revenue).toBe(5600);
+ expect(plainSold.products.find(p=>p.id==='p-2')!.revenue).toBe(560000);
  expect(plainSold.products.find(p=>p.id==='p-1')!.sold).toBe(plainOSSold);
 
  const counter=bundledOffer();let seed=1;
  while(derivedRandom(seed,counter.day,7001)>=offerSuccessChance(1))seed++;
  counter.initialSeed=seed;
  const countered=cmd(counter,{type:'respondOffer',id:1,action:'counter',markup:1});
- expect(countered.company.cash-counter.company.cash).toBe(2*Math.round(2800*1.01));
+ expect(countered.company.cash-counter.company.cash).toBe(2*Math.round(280000*1.01));
 });
 
 it('offers arrive monthly for stocked products and expire',()=>{
@@ -117,22 +118,22 @@ it('acquisition offers below valuation succeed with rising odds and impose a coo
 });
 
 it('candidates refresh monthly, paid searches find stronger talent, traits change work and pay',()=>{
- let s=start();expect(s.candidates).toHaveLength(3);s.company.cash=10_000_000;
+ let s=start();expect(s.candidates).toHaveLength(3);s.company.cash=1_000_000_000;
  const k=s.candidates[0];const hired=cmd(s,{type:'hireCandidate',id:k.id});
  expect(hired.staff[0]).toMatchObject({role:k.role,skill:k.skill});expect(hired.candidates).toHaveLength(2);
- const premium=cmd(s,{type:'searchCandidates',tier:'premium'});expect(s.company.cash-premium.company.cash).toBe(20000);
+ const premium=cmd(s,{type:'searchCandidates',tier:'premium'});expect(s.company.cash-premium.company.cash).toBe(2000000);
  expect(premium.candidates.every(c=>c.skill>=70&&c.trait)).toBe(true);
  const month=cmd(s,{type:'advance',days:30});expect(month.candidates.map(c=>c.id)).not.toEqual(s.candidates.map(c=>c.id));
- expect(salaryFor(50,'frugal')).toBe(1200);expect(salaryFor(50)).toBe(1500);
+ expect(salaryFor(50,'frugal')).toBe(120000);expect(salaryFor(50)).toBe(150000);
  expect(traitWorkMultiplier('genius','research')).toBe(1.5);expect(traitWorkMultiplier('ai-specialist','ai')).toBe(1.5);expect(traitWorkMultiplier(undefined,'ai')).toBe(1);
- const g=start();g.staff=[{id:'e-1',role:'research',skill:60,salary:1800,trait:'genius'}];g.staffSeq=1;
- const n=start();n.staff=[{id:'e-1',role:'research',skill:60,salary:1800}];n.staffSeq=1;
+ const g=start();g.staff=[{id:'e-1',role:'research',skill:60,salary:180000,trait:'genius'}];g.staffSeq=1;
+ const n=start();n.staff=[{id:'e-1',role:'research',skill:60,salary:180000}];n.staffSeq=1;
  expect(cmd(g,{type:'advance',days:7}).company.researchPoints).toBeGreaterThan(cmd(n,{type:'advance',days:7}).company.researchPoints);
 });
 
 it('firing pays severance and never reuses staff ids',()=>{
  let s=start();s=cmd(s,{type:'hire',role:'research',skill:50});s=cmd(s,{type:'hire',role:'engineering',skill:50});
- const fired=cmd(s,{type:'fire',id:'e-2'});expect(s.company.cash-fired.company.cash).toBe(1500*3);expect(fired.staff.map(e=>e.id)).toEqual(['e-1']);
+ const fired=cmd(s,{type:'fire',id:'e-2'});expect(s.company.cash-fired.company.cash).toBe(150000*3);expect(fired.staff.map(e=>e.id)).toEqual(['e-1']);
  const again=cmd(fired,{type:'hire',role:'marketing',skill:40});expect(again.staff.map(e=>e.id)).toEqual(['e-1','e-3']);
  expect(()=>cmd(s,{type:'fire',id:'e-9'})).toThrow();
 });

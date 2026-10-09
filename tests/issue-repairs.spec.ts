@@ -3,9 +3,9 @@ import {createGame,command} from '../packages/sim/src/index';
 import {exportSave} from '../packages/save/src/index';
 
 function hackerDefenseSave(){
- let state=createGame({id:'hacker-pause',name:'防御試験社',year:2026,difficulty:'normal',seed:12});
+ let state=createGame({id:'hacker-pause',name:'防御試験社',difficulty:'normal',seed:12});
  state.research.completed.push('os-compute-1','cpu-compute-1','ai-compute-1');
- state=command(state,{type:'developOS',name:'Shield OS',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:50});
+ state=command(state,{type:'developOS',name:'Shield OS',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  state=command(state,{type:'advance',days:14});
  state=command(state,{type:'launch',id:'p-1'});
  state.pendingAttack={osId:'p-1',day:state.day,deadlineDay:state.day+14,targets:6};

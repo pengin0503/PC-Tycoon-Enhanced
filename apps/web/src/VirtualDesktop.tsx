@@ -7,6 +7,7 @@ import {osRequirements} from '../../../packages/sim/src/os';
 import type {GameState} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {gameDate} from './ui';
+import {formatValue} from './RangeField';
 
 /** Fictional OS preview: installer → lock screen → desktop with the OS's own apps. Not an emulator. */
 export function VirtualDesktop({state,os,close}:{state:GameState,os:Product,close:()=>void}){
@@ -32,7 +33,7 @@ export function VirtualDesktop({state,os,close}:{state:GameState,os:Product,clos
   {stage==='desktop'&&<div className={`desktop wallpaper ${wallpaper}`}>
    <div className="desktop-window" role="region" aria-label={label(app)}>
     <h3>{label(app)}</h3>
-    {app==='settings'&&<dl><dt>品質</dt><dd>{Math.round(Number(os.spec.quality)*100)}</dd><dt>互換性</dt><dd>{Math.round(Number(os.spec.compatibility)*100)}</dd><dt>動作要件</dt><dd>CPU {req.cpu} / RAM {req.ram}GB / {req.storage}GB</dd></dl>}
+    {app==='settings'&&<dl><dt>品質</dt><dd>{Math.round(Number(os.spec.quality)*100)}</dd><dt>互換性</dt><dd>{Math.round(Number(os.spec.compatibility)*100)}</dd><dt>動作要件</dt><dd>CPU {req.cpu} / RAM {formatValue(req.ram,'GB')} / {formatValue(req.storage,'GB')}</dd></dl>}
     {app==='files'&&<ul className="file-list">{state.products.slice(0,12).map(p=><li key={p.id}>📄 {p.name}.product</li>)}</ul>}
     {app==='browser'&&<><p>{state.company.name} 公式サイト — 製品 {state.products.length} 件</p><p>オフラインのゲーム内ページです。外部サイトには接続しません。</p></>}
     {app==='calculator'&&<><div className="form-grid"><label>左の数<input type="number" value={left} onChange={e=>setLeft(e.target.value)}/></label><label>右の数<input type="number" value={right} onChange={e=>setRight(e.target.value)}/></label></div><button onClick={()=>{const n=Number(left)+Number(right);setResult(Number.isFinite(n)?String(n):'計算できません');}}>計算する</button><output data-testid="calculator-result">{result}</output></>}

@@ -5,19 +5,20 @@ import * as math from '../packages/sim/src/ai-math';
 import {aiHardwareBoost} from '../packages/sim/src/ai';
 import {aiBalance} from '../packages/content/src/ai';
 import {defaultSpec} from '../packages/content/src/hardware';
-import {unlockBranch} from './research-helpers';
+import {unlockBranch,researchTo,frontierSpec} from './research-helpers';
 const cmd=(s:any,c:any)=>command(s,c);
 const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
 function ready(seed=1){
- let s=createGame({id:'ai',name:'AI社',year:2026,difficulty:'normal',seed});
+ let s=createGame({id:'ai',name:'AI社',difficulty:'normal',seed});
  s=cmd(cmd(s,{type:'research',id:'ai-compute-1'}),{type:'advance',days:7});
- s.research.completed.push('gpu-compute-1');unlockBranch(s,'gpu','capacity',5);
- s=cmd(s,{type:'design',kind:'gpu',name:'Own AI GPU',spec:{...defaultSpec('gpu'),vram:32},price:600});
+ // Language models need GPUs from around 2030: year-2000 cards are far too slow.
+ researchTo(s,'gpu',.35);
+ s=cmd(s,{type:'design',kind:'gpu',name:'Own AI GPU',spec:frontierSpec('gpu',s.research.completed),price:60000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});
  s=cmd(s,{type:'line',id:'p-1',target:100});s=cmd(s,{type:'advance',days:1});
  return cmd(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
 }
-const train={type:'trainModel',name:'Polar One',design,clusterId:'c-1',budget:10000};
+const train={type:'trainModel',name:'Polar One',design,clusterId:'c-1',budget:1000000};
 const deploy={type:'deployModel',id:'m-1',clusterId:'c-1',bits:16,context:4096,batch:1,mode:'api',apiPrice:1000,subscriptionPrice:500};
 it('trains evaluates and serves finite API demand with actual costs',()=>{
  let s=cmd(ready(),train);expect(s.models[0].status).toBe('training');s=cmd(s,{type:'advance',days:7});expect(s.models[0].status).toBe('ready');
@@ -98,7 +99,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
 it('quantization is researched and founder work is shared',()=>{
  let s=ready();s.company.researchPoints=10000;s=cmd(s,train);s=cmd(s,{type:'research',id:'ai-quantization-1'});expect(s.research.completed).toContain('ai-quantization-1');
  // a concurrent hardware design splits the founder's weekly work with model preparation/training
- const busy=cmd(cmd(s,{type:'design',kind:'gpu',name:'Next',spec:{...defaultSpec('gpu'),vram:32},price:600}),{type:'advance',days:7});const solo=cmd(s,{type:'advance',days:7});
+ const busy=cmd(cmd(s,{type:'design',kind:'gpu',name:'Next',spec:defaultSpec('gpu'),price:8000}),{type:'advance',days:7});const solo=cmd(s,{type:'advance',days:7});
  expect(busy.models[0].remainingSeconds+busy.models[0].preparationRemaining).toBeGreaterThan(solo.models[0].remainingSeconds+solo.models[0].preparationRemaining);
  const done=cmd(solo,{type:'advance',days:14});expect(done.models[0].status).toBe('ready');expect(cmd(done,{...deploy,bits:4}).models[0].service!.bits).toBe(4);
  const noTech=cmd(cmd(ready(),train),{type:'advance',days:7});expect(()=>cmd(noTech,{...deploy,bits:4})).toThrow();

@@ -6,17 +6,17 @@ import {defaultSpec} from '../packages/content/src/hardware';
 import {importSave,exportSave} from '../packages/save/src/index';
 const commandAny=(s:any,c:any)=>command(s,c);
 function prepared(){
- const s=createGame({id:'repair',name:'検証会社',year:2026,difficulty:'normal',seed:71});
+ const s=createGame({id:'repair',name:'検証会社',difficulty:'normal',seed:71});
  s.research.completed=['pc-compute-1'];
  const r=s.rivals[0];r.researchLevel=1;
  const metrics=evaluateHardware('cpu',defaultSpec('cpu'),['cpu-compute-1']);
  r.products.push({id:'rival-cpu-p1',name:'競合CPU',kind:'cpu',spec:{...defaultSpec('cpu'),generation:1},...metrics,
- price:500,inventory:20,target:100,line:true,launched:true,remaining:0,sold:0,revenue:0,profit:0,releaseDay:0});
+ price:50000,inventory:20,target:100,line:true,launched:true,remaining:0,sold:0,revenue:0,profit:0,releaseDay:0});
  return s;
 }
 const parts={cpu:'rival-cpu-p1',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
 function assembled(){
- let s=commandAny(prepared(),{type:'assemble',kind:'pc',name:'サーバー1',parts,purpose:'server',appearance:'graphite',price:3000});
+ let s=commandAny(prepared(),{type:'assemble',kind:'pc',name:'サーバー1',parts,purpose:'server',appearance:'graphite',price:300000});
  s=commandAny(s,{type:'advance',days:14});
  s=commandAny(s,{type:'launch',id:'p-1'});
  s=commandAny(s,{type:'line',id:'p-1',target:2});
@@ -40,7 +40,7 @@ it('#3 selling variable-cost purchased competitor parts uses realized inventory 
  expect(importSave(exportSave(s))).toEqual(s);
 });
 it('#5 competitor acquisition relinks existing PC BOM to own inventory without duplicate sourcing',()=>{
- let s=assembled();s.company.cash=2000000;s.products[0].target=10;
+ let s=assembled();s.company.cash=200000000;s.products[0].target=10;
  const inputId=s.products[0].spec.cpu;
  const rivalStock=s.rivals[0].products[0].inventory;
  s=commandAny(s,{type:'acquire',id:s.rivals[0].id});
@@ -59,7 +59,7 @@ it('#5 competitor acquisition relinks existing PC BOM to own inventory without d
  expect(importSave(exportSave(s))).toEqual(s);
 });
 it('#6 notifications persist unique IDs across same-day identical events and support read acknowledgements',()=>{
- let s=createGame({id:'notify',name:'通知社',year:2026,difficulty:'normal',seed:1});
+ let s=createGame({id:'notify',name:'通知社',difficulty:'normal',seed:1});
  s=commandAny(s,{type:'research',id:'cpu-compute-1'});
  s=commandAny(s,{type:'advance',days:7});
  const notices=(s as any).notifications;
@@ -76,7 +76,7 @@ it('#6 notifications persist unique IDs across same-day identical events and sup
 it('#3 old version-1 inventory without valuation remains valid and takes default manufactured cost',()=>{
  const s=prepared();
  s.research.completed.push('cpu-compute-1');
- const designed=commandAny(s,{type:'design',kind:'cpu',name:'Legacy CPU',spec:defaultSpec('cpu'),price:400});const cpu=designed.products[0];
+ const designed=commandAny(s,{type:'design',kind:'cpu',name:'Legacy CPU',spec:defaultSpec('cpu'),price:40000});const cpu=designed.products[0];
  cpu.remaining=0;cpu.launched=true;cpu.inventory=3;cpu.line=true;
  const old=importSave(exportSave(designed));
  expect(old.products[0].inventory).toBe(3);
@@ -86,14 +86,14 @@ it('#3 old version-1 inventory without valuation remains valid and takes default
 });
 
 it('#3 assigning own GPU to AI cluster removes the same proportional stock value',()=>{
- let s=createGame({id:'gpu-stock',name:'自社GPU',year:2026,difficulty:'normal',seed:1});
+ let s=createGame({id:'gpu-stock',name:'自社GPU',difficulty:'normal',seed:1});
  s.research.completed=['gpu-compute-1','ai-compute-1'];
- s=commandAny(s,{type:'design',kind:'gpu',name:'G1',spec:defaultSpec('gpu'),price:600});
+ s=commandAny(s,{type:'design',kind:'gpu',name:'G1',spec:defaultSpec('gpu'),price:60000});
  s=commandAny(s,{type:'advance',days:14});s=commandAny(s,{type:'launch',id:'p-1'});s=commandAny(s,{type:'line',id:'p-1',target:4});
  s=commandAny(s,{type:'advance',days:1});
  const before=s.products[0];const previous=(before as any).inventoryValue;
  const after=commandAny(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
  expect(after.products[0].inventory).toBe(before.inventory-1);
  expect((after.products[0] as any).inventoryValue).toBe(previous-before.unitCost);
- expect(after.clusters[0].purchaseCost).toBe(2000+before.unitCost);
+ expect(after.clusters[0].purchaseCost).toBe(200000+before.unitCost);
 });

@@ -1,13 +1,18 @@
 import {test,expect} from '@playwright/test';
 import {createGame,command} from '../packages/sim/src/index';
 import {exportSave} from '../packages/save/src/index';
-import {defaultSpec} from '../packages/content/src/hardware';
-import {startCompany,nav,openDesigner,launchFirst,openProduct,closeDialog,skipDecision} from './ui-helpers';
-import {unlockBranch} from './research-helpers';
+import {nav,openDesigner,launchFirst,openProduct,closeDialog,skipDecision} from './ui-helpers';
+import {researchTo,frontierSpec} from './research-helpers';
+import {evaluateHardware} from '../packages/sim/src/hardware';
+/** Designs the best GPU the research allows (language models need GPUs from around the 2030s). */
+function frontierGPU(s:any,name:string){
+ const spec=frontierSpec('gpu',s.research.completed);
+ return command(s,{type:'design',kind:'gpu',name,spec,price:evaluateHardware('gpu',spec,s.research.completed).unitCost*2} as any);
+}
 test('switching a slimmed MoE design back to Dense refits the model shape',async({page})=>{
- let s:any=createGame({id:'moe',name:'AI社',year:2026,difficulty:'normal',seed:3});
- s.research.completed.push('ai-compute-1','ai-architecture-1','gpu-compute-1');unlockBranch(s,'gpu','capacity',50);
- s=command(s,{type:'design',kind:'gpu',name:'Big',spec:{...defaultSpec('gpu'),vram:80},price:900} as any);
+ let s:any=createGame({id:'moe',name:'AI社',difficulty:'normal',seed:3});
+ s.research.completed.push('ai-compute-1','ai-architecture-1');researchTo(s,'gpu',.6);
+ s=frontierGPU(s,'Big');
  s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
  s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:2,network:.8,cooling:.9});
  await page.setViewportSize({width:844,height:390});await page.goto('/');
@@ -22,9 +27,9 @@ test('switching a slimmed MoE design back to Dense refits the model shape',async
  await expect(page.getByRole('button',{name:'学習を開始'})).toBeEnabled();
 });
 test('a service context length saved outside the slider list is shown as saved',async({page})=>{
- let s:any=createGame({id:'ctx',name:'AI社',year:2026,difficulty:'normal',seed:3});
- s.research.completed.push('ai-compute-1','gpu-compute-1');unlockBranch(s,'gpu','capacity',5);
- s=command(s,{type:'design',kind:'gpu',name:'G',spec:{...defaultSpec('gpu'),vram:32},price:600} as any);
+ let s:any=createGame({id:'ctx',name:'AI社',difficulty:'normal',seed:3});
+ s.research.completed.push('ai-compute-1');researchTo(s,'gpu',.35);
+ s=frontierGPU(s,'G');
  s=command(s,{type:'advance',days:14});s=command(s,{type:'launch',id:'p-1'});s=command(s,{type:'line',id:'p-1',target:50});s=command(s,{type:'advance',days:2});
  s=command(s,{type:'buyCluster',gpuId:'p-1',serverId:'vendor',gpus:1,network:.8,cooling:.9});
  const design={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
@@ -38,20 +43,23 @@ test('a service context length saved outside the slider list is shown as saved',
  await context.focus();await page.keyboard.press('ArrowRight');await expect(context).toHaveAttribute('aria-valuetext','4Kトークン');
 });
 test('AI Lab requires manufactured player GPU before model training and deployment',async({page})=>{
- await page.setViewportSize({width:844,height:390});await startCompany(page);
+ // Year-2000 GPUs are far too small for language models: start from a company whose GPU research reached the 2030s.
+ const s=researchTo(createGame({id:'lab',name:'AI社',difficulty:'normal',seed:3}),'gpu',.35);
+ await page.setViewportSize({width:844,height:390});await page.goto('/');
+ await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});
  await nav(page,'AI Lab');
  await expect(page.getByRole('button',{name:'AI Labを解放'})).toBeVisible();
  await expect(page.getByRole('button',{name:'AIモデルを設計'})).toBeDisabled();
  await nav(page,'研究');
  await page.getByRole('button',{name:'AI 基盤技術 1 を研究'}).click();
  await page.getByRole('button',{name:'30日進める'}).click();await skipDecision(page);
- await page.getByRole('button',{name:'GPU 基盤技術 1 を研究'}).click();
  // Without a manufactured GPU the cluster builder explains what is missing instead of buying.
  await nav(page,'AI Lab');await page.getByRole('button',{name:'クラスタを構築'}).click();
  await expect(page.getByRole('alert')).toContainText('製造中の自社GPUがありません');
  await expect(page.getByRole('button',{name:'クラスタを購入'})).toBeDisabled();
  await openDesigner(page,'GPU');
- await page.getByRole('slider',{name:'VRAM容量'}).focus();await page.keyboard.press('End');
+ for(const name of ['演算ユニット','クロック','VRAM容量','メモリ帯域','冷却性能']){await page.getByRole('slider',{name}).focus();await page.keyboard.press('End');}
+ await page.getByRole('slider',{name:'製造プロセス'}).focus();await page.keyboard.press('Home');
  await page.getByRole('tab',{name:'販売'}).click();await page.getByLabel('製品名').fill('Training GPU');
  await page.getByRole('button',{name:'開発を開始'}).click();
  await page.getByRole('button',{name:'30日進める'}).click();await skipDecision(page);
@@ -61,7 +69,7 @@ test('AI Lab requires manufactured player GPU before model training and deployme
  await page.getByRole('button',{name:'1日進める'}).click(); // first day may be weekly sale; next day restores physical inventory
  await nav(page,'AI Lab');
  await page.getByRole('button',{name:'クラスタを構築'}).click();
- // Early GPUs carry 16GB, so a 1B-parameter model needs two of them.
+ // A second GPU leaves headroom for training memory.
  await page.getByRole('slider',{name:'GPU枚数'}).focus();await page.keyboard.press('ArrowRight');
  await page.getByRole('button',{name:'クラスタを購入'}).click();
  await page.getByRole('button',{name:'AIモデルを設計'}).click();

@@ -21,15 +21,16 @@ it('catalog contains 3000 unique reachable effect-bearing nodes',()=>{
 it('hardware research widens slider ranges instead of multiplying performance; power cost and reliability stay direct',()=>{
  const base=['cpu-compute-1'];const a=evaluateHardware('cpu',defaultSpec('cpu'),base);
  for(const id of ['cpu-compute-2','cpu-compatibility-1','cpu-capacity-1'])expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,id]).performance).toBe(a.performance);
- expect(fieldRange('cpu','clock',base).max).toBe(3.2);expect(fieldRange('cpu','clock',[...base,'cpu-compute-2']).max).toBe(3.4);
+ expect(fieldRange('cpu','clock',base).max).toBe(1);expect(fieldRange('cpu','clock',[...base,'cpu-compute-2']).max).toBe(1.8);
  expect(fieldRange('cpu','ipc',[...base,'cpu-compute-2']).max).toBeGreaterThan(fieldRange('cpu','ipc',base).max);
  expect(fieldRange('cpu','cache',[...base,'cpu-compatibility-1']).max).toBeGreaterThan(fieldRange('cpu','cache',base).max);
- expect(fieldRange('cpu','process',base)).toEqual({min:14,max:28});expect(fieldRange('cpu','process',[...base,'cpu-power-1']).min).toBeLessThan(14);
+ expect(fieldRange('cpu','process',base)).toEqual({min:180,max:350});expect(fieldRange('cpu','process',[...base,'cpu-power-1']).min).toBeLessThan(180);
  expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-power-1']).power).toBeLessThan(a.power);
  expect(evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-cost-1']).unitCost).toBeLessThan(a.unitCost);
  expect((evaluateHardware('cpu',defaultSpec('cpu'),[...base,'cpu-reliability-1']) as any).reliability).toBeGreaterThan((a as any).reliability);
- expect(()=>evaluateHardware('cpu',{...defaultSpec('cpu'),cores:6},base)).toThrow(/コア数/);
- expect(evaluateHardware('cpu',{...defaultSpec('cpu'),cores:6},[...base,'cpu-capacity-1']).performance).toBeGreaterThan(a.performance);
+ const dual={...defaultSpec('cpu'),cores:2,clock:.7,cooling:60};
+ expect(()=>evaluateHardware('cpu',dual,base)).toThrow(/コア数/);
+ expect(evaluateHardware('cpu',dual,[...base,'cpu-capacity-1']).performance).toBeGreaterThan(a.performance);
 });
 it('slider ranges start narrow, grow monotonically with research and reach the absolute bound at the last stage',()=>{
  for(const kind of hardwareKinds)for(const [key,field] of Object.entries(hardwareCatalog[kind].fields)){
@@ -47,6 +48,16 @@ it('slider ranges start narrow, grow monotonically with research and reach the a
   expect(field.lowerIsBetter?previous.min:previous.max).toBe(Number(field.lowerIsBetter?field.min:field.max));
  }
 });
+it('list-valued hardware sliders contain their bounds, default and starting limit, and only unlock listed values',()=>{
+ for(const kind of hardwareKinds)for(const [key,field] of Object.entries(hardwareCatalog[kind].fields)){
+  if(!field.values)continue;
+  for(const v of [field.min,field.max,field.default,field.unlock?.from])expect(field.values,`${kind}.${key} ${v}`).toContain(v);
+  for(let level=0;level<=50;level+=7){
+   const s={research:{completed:[`${kind}-compute-1`]}};if(level)for(const axis of field.unlock!.axes)unlockBranch(s,kind,axis,level);
+   const r=fieldRange(kind,key,s.research.completed);expect(field.values).toContain(field.lowerIsBetter?r.min:r.max);
+  }
+ }
+});
 it('list-valued AI sliders only ever unlock up to a value the player can select',()=>{
  for(const slider of Object.values(aiDesignSliders)){
   if(!('values' in slider))continue;
@@ -62,14 +73,14 @@ it('list-valued AI sliders only ever unlock up to a value the player can select'
  expect(unlockedRange(aiDesignSliders.context,'ai',['ai-compute-1','ai-context-1']).max).toBe(65536);
 });
 it('device research lowers cost and widens case cooling instead of multiplying performance',()=>{
- const s=createGame({id:'content',name:'技術社',year:2026,difficulty:'normal',seed:42});s.research.completed=['pc-compute-1'];
+ const s=createGame({id:'content',name:'技術社',difficulty:'normal',seed:42});s.research.completed=['pc-compute-1'];
  const parts={cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
  const a=evaluateDevice(s,parts,'gaming','pc',undefined,false,150);
- expect(()=>evaluateDevice(s,parts,'gaming','pc',undefined,false,300)).toThrow(/冷却性能は現在の研究では50～250W/);
+ expect(()=>evaluateDevice(s,parts,'gaming','pc',undefined,false,300)).toThrow(/冷却性能は現在の研究では30～200W/);
  s.research.completed.push('pc-cost-1','pc-compute-2');const b=evaluateDevice(s,parts,'gaming','pc',undefined,false,150);
  expect(b.unitCost).toBeLessThan(a.unitCost);expect(b.performance).toBe(a.performance);
  expect(evaluateDevice(s,parts,'gaming','pc',undefined,false,260).power).toBe(a.power);
- expect(()=>evaluateDevice(s,parts,'gaming','pc',undefined,false,80)).toThrow(/冷却性能が不足しています（消費電力 90W \/ 冷却性能 80W）/);
+ expect(()=>evaluateDevice(s,parts,'gaming','pc',undefined,false,50)).toThrow(/冷却性能が不足しています（消費電力 62W \/ 冷却性能 50W）/);
 });
 it('AI data/context/economics/architecture/quantization research has distinct consequences',()=>{
  const d:any={architecture:'dense',total:1e9,active:1e9,layers:24,hidden:2048,attention:'standard',context:4096,tokens:1e9,quality:.8,diversity:.8};
@@ -80,15 +91,15 @@ it('AI data/context/economics/architecture/quantization research has distinct co
  const a=inf(d,c,4,4096,1),b=inf(d,c,4,4096,1,{quantization:.2});expect(b.qualityPenalty).toBeLessThan(a.qualityPenalty);expect(b.tokensPerSecond).toBeGreaterThan(a.tokensPerSecond);
 });
 it('long economy replay and save boundaries stay finite',()=>{
- const s=createGame({id:'long',name:'長期社',year:2026,difficulty:'normal',seed:42});const a=cmd(s,{type:'advance',days:365}),b=cmd(cmd(s,{type:'advance',days:180}),{type:'advance',days:185});expect(a).toEqual(b);expect(a.history).toHaveLength(12);expect(a.company.cash).toBeGreaterThanOrEqual(0);
+ const s=createGame({id:'long',name:'長期社',difficulty:'normal',seed:42});const a=cmd(s,{type:'advance',days:365}),b=cmd(cmd(s,{type:'advance',days:180}),{type:'advance',days:185});expect(a).toEqual(b);expect(a.history).toHaveLength(12);expect(a.company.cash).toBeGreaterThanOrEqual(0);
 });
 it('seeded market events change real modifiers and expire',()=>{
- const s=createGame({id:'events',name:'市況社',year:2026,difficulty:'normal',seed:1});expect((events as any).marketMonthly).toBeTypeOf('function');(events as any).marketMonthly(s);expect((s as any).pendingDecision!==null||(s as any).modifiers.demand!==1||(s as any).modifiers.production!==1).toBe(true);
+ const s=createGame({id:'events',name:'市況社',difficulty:'normal',seed:1});expect((events as any).marketMonthly).toBeTypeOf('function');(events as any).marketMonthly(s);expect((s as any).pendingDecision!==null||(s as any).modifiers.demand!==1||(s as any).modifiers.production!==1).toBe(true);
  const after=cmd(s,{type:'advance',days:31});expect(after.modifiers.expiresDay===0||after.modifiers.expiresDay>after.day).toBe(true);
 });
 it('all OS research branches lower costs, raise reliability or widen the design sliders',()=>{
- const base=createGame({id:'os-tech',name:'OS技術',year:2026,difficulty:'normal',seed:42});base.research.completed=['os-compute-1'];
- const design={type:'developOS',name:'OS',version:1,features:['files'],quality:.8,compatibility:.8,support:.7,price:50};
+ const base=createGame({id:'os-tech',name:'OS技術',difficulty:'normal',seed:42});base.research.completed=['os-compute-1'];
+ const design={type:'developOS',name:'OS',version:1,features:['files'],quality:.8,compatibility:.8,support:.7,price:5000};
  const a=cmd(base,design);
  const withTech=(id:string)=>({...base,research:{completed:[...base.research.completed,id],active:[]}});
  expect(cmd(withTech('os-cost-1'),design).company.cash).toBeGreaterThan(a.company.cash);

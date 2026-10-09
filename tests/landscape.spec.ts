@@ -16,12 +16,16 @@ test('landscape navigation swaps screens and browser Back restores prior screen 
 test('hardware numeric specs use keyboard-accessible bounded sliders and render an interactive preview',async({page})=>{
  await page.setViewportSize({width:844,height:390});await startCompany(page);
  await openDesigner(page,'CPU');
+ // Games start in 2000: one core, up to 1GHz. Without research the sliders stop at the current limit and the locked
+ // headroom (year-2100 technology) is shown next to them.
  const core=page.getByRole('slider',{name:'コア数'});
- // Without research the slider stops at the current limit; the locked headroom is shown next to it.
- await expect(core).toHaveValue('4');await expect(core).toHaveAttribute('max','4');
- await core.focus();await page.keyboard.press('ArrowRight');await expect(core).toHaveValue('4');
- await page.keyboard.press('ArrowLeft');await expect(core).toHaveValue('3');await expect(core).toHaveAttribute('aria-valuetext','3コア');
- await expect(page.locator('.range-field',{has:core}).locator('.research-lock')).toContainText('研究で32コアまで');
+ await expect(core).toHaveAttribute('aria-valuetext','1コア');
+ await expect(page.locator('.range-field',{has:core}).locator('.research-lock')).toContainText('研究で4,096コアまで');
+ const clock=page.getByRole('slider',{name:'クロック'});
+ await expect(clock).toHaveValue('0.8');await expect(clock).toHaveAttribute('max','1');
+ await clock.focus();await page.keyboard.press('End');await page.keyboard.press('ArrowRight');await expect(clock).toHaveValue('1');
+ await page.keyboard.press('ArrowLeft');await expect(clock).toHaveValue('0.9');await expect(clock).toHaveAttribute('aria-valuetext','0.9GHz');
+ await expect(page.getByTestId('tech-year')).toHaveText('技術水準 2000年相当');
  await expect(page.getByRole('img',{name:/CPU/}).first()).toBeVisible();
  await expect(page.getByLabel('評価予測')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

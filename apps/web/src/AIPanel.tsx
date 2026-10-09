@@ -1,6 +1,6 @@
 import {useState,type ReactNode} from 'react';
 import {estimateLLM,estimateInference,benchmarks,clusterCost,type LLMDesign} from '../../../packages/sim/src/ai-math';
-import {aiMarketQuote,aiEffects,aiDesignRange,clusterBusy} from '../../../packages/sim/src/ai';
+import {aiMarketQuote,aiEffects,aiDesignRange,clusterBusy,gpuFlops} from '../../../packages/sim/src/ai';
 import {designSchema} from '../../../packages/sim/src/ai-schema';
 import {researchPointCost} from '../../../packages/sim/src/business';
 import {aiDesignSliders,aiBalance,type AISlider} from '../../../packages/content/src/ai';
@@ -8,7 +8,7 @@ import {techEffect} from '../../../packages/content/src/research';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {PanelPages} from './PanelPages';
 import {ProductIllustration} from './ProductIllustration';
-import {RangeField,formatValue} from './RangeField';
+import {RangeField,formatValue,formatFlops} from './RangeField';
 import {ActionBar,lockFor} from './DevelopScreen';
 import {describeWithResearch} from './research-hints';
 import {Meter,Empty,Chip} from './ui';
@@ -52,7 +52,7 @@ function AIHome({state,send,open}:{state:GameState,send:Send,open:(v:View)=>void
    </div>
    <div>{state.models.length?<div className="grid-list ai-roster">{state.models.map(m=><ModelCard key={m.id} model={m} send={send} configure={()=>open({kind:'deploy',id:m.id})}/>)}</div>:<Empty>まだモデルがありません。「開発」からAIモデルを設計しましょう。</Empty>}</div>
    <div>{state.clusters.length?<div className="grid-list ai-roster">{state.clusters.map(c=>{const user=state.models.find(m=>m.status==='training'&&m.clusterId===c.id)??state.models.find(m=>m.service?.enabled&&m.service.mode!=='open'&&m.service.clusterId===c.id);
-     return <article key={c.id} className="card"><h3>{c.id} · GPU {c.gpus}枚</h3><dl><dt>VRAM合計</dt><dd>{gb(c.vramBytes)}</dd><dt>演算性能</dt><dd>{(c.peakFlops/1e15).toLocaleString('ja-JP',{maximumFractionDigits:2})} PFLOPS</dd><dt>消費電力</dt><dd>{(c.powerWatts/1000).toLocaleString('ja-JP',{maximumFractionDigits:1})}kW</dd><dt>設備投資</dt><dd>{yen(c.purchaseCost)}</dd><dt>使用状況</dt><dd>{user?`${user.name}（${user.status==='training'?'学習':'推論'}）`:'空き'}</dd></dl></article>;})}</div>
+     return <article key={c.id} className="card"><h3>{c.id} · GPU {c.gpus}枚</h3><dl><dt>VRAM合計</dt><dd>{gb(c.vramBytes)}</dd><dt>演算性能</dt><dd>{formatFlops(c.peakFlops)}</dd><dt>消費電力</dt><dd>{(c.powerWatts/1000).toLocaleString('ja-JP',{maximumFractionDigits:1})}kW</dd><dt>設備投資</dt><dd>{yen(c.purchaseCost)}</dd><dt>使用状況</dt><dd>{user?`${user.name}（${user.status==='training'?'学習':'推論'}）`:'空き'}</dd></dl></article>;})}</div>
     :<Empty>クラスタがありません。「開発」から構築しましょう。</Empty>}</div>
   </PanelPages></section>;
 }
@@ -90,14 +90,14 @@ function ClusterDesigner({state,send,back,done}:{state:GameState,send:Send,back:
   <div className="workbench">
    <Stage eyebrow="CLUSTER BUILDER / AI LAB" kind="ai-cluster" title={`クラスタ c-${state.clusters.length+1}`}>
     {own?<div className="preview-metrics"><span>GPU<strong>{gpus}枚</strong></span><span>VRAM合計<strong>{formatValue(Number(own.spec.vram)*gpus,'GB')}</strong></span>
-     <span>演算性能<strong>{(own.performance*aiBalance.ownGpuFlopsPerScore*gpus/1e15).toLocaleString('ja-JP',{maximumFractionDigits:2})} PFLOPS</strong></span>
+     <span>演算性能<strong>{formatFlops(gpuFlops(own.performance)*gpus)}</strong></span>
      <span>消費電力<strong>{((own.power*gpus+(server?.power??0))/1000).toLocaleString('ja-JP',{maximumFractionDigits:2})}kW</strong></span>
      <span>学習効率<strong>{percent(aiBalance.efficiency*effectiveNetwork*cooling)}</strong></span></div>:null}
     {problem?<p role="alert" className="warning">{problem}</p>:<p className="hint">GPUは在庫から移され、クラスタの設備価値になります。クラスタは学習か有料サービスのどちらか一つに使えます。</p>}
    </Stage>
    <section className="card design-controls">
     <PanelPages labels={['構成','効率']}>
-     <div><div className="form-grid"><label>自社GPU（生産中）<select value={own?.id??''} onChange={e=>setGPU(e.target.value)}>{!own&&<option value="">製造中の自社GPUなし</option>}{ownedGPUs.map(p=><option key={p.id} value={p.id}>{p.name} · 在庫 {p.inventory} · VRAM {p.spec.vram}GB</option>)}</select></label>
+     <div><div className="form-grid"><label>自社GPU（生産中）<select value={own?.id??''} onChange={e=>setGPU(e.target.value)}>{!own&&<option value="">製造中の自社GPUなし</option>}{ownedGPUs.map(p=><option key={p.id} value={p.id}>{p.name} · 在庫 {p.inventory} · VRAM {formatValue(Number(p.spec.vram),'GB')}</option>)}</select></label>
       <label>サーバー<select value={serverId} onChange={e=>setServer(e.target.value)}><option value="vendor">購入サーバー（{yen(aiBalance.serverCost)}）</option>{servers.map(p=><option key={p.id} value={p.id}>自社 {p.name} · 在庫 {p.inventory}</option>)}</select></label></div>
       <div className="range-grid"><RangeField label="GPU枚数" unit="枚" description="クラスタに載せる自社GPUの枚数。VRAMと演算性能が比例して増えます。上限は自社GPUの在庫数です。" min={1} max={maxGPUs} step={1} value={gpus} onChange={setGPUs}/></div></div>
      <div className="range-grid"><RangeField label="ネットワーク効率" format={percent} description="GPU間通信の効率。学習と推論の速度に掛かります。自社サーバーの性能が低いと実効値が下がります。" min={.1} max={1} step={.1} value={network} onChange={setNetwork}/>
@@ -208,7 +208,7 @@ function DeployDesigner({state,model:m,send,back,done}:{state:GameState,model:Mo
  const [mode,setMode]=useState<'api'|'subscription'|'open'>(m.service?.mode??'api');
  const quote=aiMarketQuote(state);
  const [apiPrice,setAPIPrice]=useState(m.service?.apiPrice??Math.round(quote.price/10)*10);
- const [subscriptionPrice,setSubscription]=useState(m.service?.subscriptionPrice??500);
+ const [subscriptionPrice,setSubscription]=useState(m.service?.subscriptionPrice??3000);
  const effects=aiEffects(state);
  let inference:ReturnType<typeof estimateInference>|null=null,error='';
  try{if(cluster)inference=estimateInference(m.design,cluster,bits,context,batch,effects);}catch(e){error=e instanceof Error?e.message:String(e);}
@@ -237,7 +237,7 @@ function DeployDesigner({state,model:m,send,back,done}:{state:GameState,model:Mo
        <RangeField label="バッチサイズ" min={1} max={256} step={1} value={batch} onChange={setBatch} description="同時に処理する要求数。増やすと処理量が上がり、KVキャッシュのメモリも増えます。"/></div></div>
      <div className="sales-form"><label>提供形態<select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="api">API従量課金</option><option value="subscription">定額プラン</option><option value="open">公開ウェイト（ブランド効果）</option></select></label>
       {mode==='api'&&<RangeField label="API価格 / 100万トークン" unit="円" min={10} max={10000} step={10} value={apiPrice} onChange={setAPIPrice}/>}
-      {mode==='subscription'&&<RangeField label="月額プラン価格" unit="円" min={10} max={5000} step={10} value={subscriptionPrice} onChange={setSubscription}/>}
+      {mode==='subscription'&&<RangeField label="月額プラン価格" unit="円" min={100} max={20000} step={100} value={subscriptionPrice} onChange={setSubscription}/>}
       <p className="hint">市場API価格の目安は{yen(quote.price)}/100万トークンです。</p></div>
     </PanelPages>
    </section>
