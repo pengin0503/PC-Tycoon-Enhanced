@@ -98,7 +98,7 @@ it('subscription billing prorates user-days and settles earned revenue on stop, 
  expect(switched.models[0].service!.revenue).toBe(Math.round(pending*500/30*(1-aiBalance.fee-aiBalance.refund)));
 
  const debtStopped=cmd(trained,{...deploy,mode:'subscription'});
- debtStopped.day=Math.ceil(debtStopped.day/30)*30;debtStopped.company.debt=1;
+ debtStopped.day=Math.ceil((debtStopped.day+1)/30)*30-1;debtStopped.company.debt=1;
  const stoppedByDebt=cmd(debtStopped,{type:'advance',days:1}).models[0].service!;
  expect(stoppedByDebt.enabled).toBe(false);
  expect(stoppedByDebt.subscriptionUserDays).toBe(0);
