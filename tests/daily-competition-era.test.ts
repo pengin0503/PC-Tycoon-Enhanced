@@ -2,8 +2,6 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {withTestStaff} from './staff-fixture';
 import {defaultSpec} from '../packages/content/src/hardware';
-import {earliestResearchYear} from '../packages/content/src/era';
-import {techById} from '../packages/content/src/research';
 import {marketShare} from '../packages/sim/src/rivals';
 import {importSave,exportSave} from '../packages/save/src/index';
 
@@ -49,16 +47,15 @@ it('company share is a numeric fraction of cumulative units sold',()=>{
  expect(marketShare(s)).toBeCloseTo(.8);
 });
 
-it('calendar release gates prevent premature multi-core and Transformer research',()=>{
- const cpu=techById.get('cpu-capacity-1')!,ai=techById.get('ai-compute-1')!;
- expect(earliestResearchYear(cpu)).toBe(2005);
- expect(earliestResearchYear(ai)).toBe(2017);
+it('research never requires a calendar date, but still requires staff, prerequisites and RP',()=>{
  const s=withTestStaff(start());s.company.researchPoints=100000;
- const unlocked=command(s,{type:'research',id:'cpu-compute-1'});
- expect(()=>command(unlocked,{type:'research',id:'cpu-capacity-1'})).toThrow(/2005/);
- expect(()=>command(unlocked,{type:'research',id:'ai-compute-1'})).toThrow(/2017/);
- const future=structuredClone(unlocked);future.day=5*360;future.year=2005;
- expect(command(future,{type:'research',id:'cpu-capacity-1'}).research.completed).toContain('cpu-capacity-1');
+ const cpu=command(s,{type:'research',id:'cpu-compute-1'});
+ expect(command(cpu,{type:'research',id:'cpu-capacity-1'}).research.completed).toContain('cpu-capacity-1');
+ expect(command(cpu,{type:'research',id:'ai-compute-1'}).research.completed).toContain('ai-compute-1');
+ expect(()=>command(s,{type:'research',id:'cpu-capacity-1'})).toThrow(/前提研究/);
+ expect(()=>command(s,{type:'research',id:'ai-architecture-2'})).toThrow(/前提研究/);
+ const withoutRP=structuredClone(cpu);withoutRP.company.researchPoints=0;
+ expect(()=>command(withoutRP,{type:'research',id:'cpu-capacity-1'})).toThrow(/研究ポイント/);
 });
 
 it('small GPU production lines still make daily retail sales before AI research is unlocked',()=>{
