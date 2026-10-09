@@ -49,6 +49,8 @@ test('AI Lab requires manufactured player GPU before model training and deployme
  // Year-2000 GPUs are far too small for language models: start from a company whose GPU research reached the 2030s.
  const s=researchTo(withTestStaff(createGame({id:'lab',name:'AI社',difficulty:'normal',seed:3})),'gpu',.35);
  s.company.cash=100_000_000_000;s.company.researchPoints=100_000;
+  // The UI must honor the release-year gate for Transformer research.
+  s.day=17*360;s.year=2017;
  await page.setViewportSize({width:844,height:390});await page.goto('/');
  await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});
  await nav(page,'AI Lab');
