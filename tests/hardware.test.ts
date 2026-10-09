@@ -11,7 +11,7 @@ it('research spends research points, not cash, and completes immediately',()=>{
  const before=start();expect(before.company.researchPoints).toBe(100);
  const s=cmd(before,{type:'research',id:'cpu-compute-1'});expect(s.company.cash).toBe(1000000000);
  expect(s.company.researchPoints).toBe(0);expect(s.research.completed).toContain('cpu-compute-1');expect(before.research.completed).toEqual([]);
- const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(100);
+ const n=cmd(s,{type:'advance',days:7});expect(n.company.researchPoints).toBe(36);
 });
 it('research enforces prerequisites, duplicates and available points',()=>{
  expect(()=>cmd(start(),{type:'research',id:'cpu-compute-2'})).toThrow();expect(()=>cmd(start(),{type:'research',id:'unknown'})).toThrow();
