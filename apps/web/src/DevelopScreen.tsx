@@ -117,7 +117,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
      })}</div>
      <VisualPicker state={state} kind={kind} visual={{...visual,tier}} setVisual={setVisual}/>
      <div className="sales-form"><label>製品名<input maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
-      <RangeField label="販売価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>
+      <RangeField label="販売価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>
       <p className="hint">原価の約2倍（{yen(suggested)}）が標準的な価格です。設定範囲：{yen(range.min)}～{yen(range.max)}</p></div>
     </PanelPages>
    </section>
@@ -176,7 +176,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
       min={coolingRange.min} max={coolingRange.max} step={coolingField.step} value={cooling} onChange={setCooling} researchLimit={lockFor(coolingField,coolingRange,kind)}/></div>
      <VisualPicker state={state} kind={kind} visual={{...visual,tier}} setVisual={setVisual}/>
      <div className="sales-form"><label>製品名<input maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
-      {estimate&&<RangeField label="販売価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}
+      {estimate&&<RangeField label="販売価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}
       <p className="hint">競合部品は製造時に在庫を購入します。電源を指定すると品質が上がり、出力不足は組立できません。</p></div>
     </PanelPages>
    </section>
@@ -225,7 +225,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
      <div className="design-picker"><h3>ロック画面</h3><div className="wallpaper-row" role="group" aria-label="ロック画面">{lockScreens.map(w=><button key={w} type="button" className={`wallpaper ${w}`} aria-pressed={lockScreen===w} onClick={()=>setLock(w)}><span>{lockScreenLabels[w]}</span></button>)}</div>
       <h3>テーマカラー</h3><div className="swatch-row" role="group" aria-label="テーマカラー">{osThemes.map(t=><button key={t} type="button" className={`swatch theme-${t}`} aria-pressed={theme===t} onClick={()=>setTheme(t)}>{t}</button>)}</div></div>
      <div className="sales-form"><div className="form-grid"><label>OS名<input value={name} maxLength={80} onChange={e=>setName(e.target.value)}/></label><label>バージョン<input type="number" min={1} max={100} value={version} onChange={e=>setVersion(Number(e.target.value))}/></label></div>
-      {result&&<RangeField label="ライセンス価格" min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}</div>
+      {result&&<RangeField label="ライセンス価格" exactInput min={range.min} max={range.max} step={1} value={currentPrice} onChange={setPrice} unit="円"/>}</div>
     </PanelPages>
    </section>
   </div>
