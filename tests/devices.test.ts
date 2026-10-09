@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 const cmd=(s:any,c:any)=>command(s,c);const parts={cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
 function ready(kind='pc'){let s=createGame({id:'dev',name:'端末社',difficulty:'normal',seed:42});return cmd(cmd(s,{type:'research',id:`${kind}-compute-1`}),{type:'advance',days:7});}
 const assembly=(kind='pc',purpose='gaming',selected=parts)=>({type:'assemble',kind,name:'Polar Station',parts:selected,purpose,appearance:'graphite',price:300000});

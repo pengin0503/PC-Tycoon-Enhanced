@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),true);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 import {importSave,exportSave} from '../packages/save/src/index';
 import * as math from '../packages/sim/src/ai-math';
 import {aiHardwareBoost} from '../packages/sim/src/ai';

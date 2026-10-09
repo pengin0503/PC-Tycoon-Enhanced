@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 import {defaultSpec} from '../packages/content/src/hardware';
 import {unlockBranch} from './research-helpers';
 import {exportSave,importSave} from '../packages/save/src/index';

@@ -1,5 +1,7 @@
+import {withTestStaff} from './staff-fixture';
+const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
-import {createGame,command} from '../packages/sim/src/index';
+import {createGame as baseGame,command} from '../packages/sim/src/index';
 import {unlockBranch} from './research-helpers';
 const start=()=>createGame({id:'hw',name:'研究社',difficulty:'normal',seed:42});
 const cmd=(s:any,c:any)=>command(s,c);
