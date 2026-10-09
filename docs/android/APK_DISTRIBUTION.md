@@ -11,26 +11,34 @@ PC Tycoon Enhanced is distributed as a self-contained **Android game APK**, not 
 
 Pushing a trusted, stable Git tag matching root `package.json` (e.g. `v0.1.0` for `"version": "0.1.0"`) automatically runs `.github/workflows/android-release.yml`. It tests the game, builds a **signed release APK**, verifies the signature, packaged assets, Android `versionName`/`versionCode`, and publishes a GitHub Release. The Release contains **PC-Tycoon-Enhanced-v0.1.0.apk**, downloadable directly without unzipping, and **PC-Tycoon-Enhanced-v0.1.0.apk.sha256**. The release page contains generated change notes. The repository is private: users must have repository access to download.
 
-### One-time owner setup — persistent Android signing identity
+### One-time owner setup — Windows and a permanently reusable signing key
 
-1. On a trusted local machine with JDK installed, create a unique dedicated release keystore. Example:
-   ```sh
-   keytool -genkeypair -v -keystore pc-tycoon-release.jks -storetype PKCS12 -alias pc-tycoon -keyalg RSA -keysize 3072 -validity 10000
-   ```
-   Keep this keystore and its passwords in an encrypted backup **outside the repository and GitHub**. Losing them prevents seamless upgrades from APKs signed by this key. Do not upload them to issues, chats or source control.
-2. Go to repository **Settings → Secrets and variables → Actions → New repository secret**. Set these exact four secrets:
-   - `PCT_ANDROID_KEYSTORE_BASE64`: base64 representation of the entire .jks file, without newlines.
-   - `PCT_ANDROID_KEYSTORE_PASSWORD`: keystore password.
-   - `PCT_ANDROID_KEY_ALIAS`: `pc-tycoon` (or the alias actually used).
-   - `PCT_ANDROID_KEY_PASSWORD`: key password (for PKCS12 commonly the store password).
-3. On Windows, create the base64 value locally in PowerShell:
-   ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\secure\pc-tycoon-release.jks')) | Set-Clipboard
-   ```
-   Paste only into the corresponding **GitHub Secret** field. Never paste it into a chat or a workflow run input. No secret is required to be stored in plaintext in the repository.
-4. Restrict who may create `v*` tags using repository rulesets where available. Only the owner/trusted maintainers should issue releases.
+For private, personal use, the simplest approach is to register the same release key **once**, then publish future APK updates with new version tags. Android still requires APK signing even for private distribution. Never post a keystore or password in a chat or commit it to Git.
 
-The signing workflow checks for all four secrets **before** decoding/building. Missing secrets fail the job and produce **no** GitHub Release. The keystore exists only under the isolated GitHub runner's temporary directory and is deleted in an always-run cleanup step. A GitHub-managed release token with `contents:write` is used only in the release job.
+**Prerequisites:** Install JDK 21 (`keytool` on PATH) and GitHub CLI (`gh`), and open PowerShell in a fresh local clone of this repository. Authenticate once with `gh auth login` (choose GitHub.com and a browser login with repository administration access). You do not need Play Store enrollment.
+
+From the repository root, run this one-time command in Windows PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\setup-android-signing.ps1
+```
+
+The script:
+
+1. Checks GitHub CLI access, required permissions, and existing signing secrets. It refuses to overwrite any signing secrets by default.
+2. Creates `pc-tycoon-release.jks` under your Windows **Documents/PC-Tycoon-Enhanced-Signing** folder if it doesn't exist, or reuses the same file on subsequent runs. It refuses to generate a different key if Releases already exist.
+3. Prompts for the keystore password privately and verifies that the alias and password actually open the keystore.
+4. Requires confirmation that **an independent backup of the .jks and password** has been made before configuring secrets. Losing this key prevents future in-place upgrades.
+5. Registers the following four Actions Secrets using GitHub CLI's encrypted repository secret API and private process stdin; it never puts a secret value into the command line, terminal output, clipboard, repository, or a temp credentials file:
+
+   - `PCT_ANDROID_KEYSTORE_BASE64`
+   - `PCT_ANDROID_KEYSTORE_PASSWORD`
+   - `PCT_ANDROID_KEY_ALIAS`
+   - `PCT_ANDROID_KEY_PASSWORD`
+
+The release workflow retains no private keystore after the isolated runner finishes. Do not rerun setup with a newly generated keystore once you have shipped a release. If the first setup partially fails, **reuse the original keystore** and rerun with `-AllowReplace`; do not regenerate it. You can instead configure the four repository secrets manually under [Settings → Secrets and variables → Actions](https://github.com/pengin0503/PC-Tycoon-Enhanced/settings/secrets/actions).
+
+**Stop point:** The assistant's GitHub connector cannot administer Actions Secrets and cannot access your local signing keystore, so the one-time script must be executed on your trusted PC. No publish/tag operation should occur until the four secrets are confirmed.
 
 ### Publish a new version
 
