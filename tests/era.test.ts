@@ -1,3 +1,4 @@
+import {withTestStaff} from './staff-fixture';
 import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
@@ -38,7 +39,7 @@ it('market expectations rise with the calendar so products age',()=>{
  expect(marketReference('os',eraBalance.daysPerYear*30)).toBe(productCatalog.os.reference);
  expect(typicalSpec('cpu',0)).toMatchObject({cores:1,process:180});
  // A launched CPU sells less once the market has moved on by a decade.
- let s=command(command(start(),{type:'research',id:'cpu-compute-1'}),{type:'advance',days:7});
+ let s=command(command(withTestStaff(start()),{type:'research',id:'cpu-compute-1'}),{type:'advance',days:7});
  s=command(s,{type:'design',kind:'cpu',name:'C',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
  s=command(command(s,{type:'advance',days:14}),{type:'launch',id:'p-1'});s.products[0].inventory=10000;s.company.cash=1e10;
  const sold=(day:number)=>{const t=structuredClone(s);t.day=day;t.rivals=[];return command(t,{type:'advance',days:7}).products[0].sold-s.products[0].sold;};

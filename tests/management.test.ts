@@ -1,3 +1,4 @@
+import {withTestStaff} from './staff-fixture';
 import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {companyValue} from '../packages/sim/src/management';
@@ -40,14 +41,14 @@ it('repairs missing or stale staff sequence numbers after layoffs for both hirin
  candidateLegacy.staff[0]!.id='e-9';
  candidateLegacy.staff[1]!.id='e-2';
  candidateLegacy.staffSeq=1;
- candidateLegacy.candidates=[{id:'k-1',role:'ai',skill:55}];
+ candidateLegacy.candidates=[{id:'k-1',role:'marketing',skill:55}];
  const candidateLaidOff=cmd(candidateLegacy,{type:'fire',id:'e-9'});
  const candidateHired=cmd(candidateLaidOff,{type:'hireCandidate',id:'k-1'});
  expect(candidateHired.staff.map((e:any)=>e.id)).toEqual(['e-2','e-10']);
  expect(candidateHired.staffSeq).toBe(10);
 });
 it('values stock at its recorded moving-average cost rather than the design estimate',()=>{
- const ready=start();ready.research.completed.push('cpu-compute-1');
+ const ready=withTestStaff(start());ready.research.completed.push('cpu-compute-1');
  const designed=cmd(ready,{type:'design',kind:'cpu',name:'Inventory CPU',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
  const empty=structuredClone(designed);const stocked=structuredClone(designed);
  stocked.products[0].inventory=3;(stocked.products[0] as any).inventoryValue=2100;
