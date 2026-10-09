@@ -25,5 +25,5 @@ it('modern vendor motherboard and RAM remain generationally compatible (#24)',()
  const cpu=findPart(s,ids.cpu),board=findPart(s,ids.motherboard),ram=findPart(s,ids.ram);
  expect(cpu?.spec.socket).toBe(board?.spec.socket);
  expect(ram?.spec.memoryGen).toBe(board?.spec.memoryGen);
- expect(()=>evaluateDevice(s,ids,'office','pc',undefined,false,2000)).not.toThrow();
+ expect(()=>evaluateDevice(s,ids,'office','pc',undefined,false,2000,true)).not.toThrow();
 });
