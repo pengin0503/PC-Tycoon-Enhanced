@@ -23,3 +23,12 @@ test('portrait notifications do not cover two-row HUD controls (#27)',async({pag
  });
  expect(position.toastTop).toBeGreaterThanOrEqual(position.hudBottom);
 });
+
+test('market share filter reports no data instead of falsely showing zero percent (#31)',async({page})=>{
+ await startCompany(page);await nav(page,'企業');
+ await expect(page.getByTestId('player-market-share')).toHaveText('データなし');
+ await page.getByRole('combobox',{name:'シェア集計期間'}).selectOption('30');
+ await page.getByRole('combobox',{name:'シェア製品カテゴリ'}).selectOption('cpu');
+ await expect(page.getByText(/世界市場のシェアではありません/)).toBeVisible();
+ await expect(page.locator('.rival-grid .share').first()).toContainText('データなし');
+});
