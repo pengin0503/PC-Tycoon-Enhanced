@@ -7,7 +7,8 @@ test('design selling price has precise numeric keyboard entry on narrow screens 
  await page.getByRole('tab',{name:'販売'}).click();
  const price=page.getByRole('spinbutton',{name:'販売価格を直接入力'});
  await expect(price).toBeVisible();
- await price.fill('45001');
+ await price.fill('');await price.pressSequentially('45001');
+ await expect(price).toHaveValue('45001');
  await expect(page.getByRole('slider',{name:'販売価格'})).toHaveAttribute('aria-valuetext',/45,001円/);
 });
 test('portrait notifications do not cover two-row HUD controls (#27)',async({page})=>{
