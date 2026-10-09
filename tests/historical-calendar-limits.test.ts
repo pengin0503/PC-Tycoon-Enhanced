@@ -2,15 +2,25 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {fieldRange,fieldOptions,defaultSpec} from '../packages/content/src/hardware';
 import {withTestStaff} from './staff-fixture';
-it('historical consumer hardware ceilings apply to new designs but preserve old saved products (#33)',()=>{
- const completed=Array.from({length:10},(_,i)=>`cpu-capacity-${i+1}`).concat(['cpu-compute-1','cpu-compute-2']);
- expect(fieldRange('cpu','cores',completed,2000).max).toBe(1);
- expect(fieldRange('cpu','cores',completed,2005).max).toBe(2);
- expect(fieldRange('cpu','cores',completed,2008).max).toBeGreaterThanOrEqual(2);
- expect(fieldRange('cpu','clock',completed,2000).max).toBeLessThanOrEqual(1.5);
- const early=withTestStaff(createGame({id:'cap',name:'年代',difficulty:'normal',seed:7}));
- early.research.completed=[...completed,...Array.from({length:10},(_,i)=>`cpu-compute-${i+3}`)];
- expect(()=>command(early,{type:'design',kind:'cpu',name:'Impossible',spec:{...defaultSpec('cpu'),cores:2},price:50000})).toThrow(/現在の研究|年代/);
- expect(fieldRange('gpu','vram',['gpu-compute-1','gpu-capacity-1'],2000).max).toBeLessThanOrEqual(.064);
- expect(fieldOptions('ram','memoryGen',['ram-compute-1','ram-compatibility-1'],2000)).not.toContain('DDR5');
+import {importSave,exportSave} from '../packages/save/src/index';
+
+it('player hardware capability follows research, not a mandatory historical year (#33)',()=>{
+ const untouched=['cpu-compute-1'];
+ expect(fieldRange('cpu','cores',untouched).max).toBe(1);
+ const progressed=[...untouched,'cpu-capacity-1','cpu-capacity-2','cpu-capacity-3'];
+ expect(fieldRange('cpu','cores',progressed).max).toBeGreaterThan(1);
+ const year2000=withTestStaff(createGame({id:'cap',name:'研究社',difficulty:'normal',seed:7}));
+ year2000.company.cash=10_000_000_000;
+ year2000.research.completed=progressed;
+ const spec={...defaultSpec('cpu'),cores:2,cooling:80};
+ const designed=command(year2000,{type:'design',kind:'cpu',name:'Advanced',spec,price:50000});
+ expect(designed.products[0].spec.cores).toBe(2);
+ expect(designed.year).toBe(2000);
+ expect(importSave(exportSave(designed)).products[0].spec.cores).toBe(2);
+});
+it('DDR generation depends on compatibility research rather than world calendar',()=>{
+ const advanced=Array.from({length:50},(_,i)=>`ram-compatibility-${i+1}`).concat('ram-compute-1');
+ expect(fieldOptions('ram','memoryGen',['ram-compute-1'])).not.toContain('DDR5');
+ expect(fieldOptions('ram','memoryGen',advanced)).toContain('DDR5');
+ expect(fieldRange('gpu','vram',['gpu-compute-1']).max).toBeLessThan(fieldRange('gpu','vram',['gpu-compute-1','gpu-capacity-1']).max);
 });
