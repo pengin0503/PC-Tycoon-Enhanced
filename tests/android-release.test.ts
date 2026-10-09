@@ -29,7 +29,7 @@ it('tag pushes publish verified signed APK files directly to GitHub Releases',()
  expect(workflow).toContain('gh release create');
  expect(workflow).toContain('--verify-tag');
  expect(workflow).toContain('PC-Tycoon-Enhanced-');
- expect(workflow).toContain('.apk.sha256');
+ expect(workflow).toContain('"$BASENAME.sha256"');
  expect(workflow).toContain('secrets.PCT_ANDROID_KEYSTORE_BASE64');
  expect(workflow).toMatch(/gh release create[\s\S]*?--verify-tag/);
  expect(gradle).toContain('PCT_VERSION_NAME');
