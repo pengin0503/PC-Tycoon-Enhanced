@@ -1,5 +1,5 @@
 import {offices,hrBalance,staffTraitLabels,staffTraitDescriptions,managementBalance} from '../../../packages/content/src/management';
-import {salaryFor} from '../../../packages/sim/src/business';
+import {salaryFor,aiStaffUnlocked} from '../../../packages/sim/src/business';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {PanelPages} from './PanelPages';
 import {Meter,Chip,Empty} from './ui';
@@ -14,10 +14,14 @@ function Person({role,skill,trait}:{role:keyof typeof roleLabels,skill:number,tr
 export function StaffScreen({state,send}:{state:GameState,send:(c:GameCommand)=>void}){
  const capacity=offices[state.officeLevel-1].staffCapacity,full=state.staff.length>=capacity;
  const payroll=state.staff.reduce((n,e)=>n+e.salary,0);
+ const aiReady=aiStaffUnlocked(state),roles=(['research','engineering','marketing',...(aiReady?['ai']:[])] as (keyof typeof roleLabels)[]);
  return <section className="screen staff-screen">
   <header className="screen-title"><h2>人事 <small>社員 <span data-testid="staff-count">{state.staff.length}</span> / {capacity}名 · 給与 {yen(payroll)}/月</small></h2></header>
   <PanelPages labels={['候補者','社員','人材探し']}>
-   <div>{full&&<p className="warning">オフィスの社員枠が上限です。アップグレードで枠を増やせます。</p>}
+   <div><div className="card staff-quick-hire"><h3>担当別に直接採用</h3><p>各作業には対応する社員が最低1名必要です。能力50の社員を直接採用できます。</p><div className="button-row">
+    {roles.map(role=><button key={role} disabled={full||state.company.cash<50*managementBalance.recruitPerSkill} onClick={()=>send({type:'hire',role,skill:50})}>{roleLabels[role]}担当を採用（{yen(50*managementBalance.recruitPerSkill)}）</button>)}
+    </div>{!aiReady&&<p className="hint">AI担当は「AI Transformer 基盤技術」を研究すると採用可能になります。</p>}</div>
+    {full&&<p className="warning">オフィスの社員枠が上限です。アップグレードで枠を増やせます。</p>}
     {state.candidates.length?<div className="people-grid">{state.candidates.map(k=><article key={k.id} className="person-card"><Person role={k.role} skill={k.skill} trait={k.trait}/>
      <dl><dt>採用費</dt><dd>{yen(k.skill*managementBalance.recruitPerSkill)}</dd><dt>給与</dt><dd>{yen(salaryFor(k.skill,k.trait))}/月</dd></dl>
      <button className="primary" disabled={full||state.company.cash<k.skill*managementBalance.recruitPerSkill} onClick={()=>send({type:'hireCandidate',id:k.id})}>採用する</button></article>)}</div>
@@ -25,7 +29,7 @@ export function StaffScreen({state,send}:{state:GameState,send:(c:GameCommand)=>
    <div>{state.staff.length?<div className="people-grid">{state.staff.map(e=><article key={e.id} className="person-card"><Person role={e.role} skill={e.skill} trait={e.trait}/>
     <dl><dt>給与</dt><dd>{yen(e.salary)}/月</dd><dt>退職金</dt><dd>{yen(e.salary*hrBalance.severanceMonths)}</dd></dl>
     <div className="button-row"><button disabled={e.skill>=100} onClick={()=>send({type:'train',id:e.id})}>育成する（{yen(managementBalance.trainingCost)}）</button><button className="danger" onClick={()=>send({type:'fire',id:e.id})}>解雇</button></div></article>)}</div>
-    :<Empty>社員はまだいません。創業者が一人で研究と開発を進めています。</Empty>}</div>
+    :<Empty>社員はまだいません。研究・開発を始めるには担当者の採用が必要です。</Empty>}</div>
    <div className="search-grid">{(['standard','premium'] as const).map(tier=>{const cfg=hrBalance.searches[tier];return <article key={tier} className="card">
     <h3>{tier==='standard'?'人材紹介会社':'ヘッドハンティング'}</h3><p>能力 {cfg.minSkill}～{Math.min(100,cfg.minSkill+cfg.skillRange)} の候補者 {hrBalance.candidateCount}名。特殊スキル保有率 {Math.round(cfg.traitChance*100)}%。現在の候補者は入れ替わります。</p>
     <button className="primary" disabled={state.company.cash<cfg.cost} onClick={()=>send({type:'searchCandidates',tier})}>{yen(cfg.cost)}で探す</button></article>;})}</div>
