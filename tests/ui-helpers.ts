@@ -12,8 +12,15 @@ export async function prepareTeam(page:Page){
 /** Drives the same pause/play clock a player uses; retired +1/+30 controls are not reintroduced. */
 export async function advanceDays(page:Page,days:number){
  if(!clocks.has(page)){try{await page.clock.install();}catch{/* Test may already have installed the clock. */}clocks.add(page);}
+ const start=Number(await page.getByTestId('day').textContent()??'0');
  await page.getByRole('button',{name:'1x',exact:true}).click();
  await page.clock.runFor(1000*days);
+ // React's interval effect may start a fraction after the first simulated tick.
+ for(let i=0;i<3;i++){
+  if(Number(await page.getByTestId('day').textContent())>=start+days)break;
+  if(await page.getByRole('dialog').count())break;
+  await page.clock.runFor(1000);
+ }
  await page.getByRole('button',{name:'一時停止'}).click();
 }
 export async function nav(page:Page,name:string){await page.getByRole('navigation',{name:'ゲームメニュー'}).getByRole('button',{name,exact:true}).click();}

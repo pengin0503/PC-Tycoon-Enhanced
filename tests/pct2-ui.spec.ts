@@ -1,16 +1,17 @@
 import {test,expect,type Page} from '@playwright/test';
 import {createGame,command,type GameState} from '../packages/sim/src/index';
 import {exportSave} from '../packages/save/src/index';
-import {startCompany,nav,openDesigner} from './ui-helpers';
+import {startCompany,nav,openDesigner,advanceDays} from './ui-helpers';
+import {withTestStaff} from './staff-fixture';
 const cmd=(s:GameState,c:any)=>command(s,c);
 async function load(page:Page,s:GameState){await page.goto('/');await page.getByLabel('JSON読み込み').setInputFiles({name:'s.json',mimeType:'application/json',buffer:Buffer.from(exportSave(s))});}
 function withOS(){
- let s=createGame({id:'ui-os',name:'OS社',difficulty:'normal',seed:9});s.research.completed.push('os-compute-1');
+ let s=withTestStaff(createGame({id:'ui-os',name:'OS社',difficulty:'normal',seed:9}));s.research.completed.push('os-compute-1');
  s=cmd(s,{type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000});
  s=cmd(s,{type:'advance',days:21});return cmd(s,{type:'launch',id:'p-1'});
 }
 function withCPU(){
- let s=createGame({id:'ui-cpu',name:'部品社',difficulty:'normal',seed:9});s.research.completed.push('cpu-compute-1');
+ let s=withTestStaff(createGame({id:'ui-cpu',name:'部品社',difficulty:'normal',seed:9}));s.research.completed.push('cpu-compute-1');
  s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:50});return cmd(s,{type:'advance',days:2});
 }
@@ -49,7 +50,7 @@ test('acquisition negotiation shows odds and completes at full valuation',async(
 
 test('hard-mode bankruptcy shows the game over screen and allows a new game',async({page})=>{
  const s=createGame({id:'ui-over',name:'倒産社',difficulty:'hard',seed:3});s.company.cash=10;
- await load(page,s);await page.getByRole('button',{name:'30日進める'}).click();
+ await load(page,s);await advanceDays(page,30);
  const dialog=page.getByRole('dialog',{name:'ゲームオーバー'});await expect(dialog).toBeVisible();
  await dialog.getByRole('button',{name:'新しいゲーム'}).click();await expect(page.getByRole('button',{name:'会社を設立'})).toBeVisible();
 });

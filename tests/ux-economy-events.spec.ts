@@ -16,7 +16,8 @@ test('UI size persists from 50 to 150 percent with accessible icon-led clock',as
  await expect(page.getByText('150%',{exact:true})).toBeVisible();
  await page.reload();
  await expect(page.getByRole('slider',{name:'UIサイズ'})).toHaveValue('150');
- await expect(page.getByRole('button',{name:'1日進める'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'1x',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'30日進める'})).toHaveCount(0);
 });
 test('research inner grid accepts wheel and touch-compatible scrolling in low landscape heights',async({page})=>{
  await page.setViewportSize({width:844,height:390});await page.goto('/');
