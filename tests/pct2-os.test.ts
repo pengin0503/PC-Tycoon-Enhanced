@@ -25,6 +25,7 @@ it('extra OS features need their research, raise appeal and requirements, and ad
 
 function withOS(){let s=cmd(unlock(start(),'os-compute-1'),os);s=cmd(s,{type:'advance',days:21});return cmd(s,{type:'launch',id:'p-1'});}
 
+// Simulates up to two years day by day (~3.3s locally, same on main); CI runners can exceed vitest's 5s default.
 it('hacker attacks arrive for launched OSes, pause interactive time and damage by unblocked share',()=>{
  let s=withOS();let found:GameState|undefined;
  for(let i=0;i<720&&!found;i++){s=cmd(s,{type:'advance',days:1});if(s.pendingAttack)found=s;}
@@ -39,7 +40,7 @@ it('hacker attacks arrive for launched OSes, pause interactive time and damage b
  expect(()=>cmd(a,{type:'defendAttack',blocked:99})).toThrow();expect(()=>cmd(perfect,{type:'defendAttack',blocked:1})).toThrow();
  const ignored=cmd(a,{type:'advance',days:8});expect(ignored.pendingAttack).toBeNull();expect(ignored.company.reputation).toBeLessThan(a.company.reputation);
  expect(cmd(none,{type:'advance',days:31}).osIncident).toBeNull();
-});
+},20000);
 
 it('security feature and support quality reduce attack damage',()=>{
  const plain={spec:{features:'files',support:0}} as any,secure={spec:{features:'files,security',support:0}} as any,supported={spec:{features:'files',support:1}} as any;
