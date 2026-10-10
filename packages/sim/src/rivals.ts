@@ -59,6 +59,8 @@ export function rivalWeekly(s:GameState){
    p.remaining=Math.max(0,p.remaining-b.work*r.efficiency);
    if(wasDeveloping&&p.remaining===0)logEvent(s,'rivalLaunch',`${r.name}: ${p.name}`);
   }
+  // A released model replaces the oldest one on sale; models still in development do not count yet.
+  retireRivalModels(s,r);
  }
 }
 export function rivalMonthly(s:GameState){
@@ -71,18 +73,17 @@ export function rivalMonthly(s:GameState){
    const share=rivalShare(r.researchLevel);
    const spec=typicalSpec(r.focus,share);const metrics=evaluateHardware(r.focus,spec,researchAtShare(r.focus,share),{stored:true});metrics.performance=Math.round(metrics.performance*r.efficiency);
    r.products.push({id:`${r.id}-p-${r.products.length+1}`,name:`${r.name} ${r.researchLevel}`,kind:r.focus,spec:{...spec,generation:r.researchLevel},...metrics,remaining:b.developmentWork,price:metrics.unitCost*b.priceCostMultiple,inventory:0,target:b.inventoryTarget,line:true,launched:true,sold:0,revenue:0,profit:0,releaseDay:s.day});
-   retireRivalModels(s,r);
   }
   for(const p of r.products.filter(p=>p.discontinuedDay===undefined)){const alternatives=s.products.filter(v=>v.kind===p.kind&&onSale(v));const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*b.priceUndercut:p.unitCost*b.priceCostMultiple;p.price=Math.max(Math.ceil(p.unitCost*b.minimumPriceCostMultiple),Math.round(price));}
  }
 }
 /**
- * Keeps a rival's line-up to its newest `rivalBalance.activeModels` models: older models stop production and their
- * stock is cleared at `hardwareBalance.clearanceShare` of the price, like a player's discontinued product. A notice
+ * Keeps a rival's line-up to its newest `rivalBalance.activeModels` released models: older models stop production and
+ * their stock is cleared at `hardwareBalance.clearanceShare` of the price, like a player's discontinued product. A notice
  * names the player's PCs/laptops that used a retired part, since they can no longer buy it.
  */
 export function retireRivalModels(s:GameState,r:Rival){
- const active=r.products.filter(p=>p.discontinuedDay===undefined);
+ const active=r.products.filter(rivalOnSale);
  for(const p of active.slice(0,Math.max(0,active.length-b.activeModels))){
   if(p.inventory>0){
    const price=Math.max(1,Math.round(p.price*hardwareBalance.clearanceShare)),units=p.inventory;
@@ -90,8 +91,18 @@ export function retireRivalModels(s:GameState,r:Rival){
   }
   p.line=false;p.target=0;p.discontinuedDay=s.day;
   const users=s.products.filter(d=>(d.kind==='pc'||d.kind==='laptop')&&d.discontinuedDay===undefined&&deviceSlots.some(k=>d.spec[k]===p.id));
-  if(users.length)logEvent(s,'rivalDiscontinued',`${r.name} ${p.name}（使用中: ${users.map(d=>d.name).join('、')}）`);
+  if(users.length)logEvent(s,'rivalDiscontinued',retirementNotice(`${r.name} ${p.name}`,users.map(d=>d.name)));
  }
+}
+/** Notice text for a retired rival part, kept within the 200 characters events and notifications allow. */
+export function retirementNotice(part:string,users:string[]){
+ const limit=200;
+ for(let shown=users.length;shown>=1;shown--){
+  const rest=users.length-shown,text=`${part}（使用中: ${users.slice(0,shown).join('、')}${rest?` ほか${rest}件`:''}）`;
+  if(text.length<=limit)return text;
+ }
+ const text=`${part}（使用中: ${users.length}件）`;
+ return text.length<=limit?text:text.slice(0,limit-1)+'…';
 }
 /** Fans of a rival brand (saves converted before rival fans existed derive them from sales). */
 export function rivalFans(r:Rival){return r.fans??rivalFanBalance.initial+r.products.reduce((n,p)=>n+p.sold,0)*rivalFanBalance.perUnit;}

@@ -69,14 +69,14 @@ Seed 47 (the other seeds differ by less than 0.3% in every column):
 
 | Policy | Game year | CPU tech-equivalent year | Cash | Lifetime units | Rival max level |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Five-person | 2050 | 2048.0 | ¥118B | 2,491,789 | 25 |
-| Five-person | 2100 | 2067.3 | ¥203B | 3,617,850 | 50 |
-| Five-person | 2150 | 2081.8 | ¥216B | 3,711,980 | 75 |
-| Five-person | 2200 | 2093.6 | ¥219B | 3,756,659 | 99 |
-| Growing | 2050 | 2129.6 | ¥123B | 2,550,791 | 25 |
-| Growing | 2100 | 2200 (all CPU research done) | ¥332B | 5,203,048 | 50 |
-| Growing | 2150 | 2200 | ¥690B | 7,903,048 | 75 |
-| Growing | 2200 | 2200 | ¥1.32T | 10,573,289 | 99 |
+| Five-person | 2050 | 2048.0 | ¥118B | 2,491,541 | 25 |
+| Five-person | 2100 | 2067.3 | ¥203B | 3,617,602 | 50 |
+| Five-person | 2150 | 2081.8 | ¥216B | 3,711,732 | 75 |
+| Five-person | 2200 | 2093.6 | ¥219B | 3,756,411 | 99 |
+| Growing | 2050 | 2129.6 | ¥123B | 2,550,541 | 25 |
+| Growing | 2100 | 2200 (all CPU research done) | ¥332B | 5,202,862 | 50 |
+| Growing | 2150 | 2200 | ¥690B | 7,902,862 | 75 |
+| Growing | 2200 | 2200 | ¥1.32T | 10,573,103 | 99 |
 
 - Both policies stay solvent for 200 years with no debt, and every refresh design is accepted (no socket, cooling or price rejection).
 - A five-person company keeps pace until about 2050, then falls behind the calendar market (−33 years in 2100, −106 years in 2200) and its sales fade to under 2,000 units a year after 2100 (about 900 a year after 2150). The research cost curve outgrows a fixed RP income; the player has to grow the research team to stay current. This matches the design intent but is now measured.

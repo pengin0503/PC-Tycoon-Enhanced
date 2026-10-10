@@ -63,7 +63,8 @@ export function migrateResearchIds(raw:Record<string,unknown>):Record<string,unk
 export function migrateEconomy(input:GameState):GameState{
  const legacyRivalRoster=input.rivals.length===3&&input.rivals.every((r,i)=>r.id===`r-${i+1}`);
  const needsEconomyMigration=input.economyVersion!==balance.economyVersion;
- if(!needsEconomyMigration&&!legacyRivalRoster)return input;
+ const missingLastSale=input.products.some(unrecordedSale);
+ if(!needsEconomyMigration&&!legacyRivalRoster&&!missingLastSale)return input;
  const s=structuredClone(input);
  const from=s.economyVersion;
  if(needsEconomyMigration){
@@ -81,12 +82,18 @@ export function migrateEconomy(input:GameState):GameState{
   if((from??2)<5)toVersion5(s);
   s.economyVersion=balance.economyVersion;
  }
+ // Every sale records its day, so a product that has sold without one comes from a save written before last-sale
+ // dates existed, including version 5 saves of the first release. Treat it as selling up to now, so the 90-day
+ // "no sales" hint starts counting from this load instead of from its release.
+ for(const p of s.products)if(unrecordedSale(p))p.lastSaleDay=s.day;
  return s;
 }
+function unrecordedSale(p:Product){return p.sold>0&&p.lastSaleDay===undefined;}
 /**
- * Version 5 adds the year-2200 research tier, company sockets and per-kind monthly sales (new data needs no conversion)
- * and has rivals retire old models: each independent rival keeps its newest `rivalBalance.activeModels` models and clears
- * the stock of older ones at the clearance price, as it now does whenever it launches a model.
+ * Version 5 adds the year-2200 research tier, company sockets and per-kind monthly sales (new data needs no
+ * conversion; missing last-sale dates are filled by `migrateEconomy` on every load) and has rivals retire old models:
+ * each independent rival keeps its newest `rivalBalance.activeModels` released models and clears the stock of older
+ * ones at the clearance price, as it now does whenever a new model is released.
  */
 function toVersion5(s:GameState){
  for(const r of s.rivals)if(!r.acquired)retireRivalModels(s,r);

@@ -13,7 +13,7 @@ export function recordProductSale(s:GameState,p:Product,units:number,unitPrice:n
  p.profit+=productRevenue+units*(bundled?.unitCost??0)-actualCost;
  if(bundled){
   recordMarketSale(s,'player','os',units);
-  bundled.sold+=units;
+  bundled.sold+=units;bundled.lastSaleDay=s.day;
   bundled.revenue+=units*license;
   bundled.profit+=units*(license-bundled.unitCost);
  }

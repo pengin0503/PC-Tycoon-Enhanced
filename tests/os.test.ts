@@ -2,6 +2,7 @@ import {withTestStaff} from './staff-fixture';
 const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args));
 import {it,expect} from 'vitest';
 import {createGame as baseGame,command} from '../packages/sim/src/index';
+import {recordProductSale} from '../packages/sim/src/sales';
 const cmd=(s:any,c:any)=>command(s,c);
 function ready(){let s=createGame({id:'os',name:'OS社',difficulty:'normal',seed:4});return cmd(cmd(s,{type:'research',id:'os-compute-1'}),{type:'advance',days:7});}
 const os={type:'developOS',name:'Aurora',version:1,features:['files','calculator','browser'],quality:.8,compatibility:.8,support:.7,price:5000};
@@ -24,4 +25,11 @@ it('bundled PCs allocate license revenue without double counting company income'
  let s=cmd(ready(),os);s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s.research.completed.push('pc-compute-1');
  s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:300000,osId:'p-1'});s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:100});
  const before=s.products[0].sold;const n=cmd(s,{type:'advance',days:7});const pc=n.products[1];expect(pc.sold).toBeGreaterThan(0);expect(pc.revenue).toBe(pc.sold*295000);expect(n.products[0].sold-before).toBeGreaterThanOrEqual(pc.sold);expect(n.finance.revenue).toBe(n.products.reduce((v,p)=>v+p.revenue,0));
+});
+it('a bundled sale records the OS last-sale day too',()=>{
+ let s=cmd(ready(),os);s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s.research.completed.push('pc-compute-1');
+ s=cmd(s,{type:'assemble',kind:'pc',name:'Bundle',parts:{cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:300000,osId:'p-1'});
+ const [system,pc]=s.products;delete system.lastSaleDay;s.day+=100;
+ recordProductSale(s,pc,3,pc.price,0);
+ expect(pc.lastSaleDay).toBe(s.day);expect(system.lastSaleDay).toBe(s.day);
 });
