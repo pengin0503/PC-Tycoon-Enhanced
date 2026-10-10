@@ -52,12 +52,17 @@ export function command(state: GameState, input: GameCommand): GameState {
   return validateGame(s);
 }
 
-/** UI progression halts at the first unresolved decision; batch simulation replay stays unchanged. */
+/** Whether the player must answer something before time may run (a decision, an attack or a bulk-deal offer). */
+export function awaitingPlayer(s:GameState){return !!(s.pendingDecision||s.pendingAttack||s.gameOver||s.offers.length);}
+/**
+ * UI progression halts at the first unresolved decision, attack or bulk-deal offer, so fast-forwarding never lets an
+ * offer expire unseen; batch simulation replay stays unchanged.
+ */
 export function advanceInteractive(state:GameState,days:number):GameState{
  if(!Number.isInteger(days)||days<0||days>31)throw new Error('時間操作の指定が不正です');
  let result=state;
  for(let i=0;i<days;i++){
-  if(result.pendingDecision||result.pendingAttack||result.gameOver)break;
+  if(awaitingPlayer(result))break;
   result=command(result,{type:'advance',days:1});
  }
  return result;

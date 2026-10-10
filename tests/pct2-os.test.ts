@@ -12,8 +12,8 @@ const unlock=(s:GameState,...ids:string[])=>{s.research.completed.push(...ids);r
 
 it('extra OS features need their research, raise appeal and requirements, and add apps',()=>{
  const s=unlock(start(),'os-compute-1');
- expect(()=>cmd(s,{...os,features:['files','security']})).toThrow(/研究/);
- const r=unlock(start(),'os-compute-1','os-reliability-1','os-capacity-1','os-compatibility-1','os-compute-2');
+ expect(()=>cmd(s,{...os,features:['files','security']})).toThrow(/研究「OS セキュリティ機能」/);
+ const r=unlock(start(),'os-compute-1','os-security-1','os-media-1','os-games-1','os-store-1');
  const basic=cmd(r,os).products[0];
  const rich=cmd(r,{...os,features:['files','calculator','browser','security','media','games','store'],lockScreen:'nebula',theme:'violet'}).products[0];
  expect(rich.performance).toBeGreaterThan(basic.performance);

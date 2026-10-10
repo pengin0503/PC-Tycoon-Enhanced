@@ -1,5 +1,5 @@
 import {distributionBalance as d,offerBalance as o,offerBuyers,acquisitionBalance as a,hrBalance as h,staffTraits,managementBalance,researchPointBalance as rp,offices,type StaffTrait} from '../../content/src/management';
-import {techById} from '../../content/src/research';
+import {techById} from '../../content/src/tech-catalog';
 import {expense,logEvent} from './finance';
 import {derivedRandom} from './random';
 import {removeStock} from './inventory';
@@ -85,7 +85,7 @@ export function negotiateAcquisition(s:GameState,r:GameState['rivals'][number],v
 export function offerSuccessChance(markup:number){return Math.max(0,1-markup/o.counterLimit);}
 export function offersMonthly(s:GameState){
  if(s.offers.length>=o.maxOffers||derivedRandom(s.initialSeed,s.day,6000)>=o.monthlyChance)return;
- const stocked=s.products.filter(p=>p.launched&&p.kind!=='os'&&availableForRetail(s,p)>0);if(!stocked.length)return;
+ const stocked=s.products.filter(p=>p.launched&&p.discontinuedDay===undefined&&p.kind!=='os'&&availableForRetail(s,p)>0);if(!stocked.length)return;
  const p=stocked[Math.floor(derivedRandom(s.initialSeed,s.day,6001)*stocked.length)];
  const quantity=Math.max(1,Math.round(availableForRetail(s,p)*(o.minShare+derivedRandom(s.initialSeed,s.day,6002)*o.shareRange)));
  const unitPrice=Math.max(1,Math.round(p.price*(o.minPrice+derivedRandom(s.initialSeed,s.day,6003)*o.priceRange)));

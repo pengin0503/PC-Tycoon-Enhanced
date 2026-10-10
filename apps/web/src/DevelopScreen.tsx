@@ -1,6 +1,7 @@
 import {useState} from 'react';
-import {hardwareKinds,unlockedVisualTier,techById,type HardwareKind} from '../../../packages/content/src/research';
-import {defaultSpec,hardwareCatalog,fieldRange,fieldOptions,hardwareBalance,type Spec} from '../../../packages/content/src/hardware';
+import {hardwareKinds,type HardwareKind} from '../../../packages/content/src/research';
+import {unlockedVisualTier,techById} from '../../../packages/content/src/tech-catalog';
+import {defaultSpec,hardwareCatalog,designFields,fieldRange,fieldOptions,hardwareBalance,type Spec} from '../../../packages/content/src/hardware';
 import {productCatalog,deviceBalance,deviceCooling} from '../../../packages/content/src/devices';
 import {osFeatures,osFeatureLabels,osFeatureResearch,lockScreens,lockScreenLabels,osThemes,osSliders,type OSFeature,type OSSlider} from '../../../packages/content/src/os';
 import {unlockedRange,canUnlockMore,type RangeSpec} from '../../../packages/content/src/unlocks';
@@ -23,7 +24,7 @@ import {RangeField,formatValue,formatScore} from './RangeField';
 import {TermHelp,hardwareExplanations} from './HardwareTerms';
 import {Stars,Meter,Chip} from './ui';
 import {yen} from './i18n';
-import {describeWithResearch,researchHint,domainTechYear} from './research-hints';
+import {describeWithResearch,researchHint,domainTechYear,domainLabel} from './research-hints';
 import {useBackHandler} from './app-gestures';
 
 type Send=(c:GameCommand)=>boolean;
@@ -73,7 +74,7 @@ function VisualPicker({state,kind,visual,setVisual}:{state:GameState,kind:string
   <h3>外観グレード</h3>
   <div className="tier-row" role="group" aria-label="外観グレード">{Array.from({length:6},(_,i)=><button key={i} type="button" disabled={i>available} aria-pressed={visual.tier===i} onClick={()=>setVisual({...visual,tier:i})}>
    <ProductIllustration kind={kind} tier={i} color={visual.color}/><span>グレード {i}{i>available?' 🔒':''}</span></button>)}</div>
-  {available<5&&<p className="hint">「{kind.toUpperCase()} 外観」研究で次のグレードが解放されます（+{yen(visualFinishCost(1))}/台）。</p>}
+  {available<5&&<p className="hint">「{domainLabel(kind)} 外観」研究で次のグレードが解放されます（+{yen(visualFinishCost(1))}/台）。外観は需要とデザイン評価に影響します。</p>}
   <h3>カラー</h3>
   <div className="swatch-row" role="group" aria-label="外装カラー">{colors.map(([c,label])=><button key={c} type="button" className={`swatch ${c}`} aria-pressed={visual.color===c} onClick={()=>setVisual({...visual,color:c})}>{label}</button>)}</div>
  </div>;
@@ -108,10 +109,10 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
    </section>
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
-     <div className="range-grid">{Object.entries(definition.fields).filter(([key])=>key!=='cache').map(([key,field])=>{
+     <div className="range-grid">{designFields(kind).map(([key,field])=>{
       if(field.options){const open=fieldOptions(kind,key,state.research.completed);
        return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
-        return <option key={v} value={v} disabled={locked}>{({none:'直付け',semi:'セミモジュラー',full:'フルモジュラー'} as Record<string,string>)[v]??v}{locked?` 🔒 追加研究が必要`:''}</option>;})}</select></label>;}
+        return <option key={v} value={v} disabled={locked}>{field.optionLabels?.[v]??v}{locked?` 🔒 追加研究が必要`:''}</option>;})}</select></label>;}
       const range=fieldRange(kind,key,state.research.completed);
       return <RangeField key={key} label={field.label} unit={field.unit} description={describeWithResearch(hardwareExplanations[key],kind,field.unlock?.axes)} min={range.min} max={range.max} step={field.step??1} values={field.values} value={Number(spec[key])} onChange={v=>setSpec({...spec,[key]:v})}
        researchLimit={lockFor(field,range,kind)}/>;
@@ -157,7 +158,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  // PSUs list their rated output; other parts their power draw, which the case cooling has to cover.
  const watts=(p:{kind:string,power:number,spec:Spec})=>p.kind==='psu'?`${p.spec.wattage}W出力`:`${p.power}W`;
  const options=(slot:string)=>[...availableVendors.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.name}（${yen(p.unitCost)} / ${watts(p)}）`})),
-  ...state.products.filter(p=>p.kind===slot&&p.remaining===0).map(p=>({id:p.id,label:`自社 ${p.name}（在庫 ${p.inventory} / ${watts(p)}）`})),
+  ...state.products.filter(p=>p.kind===slot&&p.remaining===0&&p.discontinuedDay===undefined).map(p=>({id:p.id,label:`自社 ${p.name}（在庫 ${p.inventory} / ${watts(p)}）`})),
   ...competitor.filter(p=>p.kind===slot).map(p=>({id:p.id,label:`${p.supplier} ${p.name}（${yen(p.price)} / 在庫${p.inventory} / ${watts(p)}）`}))];
  const submit=()=>{if(send({type:'assemble',kind,name,parts:chosen as {cpu:string,gpu:string,motherboard:string,ram:string,storage:string,psu?:string},purpose,appearance:visual.color,price:currentPrice,cooling,...(osId?{osId}:{}),visual:{tier,color:visual.color}}))done();};
  return <section className="screen designer">
@@ -175,7 +176,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
      <div className="form-grid">{(Object.keys(slotLabels) as (keyof typeof slotLabels)[]).map(slot=><label key={slot}>{slotLabels[slot]}<select value={parts[slot]} onChange={e=>setParts({...parts,[slot]:e.target.value})}>
       {slot==='psu'&&<option value="">ケース内蔵の汎用電源</option>}{options(slot).map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></label>)}
       <label>用途<select value={purpose} onChange={e=>setPurpose(e.target.value as typeof purpose)}><option value="gaming">ゲーミング</option><option value="office">業務</option><option value="server">サーバー</option></select></label>
-      <label>OS<select value={osId} onChange={e=>setOS(e.target.value)}><option value="">OSなし</option>{state.products.filter(p=>p.kind==='os'&&p.launched).map(p=><option key={p.id} value={p.id}>{p.name} v{p.spec.version}</option>)}</select></label>
+      <label>OS<select value={osId} onChange={e=>setOS(e.target.value)}><option value="">OSなし</option>{state.products.filter(p=>p.kind==='os'&&p.launched&&p.discontinuedDay===undefined).map(p=><option key={p.id} value={p.id}>{p.name} v{p.spec.version}</option>)}</select></label>
      </div>
      <div className="range-grid"><RangeField label={coolingField.label} unit={coolingField.unit} description={describeWithResearch(`ケースが放熱できる電力（W）。部品の消費電力の合計（現在 ${estimate?.power??'-'}W）を下回ると組み立てられません。余裕があるほど品質が上がり、原価も増えます。`,kind,coolingField.unlock.axes)}
       min={coolingRange.min} max={coolingRange.max} step={coolingField.step} value={cooling} onChange={setCooling} researchLimit={lockFor(coolingField,coolingRange,kind)}/></div>

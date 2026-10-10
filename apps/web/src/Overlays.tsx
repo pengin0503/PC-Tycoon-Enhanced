@@ -5,6 +5,9 @@ import {companyStats} from '../../../packages/sim/src/progress';
 import {Modal,compact} from './ui';
 import {yen} from './i18n';
 import {createForegroundClock} from './foreground-clock';
+import {availableForRetail} from '../../../packages/sim/src/inventory-allocation';
+import {offerSuccessChance} from '../../../packages/sim/src/business';
+import {productCatalog} from '../../../packages/content/src/devices';
 
 type Node='idle'|'active'|'blocked'|'breached';
 const appearEvery=700,window_=2600;
@@ -50,3 +53,28 @@ export function DecisionModal({state,send}:{state:GameState,send:(c:GameCommand)
  </Modal>;
 }
 
+
+/**
+ * A bulk-deal offer arrived: time is stopped and the offer fills the screen until the player accepts, declines or
+ * counters it (one offer at a time; further pending offers follow).
+ */
+export function OfferModal({state,send,error}:{state:GameState,send:(c:GameCommand)=>boolean,error?:string}){
+ const offer=state.offers[0];const p=state.products.find(x=>x.id===offer.productId);
+ const [markup,setMarkup]=useState(5);
+ if(!p)return null;
+ const retail=availableForRetail(state,p),enough=retail>=offer.quantity;
+ const counter=Math.round(offer.unitPrice*(1+markup/100));
+ return <Modal title="大口取引の打診" className="offer-event fullscreen">
+  <p className="eyebrow">時間を停止しています{state.offers.length>1?` · ほかに${state.offers.length-1}件の打診`:''}</p>
+  <div className="offer-hero"><strong>{offer.buyer}</strong><span>{productCatalog[p.kind].label} · {p.name}</span></div>
+  <dl className="stat-grid"><dt>数量</dt><dd>{offer.quantity.toLocaleString('ja-JP')}台</dd><dt>提示単価</dt><dd>{yen(offer.unitPrice)}（定価 {yen(p.price)}）</dd>
+   <dt>合計</dt><dd>{yen(offer.quantity*offer.unitPrice)}</dd><dt>粗利見込み</dt><dd>{yen(offer.quantity*(offer.unitPrice-p.unitCost))}</dd><dt>販売可能在庫</dt><dd className={enough?'':'bad'}>{retail.toLocaleString('ja-JP')}台（総在庫 {p.inventory.toLocaleString('ja-JP')}台）</dd></dl>
+  {!enough&&<p className="warning">在庫が不足しているため承諾できません。見送るか、値上げ交渉も在庫が必要です。</p>}
+  {error&&<p role="alert" className="warning">{error}</p>}
+  <label className="range-field"><span className="range-label"><span>値上げ交渉</span><output>+{markup}% · {yen(counter)} · 成功 {Math.round(offerSuccessChance(markup)*100)}%</output></span>
+   <input type="range" aria-label="値上げ率" min={1} max={30} step={1} value={markup} onChange={e=>setMarkup(Number(e.target.value))}/></label>
+  <div className="button-row end"><button onClick={()=>send({type:'respondOffer',id:offer.id,action:'decline'})}>見送る</button>
+   <button disabled={!enough} onClick={()=>send({type:'respondOffer',id:offer.id,action:'counter',markup})}>値上げを提案</button>
+   <button className="primary" disabled={!enough} onClick={()=>send({type:'respondOffer',id:offer.id,action:'accept'})}>承諾する</button></div>
+ </Modal>;
+}

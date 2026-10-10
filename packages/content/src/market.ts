@@ -11,6 +11,8 @@ export const reviewBalance={
  innovationFirst:70,innovationBase:50,innovationScale:200,innovationMin:10,
  outletNoise:12,
  demandFloor:.7,demandRange:.65,demandExponent:1.5,
+ /** Above 100 points: diminishing scale of review axes and demand bonus per doubling of the score. */
+ overflowScale:50,demandOverflow:.25,
 } as const;
 export const reviewOutlets=[
  {name:'TechPulse',focus:'performance'},{name:'ギガレビュー',focus:'value'},

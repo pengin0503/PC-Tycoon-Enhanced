@@ -7,7 +7,7 @@ export function Modal({title,children,onClose,onBack,wide=false,className=''}:{t
  useBackHandler(()=>{if(onBack)return onBack();if(onClose)onClose();return true;},true,100);
  useEffect(()=>{ref.current?.focus();},[]);
  useEffect(()=>{if(!onClose)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[onClose]);
- return <div className="modal-overlay"><section ref={ref} tabIndex={-1} className={`modal ${wide?'wide':''} ${className}`} role="dialog" aria-modal="true" aria-labelledby={id+'-title'}>
+ return <div className={`modal-overlay${className.split(' ').includes('fullscreen')?' fullscreen':''}`}><section ref={ref} tabIndex={-1} className={`modal ${wide?'wide':''} ${className}`} role="dialog" aria-modal="true" aria-labelledby={id+'-title'}>
   <header className="modal-header"><h2 id={id+'-title'}>{title}</h2>{onClose&&<button className="icon-button" aria-label="閉じる" onClick={onClose}>×</button>}</header>
   <div className="modal-body">{children}</div>
  </section></div>;

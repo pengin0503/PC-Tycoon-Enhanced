@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {command,createGame,advanceInteractive,type GameState,type GameCommand} from '../../../packages/sim/src/index';
+import {command,createGame,advanceInteractive,awaitingPlayer,type GameState,type GameCommand} from '../../../packages/sim/src/index';
 import {importSave} from '../../../packages/save/src/index';
 import {SaveRepository} from '../../../packages/save/src/repository';
 import {achievementLabelMap} from '../../../packages/content/src/achievements';
@@ -16,7 +16,7 @@ import {AIPanel} from './AIPanel';
 import {FinancePanel} from './FinancePanel';
 import {SettingsScreen,modeLabels} from './SettingsScreen';
 import {NotificationCenter} from './NotificationCenter';
-import {HackerDefense,GameOver,DecisionModal} from './Overlays';
+import {HackerDefense,GameOver,DecisionModal,OfferModal} from './Overlays';
 import {useOfflineStatus} from './pwa';
 import {downloadGame} from './save-export';
 import {navScreens,screenFromHash,type Screen} from './navigation';
@@ -50,7 +50,7 @@ export default function App(){
  const repo=useRef(new SaveRepository());
  const writer=useRef(Promise.resolve());
  const current=useRef(state);current.current=state;
- const blocked=!!(state?.pendingDecision||state?.pendingAttack||state?.gameOver);
+ const blocked=!!state&&awaitingPlayer(state);
  useEffect(()=>{if(blocked)setSpeed(0);},[blocked]);
  const report=(e:unknown)=>setError(e instanceof Error?e.message.slice(0,240):String(e));
  useEffect(()=>{if(!notice)return;const id=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(id);},[notice]);
@@ -132,7 +132,7 @@ export default function App(){
    </>}
   </main>
   {state&&showInbox&&<NotificationCenter state={state} send={send} close={()=>setShowInbox(false)}/>}
-  {state?.gameOver?<GameOver state={state} onNewGame={newGame}/>:state?.pendingDecision?<DecisionModal state={state} send={send}/>:state?.pendingAttack?<HackerDefense key={state.pendingAttack.day} state={state} send={send}/>:null}
+  {state?.gameOver?<GameOver state={state} onNewGame={newGame}/>:state?.pendingDecision?<DecisionModal state={state} send={send}/>:state?.pendingAttack?<HackerDefense key={state.pendingAttack.day} state={state} send={send}/>:state?.offers.length?<OfferModal key={state.offers[0].id} state={state} send={send} error={error}/>:null}
   {state&&<nav className="screen-nav" aria-label="ゲームメニュー">{navScreens.map(screen=><button key={screen.id} data-screen={screen.id} className={tab===screen.id?'selected':''} aria-current={tab===screen.id?'page':undefined} onClick={()=>navigate(screen.id)}><ScreenIcon id={screen.id}/><span>{screen.label}</span>{(badges[screen.id]??0)>0&&<i className="badge" aria-hidden="true">{badges[screen.id]}</i>}</button>)}</nav>}
  </div>;
 }

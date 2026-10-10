@@ -13,7 +13,7 @@ export const ja={
   marketEvent:'市況イベント',rivalLaunch:'競合の新製品',decisionPending:'経営判断',eventDecision:'イベント結果',
   reviewPublished:'レビュー公開',offerReceived:'大口取引の打診',offerAccepted:'取引成立',offerRejected:'値上げ交渉決裂',offerDeclined:'取引見送り',
   acquisitionRejected:'買収交渉決裂',distributionUpgrade:'販売網拡大',candidateSearch:'人材探し',fired:'解雇',hackerAttack:'ハッカー攻撃',
-  attackResolved:'攻撃への対処',achievement:'実績解除',gameOver:'ゲームオーバー',renamed:'社名変更',
+  attackResolved:'攻撃への対処',achievement:'実績解除',gameOver:'ゲームオーバー',renamed:'社名変更',discontinued:'販売終了',
 } as const;
 export function eventLabel(kind:string){return kind in ja ? ja[kind as keyof typeof ja]:kind;}
 export function yen(n:number){return new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(n);}

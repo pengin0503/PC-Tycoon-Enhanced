@@ -48,5 +48,6 @@ Design: `docs/superpowers/specs/2026-10-08-pct2-parity-design.md`. Original mech
 | P2-04 | OS features (security/media/games/store), requirements, lock screen/theme, hacker attacks, installer/lock/desktop preview — `sim/src/os.ts` | `pct2-os.test.ts`, `devices.spec.ts`, `pct2-ui.spec.ts` |
 | P2-05 | Modes (standard/tycoon/long/sandbox), hard-mode game over, achievements, rename/logo — `sim/src/progress.ts` | `pct2-progress.test.ts`, `pct2-ui.spec.ts` |
 | P2-06 | PC Tycoon 2-style flow UI: office home, develop tiles → designer, products + launch presentation → review, upgrades, HR, companies, stats/achievements | all `*.spec.ts` |
+| P2-07 | One research branch per specification, split specs (motherboard USB/storage ports/LAN, storage read/write, monitor size/panel/response/brightness, CPU L1–L3), node-priced production cost and power, uncapped reviews, discontinue, rival fans transferred on acquisition, value-based loan cap, full-screen offer pause, per-type product stats — economy version 4 (`docs/dev/BALANCE.md`) | `balance-features.test.ts`, `balance-features.spec.ts`, `content.test.ts`, `research-hints.test.ts` |
 
 Excluded by decision: gems, login rewards, daily quests, slot/lottery, season pass, seasonal events, online leaderboards, cloud sync. Art remains original SVG; no original-game assets are used.

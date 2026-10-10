@@ -1,6 +1,8 @@
 import {vendorParts,deviceSlots} from '../../content/src/devices';
 import {marketShareAt,eraBalance} from '../../content/src/era';
 import {typicalSpec} from './market';
+import {researchAtShare} from '../../content/src/tech-catalog';
+import {productCatalog} from '../../content/src/devices';
 import {evaluateHardware} from './hardware';
 import type {DeviceSlot} from '../../content/src/devices';
 
@@ -14,8 +16,9 @@ function generatedVendor(year:number,kind:DeviceSlot){
   const draw=(['cpu','gpu','motherboard','ram','storage'] as const).reduce((watts,part)=>watts+generatedVendor(year,part).power,0);
   spec.wattage=Math.max(Number(spec.wattage),Math.min(3000,Math.ceil(draw*1.2/50)*50));
  }
- const metrics=evaluateHardware(kind,spec,[`${kind}-compute-1`],{stored:true});
- return {id:`v-${year}-${kind}`,name:`汎用 ${kind.toUpperCase()}（${year}年型）`,kind,spec,
+ // Suppliers build with the technology of the release year, so their costs follow that era's production technology.
+ const metrics=evaluateHardware(kind,spec,researchAtShare(kind,share),{stored:true});
+ return {id:`v-${year}-${kind}`,name:`汎用 ${productCatalog[kind].label}（${year}年型）`,kind,spec,
   performance:metrics.performance,power:metrics.power,unitCost:Math.max(1,Math.round(metrics.unitCost*1.8))};
 }
 const cache=new Map<string,ReturnType<typeof generatedVendor>>();

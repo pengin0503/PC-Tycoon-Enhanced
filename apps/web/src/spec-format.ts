@@ -10,6 +10,6 @@ export function specRows(p:Pick<Product,'kind'|'spec'>):{key:string,label:string
  if(!isHardware(p.kind))return [];
  return Object.entries(hardwareCatalog[p.kind].fields).flatMap(([key,field])=>{
   const v=p.spec[key];if(v===undefined)return [];
-  return [{key,label:field.label,value:typeof v==='number'?formatValue(v,field.unit):optionLabels[v]??v}];
+  return [{key,label:field.label,value:typeof v==='number'?formatValue(v,field.unit):field.optionLabels?.[v]??optionLabels[v]??v}];
  });
 }

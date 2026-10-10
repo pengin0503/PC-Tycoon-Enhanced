@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {startCompany,nav,openDesigner,launchFirst,openProduct,prepareTeam,advanceDays} from './ui-helpers';
 test('OS virtual desktop installs, unlocks and runs selected game applications',async({page})=>{
  await startCompany(page);await prepareTeam(page);await nav(page,'研究');
- await page.getByRole('button',{name:'OS 基盤技術 1 を研究'}).click();
+ await page.getByRole('button',{name:'OS 基盤技術 を研究'}).click();
  await openDesigner(page,'OS');await page.getByRole('button',{name:'OS開発を開始'}).click();await advanceDays(page,30);
  await launchFirst(page);await openProduct(page,'Aurora');
  await page.getByRole('tab',{name:'製品・テスト'}).click();await page.getByRole('button',{name:'操作テスト'}).click();

@@ -4,7 +4,7 @@ import {aiMarketQuote,aiEffects,aiDesignRange,clusterBusy,gpuFlops} from '../../
 import {designSchema} from '../../../packages/sim/src/ai-schema';
 import {researchPointCost} from '../../../packages/sim/src/business';
 import {aiDesignSliders,aiBalance,type AISlider} from '../../../packages/content/src/ai';
-import {techEffect} from '../../../packages/content/src/research';
+import {techEffect} from '../../../packages/content/src/tech-catalog';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import {PanelPages} from './PanelPages';
 import {ProductIllustration} from './ProductIllustration';

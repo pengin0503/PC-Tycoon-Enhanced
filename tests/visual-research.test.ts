@@ -1,14 +1,14 @@
 import {withTestStaff} from './staff-fixture';
 const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args));
 import {it,expect} from 'vitest';
-import {techCatalog} from '../packages/content/src/research';
+import {techCatalog} from '../packages/content/src/tech-catalog';
 import {createGame as baseGame,command,gameSchema} from '../packages/sim/src/index';
 const start=()=>createGame({id:'visual-legacy',name:'デザイン社',difficulty:'normal',seed:42});
-const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
+const cpu={cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'};
 const design=(visual?:{tier:number,color:'graphite'|'silver'|'teal'})=>({type:'design',kind:'cpu',name:'C1',spec:cpu,price:40000,...(visual?{visual}:{})} as const);
 it('adds 45 reachable, non-duplicated visual research milestones without replacing existing technology',()=>{
- expect(techCatalog).toHaveLength(3345);
- expect(new Set(techCatalog.map(t=>t.id)).size).toBe(3345);
+ expect(techCatalog.filter(t=>t.axis==='visual')).toHaveLength(45);
+ expect(new Set(techCatalog.map(t=>t.id)).size).toBe(techCatalog.length);
  for(const cat of ['cpu','gpu','motherboard','ram','storage','monitor','psu','pc','laptop']){
   for(let level=1;level<=5;level++){
    const t=techCatalog.find(x=>x.id===cat+'-visual-'+level);

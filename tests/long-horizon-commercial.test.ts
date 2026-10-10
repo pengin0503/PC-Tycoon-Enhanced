@@ -3,7 +3,7 @@ import {createGame,command,type GameState} from '../packages/sim/src/index';
 import {defaultSpec,hardwareTechYear,fieldRange} from '../packages/content/src/hardware';
 import {evaluateHardware} from '../packages/sim/src/hardware';
 import {marketYear} from '../packages/sim/src/market';
-import {techById} from '../packages/content/src/research';
+import {techById,researchBranches} from '../packages/content/src/tech-catalog';
 import {researchPointCost} from '../packages/sim/src/business';
 
 /** Real company commands, no free cash/RP injection. Different from the trillion-yen smoke baseline. */
@@ -26,7 +26,7 @@ it('models 30 years of paid research, office expansion, engineering and retail r
    s=command(s,{type:'hire',role:'research',skill:55});
   }
   for(let k=0;k<110;k++){
-   const candidates=['compute','power','capacity','compatibility'].map(axis=>{
+   const candidates=researchBranches('cpu').map(({axis})=>{
     const n=s.research.completed.filter(id=>id.startsWith(`cpu-${axis}-`)).length+1;
     return techById.get(`cpu-${axis}-${n}`);
    }).filter((t):t is NonNullable<typeof t>=>!!t&&t.prerequisites.every(p=>s.research.completed.includes(p)));
@@ -61,6 +61,7 @@ it('models 30 years of paid research, office expansion, engineering and retail r
  expect(s.products.some(p=>p.sold>0)).toBe(true);
  expect(rows).toHaveLength(3);
  expect(rows.every(x=>x.cash>=0&&Number.isFinite(x.tech))).toBe(true);
+ expect(rows[0].tech).toBeGreaterThan(2005);
  console.info('COMMERCIAL_30_YEAR_RESULTS '+JSON.stringify({rows,spent,productCount:s.products.length}));
 },120000);
 

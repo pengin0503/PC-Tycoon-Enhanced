@@ -1,17 +1,26 @@
-import {axisLabels,type Tech} from '../../../packages/content/src/research';
-import {productCatalog,deviceCooling} from '../../../packages/content/src/devices';
-import {hardwareCatalog,hardwareTechYear} from '../../../packages/content/src/hardware';
-import {techYear} from '../../../packages/content/src/era';
-import {osSliders} from '../../../packages/content/src/os';
+import {axisLabels,type Tech,type HardwareKind} from '../../../packages/content/src/research';
+import {deviceCooling} from '../../../packages/content/src/devices';
+import {hardwareCatalog,hardwareTechYear,designFields} from '../../../packages/content/src/hardware';
+import {techYear,unlockedOptions} from '../../../packages/content/src/era';
+import {osSliders,osFeatureLabels,type OSFeature} from '../../../packages/content/src/os';
+import {domainLabel,researchBranches,techById} from '../../../packages/content/src/tech-catalog';
 import {aiDesignSliders} from '../../../packages/content/src/ai';
 import {unlockedRange,type RangeSpec} from '../../../packages/content/src/unlocks';
 import {formatValue} from './RangeField';
 
-export const domainLabel=(d:string)=>d==='ai'?'AI':productCatalog[d as keyof typeof productCatalog]?.label??d.toUpperCase();
-/** Which research branches widen a slider, e.g. 「CPU 演算・処理設計」. */
-export function researchHint(category:string,axes:readonly string[]){
- return `${axes.map(a=>`「${domainLabel(category)} ${axisLabels[a]??a}」`).join('・')}の研究で上限が広がります。`;
+export {domainLabel};
+/** Name of the research branch `axis` of a category as research cards show it, e.g. 「CPU コア数」. */
+export function branchName(category:string,axis:string){
+ const label=researchBranches(category).find(b=>b.axis===axis)?.label??axisLabels[axis]??axis;
+ return `${domainLabel(category)} ${label}`;
 }
+/** Which research branch widens a slider or adds choices to an option field, e.g. 「CPU コア数」. */
+export function researchHint(category:string,axes:readonly string[]){
+ const option=axes.every(a=>researchBranches(category).find(b=>b.axis===a)?.kind==='option');
+ return `${axes.map(a=>`「${branchName(category,a)}」`).join('・')}の研究で${option?'選べる方式が増えます':'設計できる範囲が広がります'}。`;
+}
+/** Names of the technologies a card still needs, instead of their internal ids. */
+export function prerequisiteNames(t:Tech){return t.prerequisites.map(id=>techById.get(id)?.label??id);}
 /** Slider description followed by the research that widens it. */
 export function describeWithResearch(description:string|undefined,category:string,axes:readonly string[]|undefined){
  if(!axes)return description;
@@ -32,7 +41,7 @@ type Slider=RangeSpec&{label:string,format:(n:number)=>string};
 const percent=(n:number)=>`${Math.round(n*100)}%`;
 /** Research-gated sliders of a research domain. */
 function slidersFor(category:string):Slider[]{
- if(category in hardwareCatalog)return Object.values(hardwareCatalog[category as keyof typeof hardwareCatalog].fields).filter(f=>f.unlock).map(f=>({...f,format:(n:number)=>formatValue(n,f.unit)}));
+ if(category in hardwareCatalog)return designFields(category as HardwareKind).map(([,f])=>f).filter(f=>f.unlock).map(f=>({...f,format:(n:number)=>formatValue(n,f.unit)}));
  if(category==='pc'||category==='laptop'){const f=deviceCooling[category];return [{...f,format:(n:number)=>formatValue(n,f.unit)}];}
  if(category==='os')return Object.values(osSliders).map(f=>({...f,format:percent}));
  if(category==='ai')return Object.values(aiDesignSliders).filter(f=>'unlock' in f).map(f=>({...f,format:(n:number)=>formatValue(n,f.unit)}));
@@ -56,7 +65,17 @@ export function techEffectText(t:Tech,completed:readonly string[]){
  const sliders=slidersFor(t.category).filter(f=>f.unlock?.axes.includes(t.axis)).map(f=>{
   const r=unlockedRange(f,t.category,after);return `${f.label}${f.lowerIsBetter?`下限 ${f.format(r.min)}`:`上限 ${f.format(r.max)}`}`;
  });
- const direct=hasDirectEffect(t)?[`${t.axis==='capacity'&&t.category!=='ai'?'開発速度':axisLabels[t.axis]} +${(t.effect*100).toFixed(1)}%`]:[];
- if(t.axis==='compute'&&t.level===1&&t.category!=='ai')return `${domainLabel(t.category)}の開発を解放`;
+ const direct=hasDirectEffect(t)?[`${axisLabels[t.axis]??t.branchLabel} +${(t.effect*100).toFixed(1)}%`]:[];
+ if(t.kind==='foundation'&&t.category!=='ai')return `${domainLabel(t.category)}の開発を解放`;
+ if(t.kind==='feature')return `OS機能「${osFeatureLabels[t.axis as OSFeature]??t.branchLabel}」を解放`;
+ if(t.kind==='option'&&t.category in hardwareCatalog){
+  const f=designFields(t.category as HardwareKind).find(([k])=>k===t.axis)?.[1];
+  if(f?.options){
+   const before=new Set(unlockedOptions(f.options,f.optionUnlock,t.category,after.filter(id=>id!==`${branch}${t.level}`)));
+   const added=unlockedOptions(f.options,f.optionUnlock,t.category,after).filter(o=>!before.has(o)).map(o=>`「${f.optionLabels?.[o]??o}」`);
+   const next=f.options.find(o=>!before.has(o)&&!added.includes(`「${f.optionLabels?.[o]??o}」`));
+   return added.length?`${f.label} ${added.join('・')}を解放`:`${f.label}の研究を進める${next?`（次：「${f.optionLabels?.[next]??next}」）`:''}`;
+  }
+ }
  return [...sliders,...direct].join(' / ')||'設計可能な技術領域を解放';
 }

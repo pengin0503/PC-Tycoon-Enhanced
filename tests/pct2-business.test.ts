@@ -9,11 +9,11 @@ import {derivedRandom} from '../packages/sim/src/random';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(difficulty:'normal'|'hard'='normal',seed=11)=>createGame({id:'g3',name:'経営社',difficulty,seed});
 /** Year-2000 default CPU. */
-const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
+const cpu={cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'};
 
 it('research point costs scale with level and difficulty; points accrue weekly with staff and office',()=>{
  const s=start();expect(researchPointCost(s,'cpu-compute-1')).toBe(100);
- expect(researchPointCost(s,'cpu-compute-10')).toBeGreaterThan(researchPointCost(s,'cpu-compute-2'));
+ expect(researchPointCost(s,'cpu-cores-10')).toBeGreaterThan(researchPointCost(s,'cpu-cores-2'));
  expect(researchPointCost(start('hard'),'cpu-compute-1')).toBe(130);
  const base=cmd(s,{type:'advance',days:7}).company.researchPoints-s.company.researchPoints;
  const staffed=cmd(cmd(s,{type:'hire',role:'research',skill:80}),{type:'advance',days:7});

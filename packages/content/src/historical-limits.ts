@@ -57,11 +57,19 @@ const retailTypical:Record<string,Timeline>={
  'gpu.bandwidth':[3,8,24,60,150,320,448,700],
  'ram.capacity':[.128,.256,.512,2,4,8,16,32],
  'storage.capacity':[20,80,160,500,1000,2000,4000,8000],
+ 'storage.speed':[30,50,70,100,150,550,3500,7000],
+ 'storage.writeSpeed':[20,40,60,90,130,500,3000,6000],
+ 'monitor.size':[15,15,17,19,22,24,24,27],
+ 'monitor.brightness':[250,250,250,300,300,300,350,400],
+ 'motherboard.usb':[2,4,6,8,8,10,10,12],
+ 'motherboard.lan':[100,100,1000,1000,1000,1000,2500,2500],
 };
 /** Soft world-market retail target by release year, never used to gate player research or design. */
+/** Growth per decade of a typical retail value after 2025 (default: doubling); screen sizes stay at desk scale. */
+const retailGrowthPerDecade:Record<string,number>={'monitor.size':1.08,'monitor.brightness':1.3,'motherboard.usb':1.15,'cpu.clock':1.1};
 export function typicalRetailLimit(kind:string,key:string,year:number):number|undefined{
  const row=retailTypical[`${kind}.${key}`];if(!row)return undefined;
  const j=milestoneYears.findIndex(y=>year<y);
- if(j<0){const last=row.at(-1)!;return year>2025?last*2**((Math.min(year,2100)-2025)/10):last;}
+ if(j<0){const last=row.at(-1)!;return year>2025?last*(retailGrowthPerDecade[`${kind}.${key}`]??2)**((Math.min(year,2100)-2025)/10):last;}
  return row[Math.max(0,j-1)];
 }

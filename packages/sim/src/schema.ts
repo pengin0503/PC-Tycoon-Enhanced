@@ -7,15 +7,17 @@ export const money = z.number().int().min(0).max(balance.moneyLimit);
 export const seedSchema = z.number().int().min(0).max(0xffffffff);
 export const specSchema=z.record(z.string(),z.union([z.number(),z.string().max(80)]));
 export const visualSchema=z.object({tier:z.number().int().min(0).max(5),color:z.enum(['graphite','silver','teal'])}).strict();
-export const reviewSchema=z.object({score:z.number().int().min(0).max(100),stars:z.number().min(1).max(5),
- axes:z.object({performance:z.number().min(0).max(100),value:z.number().min(0).max(100),quality:z.number().min(0).max(100),design:z.number().min(0).max(100),innovation:z.number().min(0).max(100)}).strict(),
- outlets:z.array(z.object({name:z.string().min(1).max(40),score:z.number().int().min(0).max(100),comment:z.string().max(200)}).strict()).max(8)}).strict();
+/** Review scores are not capped at 100: an outstanding product scores above it (with diminishing returns). */
+const reviewScore=z.number().min(0).max(1000);
+export const reviewSchema=z.object({score:reviewScore.int(),stars:z.number().min(1).max(5),
+ axes:z.object({performance:reviewScore,value:reviewScore,quality:reviewScore,design:reviewScore,innovation:reviewScore}).strict(),
+ outlets:z.array(z.object({name:z.string().min(1).max(40),score:reviewScore.int(),comment:z.string().max(200)}).strict()).max(8)}).strict();
 export const productSchema=z.object({stockAllocation:z.object({retail:z.number().int().min(0).max(1000000),assembly:z.number().int().min(0).max(1000000),ai:z.number().int().min(0).max(1000000)}).strict().optional(),visual:visualSchema.optional(),review:reviewSchema.optional(),hype:z.number().min(0).max(100).optional(),id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
  performance:z.number().positive(),power:z.number().nonnegative(),unitCost:z.number().int().positive(),remaining:z.number().nonnegative(),inventoryValue:z.number().int().min(0).max(1e15).optional(),
  reliability:z.number().min(.1).max(1).default(.9),price:z.number().int().min(1).max(1e8),inventory:z.number().int().min(0).max(10000000),target:z.number().int().min(0).max(10000000),
- line:z.boolean(),launched:z.boolean(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
+ line:z.boolean(),launched:z.boolean(),discontinuedDay:z.number().int().min(0).optional(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
 }).strict();
-export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(hardwareKinds),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean()}).strict();
+export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(hardwareKinds),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean(),fans:z.number().min(0).max(1e12).optional()}).strict();
 export const modeSchema=z.enum(['standard','tycoon','long','sandbox']);
 export const roleSchema=z.enum(['research','engineering','marketing','ai']);
 export const traitSchema=z.enum(['genius','efficient','charismatic','frugal','ai-specialist']);
@@ -26,7 +28,7 @@ export const newGameSchema = z.object({
   mode: modeSchema.optional(),
 }).strict();
 export const gameSchema = z.object({
-  version: z.literal(1), economyVersion: z.union([z.literal(2),z.literal(3)]).optional(), id: z.string().min(1).max(80), seed: seedSchema,
+  version: z.literal(1), economyVersion: z.union([z.literal(2),z.literal(3),z.literal(4)]).optional(), id: z.string().min(1).max(80), seed: seedSchema,
   initialSeed: seedSchema, day: z.number().int().min(0).max(1_000_000), year: z.number().int().min(1970).max(2200),
   difficulty: z.enum(['normal','hard']),
   mode: modeSchema.default('standard'),
@@ -71,6 +73,7 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('launch'),id:z.string().min(1),presentation:z.enum(['none','online','event','keynote']).optional()}).strict(),
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(1000000)}).strict(),
  z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1e8)}).strict(),
+ z.object({type:z.literal('discontinue'),id:z.string().min(1)}).strict(),
   z.object({type:z.literal('allocateStock'),id:z.string().min(1),retail:z.number().int().min(0).max(1000000),assembly:z.number().int().min(0).max(1000000),ai:z.number().int().min(0).max(1000000)}).strict(),
  z.object({type:z.literal('assemble'),kind:z.enum(['pc','laptop']),name:z.string().trim().min(1).max(80),parts:z.object({cpu:z.string(),gpu:z.string(),motherboard:z.string(),ram:z.string(),storage:z.string(),psu:z.string().optional()}).strict(),purpose:z.enum(['gaming','office','server']),appearance:z.enum(['graphite','silver','teal']),visual:visualSchema.optional(),price:z.number().int().min(1).max(1e8),osId:z.string().optional(),cooling:z.number().int().min(1).max(100000).optional()}).strict(),
  z.object({type:z.literal('developOS'),name:z.string().trim().min(1).max(80),version:z.number().int().min(1).max(100),features:z.array(z.enum(['files','calculator','browser','security','media','games','store'])).min(1).max(7).refine(a=>new Set(a).size===a.length),lockScreen:z.enum(['aurora','grid','dunes','nebula']).optional(),theme:z.enum(['teal','blue','orange','violet']).optional(),quality:z.number().min(.1).max(1),compatibility:z.number().min(.1).max(1),support:z.number().min(0).max(1),price:z.number().int().min(1).max(1e8)}).strict(),

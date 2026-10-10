@@ -2,21 +2,27 @@ import {it,expect} from 'vitest';
 import {createGame,command} from '../packages/sim/src/index';
 import {hardwareTechYear} from '../packages/content/src/hardware';
 import {marketYear} from '../packages/sim/src/market';
-import {techById} from '../packages/content/src/research';
+import {techById,researchBranches} from '../packages/content/src/tech-catalog';
+import type {GameState} from '../packages/sim/src/index';
 import {researchPointCost} from '../packages/sim/src/business';
 
+/** Cheapest next CPU stage whose prerequisites are met (one stage per branch, every branch improves one spec). */
+function nextCpuTech(s:GameState){
+ return researchBranches('cpu').flatMap(b=>{
+  const done=s.research.completed.filter(x=>x.startsWith(`cpu-${b.axis}-`)).length;
+  const tech=techById.get(`cpu-${b.axis}-${done+1}`);
+  return tech&&tech.prerequisites.every(id=>s.research.completed.includes(id))?[tech]:[];
+ }).sort((a,b)=>researchPointCost(s,a.id)-researchPointCost(s,b.id)||a.id.localeCompare(b.id))[0];
+}
 /** 100-year deterministic offline smoke test. This is NOT a substitute for economy/player simulation QA. */
 it('keeps 30-year and 100-year economy progression finite and auditable (#25)',()=>{
  let s=createGame({id:'century',name:'Century',difficulty:'normal',seed:73});
  s.company.cash=1_000_000_000_000;
  s=command(s,{type:'hire',role:'research',skill:50});
  const records:{year:number,tech:number,points:number,rivalLevel:number,cash:number}[]=[];
- let next=1;
  for(let year=1;year<=100;year++){
-  const t=techById.get(`cpu-compute-${next}`);
-  if(t&&s.company.researchPoints>=researchPointCost(s,t.id)){
-   s=command(s,{type:'research',id:t.id});next++;
-  }
+  const t=nextCpuTech(s);
+  if(t&&s.company.researchPoints>=researchPointCost(s,t.id))s=command(s,{type:'research',id:t.id});
   s=command(s,{type:'advance',days:360});
   if(year===30||year===100)records.push({
    year:marketYear(s.day),tech:hardwareTechYear('cpu',s.research.completed),
@@ -39,11 +45,7 @@ it('quantifies research progression with one vs three researchers over 30 years 
   let spent=0;
   for(let year=1;year<=30;year++){
    for(let attempt=0;attempt<150;attempt++){
-    const next=['compute','capacity','power','compatibility'].flatMap(axis=>{
-     const completed=s.research.completed.filter(x=>x.startsWith(`cpu-${axis}-`)).length;
-     const tech=techById.get(`cpu-${axis}-${completed+1}`);
-     return tech&&tech.prerequisites.every(id=>s.research.completed.includes(id))?[tech]:[];
-    }).sort((a,b)=>researchPointCost(s,a.id)-researchPointCost(s,b.id)||a.id.localeCompare(b.id))[0];
+    const next=nextCpuTech(s);
     if(!next)break;
     const cost=researchPointCost(s,next.id);if(cost>s.company.researchPoints)break;
     s=command(s,{type:'research',id:next.id});spent+=cost;

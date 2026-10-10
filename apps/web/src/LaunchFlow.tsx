@@ -43,7 +43,7 @@ export function LaunchFlow({state,product,send,close}:{state:GameState,product:P
  }
  const review=launched?.review;
  return <Modal title="レビュー結果" onClose={close} wide className="review-result">
-  {review?<><div className="review-hero"><ProductVisual product={launched!}/><div><h3>{launched!.name}</h3><Stars value={review.stars} size="lg"/><p className="score"><b>{review.score}</b> / 100</p></div></div>
+  {review?<><div className="review-hero"><ProductVisual product={launched!}/><div><h3>{launched!.name}</h3><Stars value={review.stars} size="lg"/><p className="score"><b>{review.score}</b> 点{review.score>100&&<small className="overflow-score">満点超え</small>}</p></div></div>
    <ul className="axis-list">{reviewAxes.map(a=><li key={a}><span>{reviewAxisLabels[a]}</span><Meter value={review.axes[a]} label={reviewAxisLabels[a]} tone={review.axes[a]>=70?'good':review.axes[a]>=45?'accent':'warn'}/><b>{review.axes[a]}</b></li>)}</ul>
    <div className="outlets">{review.outlets.map(o=><article key={o.name}><header><strong>{o.name}</strong><span>{o.score}点</span></header><p>{o.comment}</p></article>)}</div></>
    :<p>レビューはまだ公開されていません。</p>}

@@ -43,3 +43,17 @@ GitHub Actions successful game job on commit `ecfe864b4b2e0af29b5125119e66472931
 - A single policy/seed cannot establish acceptable tuning for all play styles; follow up with 50/100-year commercially funded policies, multiple difficulty/mode/seed combinations, recurrent upgrades, advanced graphics/AI strategy and sensitivity across CPU/GPU/RAM.
 
 **Decision:** Preserve existing RP cost and market speed on this evidence alone. With 3 research employees and legal CPU investments, technology is ahead of the industry's calendar-equivalent average, but the economy has slower late-game sales; tune with further reproducible data, never with calendar release-year research locks.
+
+## Re-measurement after per-specification research (economy version 4)
+
+Same seeds and policies, with each annual policy buying the cheapest available stage among all CPU branches (`researchBranches('cpu')`: foundation, cores, clock, IPC, process, L1/L2/L3, SMT, memory channels, cooling). Local `vitest` run on the PR branch.
+
+| Policy | Game year | CPU research-equivalent year | Version 3 value |
+| --- | ---: | ---: | ---: |
+| No products, 1 researcher | 2030 | 2029.1 (133 stages, 70,971 RP) | 2028.6 |
+| No products, 3 researchers | 2030 | 2038.0 (173 stages, 125,110 RP) | 2037.7 |
+| Commercial | 2010 / 2020 / 2030 | 2019.3 / 2029.8 / 2037.1 | 2018.6 / 2029.1 / 2036.7 |
+
+- Research pace is unchanged within one year: per-category cost weights keep the total price of a category's research comparable even though it is split into more branches.
+- Commercial cash was ¥2.05B / ¥2.09B / ¥1.59B (version 3: ¥1.77B / ¥1.67B / ¥1.17B) with 198,650 lifetime units (175,547). The difference comes from the new cost model: an older design keeps getting cheaper to make while its price stays fixed, so a long-running product earns more margin. Frontier refreshes cost more than before.
+- The one-purchase-per-year smoke test now reaches 2006 (2030) and 2022 (2100); it is a lower-effort baseline and still not evidence about RP balance.
