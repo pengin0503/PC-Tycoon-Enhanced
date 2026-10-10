@@ -1,15 +1,16 @@
 export const aiGPUs=[{id:'v-ai-small',label:'Vector 16',vramBytes:16e9,peakFlops:1e14,powerWatts:250,cost:800000},{id:'v-ai-workstation',label:'Vector 48',vramBytes:48e9,peakFlops:2e14,powerWatts:350,cost:1800000}];
 /**
- * Selectable model-design values. Research widens the upper bound from `unlock.from` (AI branch levels);
+ * Selectable model-design values. Each slider's own research branch widens the upper bound from `unlock.from`
+ * (total and active parameters share the model-scale branch `params`, since active parameters never exceed the total);
  * list-valued sliders snap to the listed sizes. Scales: parameters/tokens in units of 1e9.
  */
 export const aiDesignSliders={
- total:{label:'総パラメータ',unit:'B',scale:1e9,values:[.1,.25,.5,1,2,3,4,7,8,13,20,30,34,50,70,100,175,200,400,700,1000],min:.1,max:1000,unlock:{axes:['compute'],from:4}},
- active:{label:'稼働パラメータ',unit:'B',scale:1e9,values:[.1,.25,.5,1,2,3,4,7,8,13,20,30,34,50,70,100,175,200,400,700,1000],min:.1,max:1000,unlock:{axes:['compute'],from:4}},
- layers:{label:'層数',unit:'層',scale:1,min:1,max:256,step:1,unlock:{axes:['architecture'],from:32}},
- hidden:{label:'Hidden size',unit:'',scale:1,min:128,max:32768,step:128,unlock:{axes:['architecture'],from:4096}},
- context:{label:'学習コンテキスト長',unit:'トークン',scale:1,values:[512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576],min:512,max:1048576,unlock:{axes:['context'],from:8192}},
- tokens:{label:'学習トークン数',unit:'B',scale:1e9,values:[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000],min:1,max:10000,unlock:{axes:['data'],from:50}},
+ total:{label:'総パラメータ',unit:'B',scale:1e9,values:[.1,.25,.5,1,2,3,4,7,8,13,20,30,34,50,70,100,175,200,400,700,1000],min:.1,max:1000,unlock:{axes:['params'],from:4}},
+ active:{label:'稼働パラメータ',unit:'B',scale:1e9,values:[.1,.25,.5,1,2,3,4,7,8,13,20,30,34,50,70,100,175,200,400,700,1000],min:.1,max:1000,unlock:{axes:['params'],from:4}},
+ layers:{label:'層数',unit:'層',scale:1,min:1,max:256,step:1,unlock:{axes:['layers'],from:32}},
+ hidden:{label:'Hidden size',unit:'',scale:1,min:128,max:32768,step:128,unlock:{axes:['hidden'],from:4096}},
+ context:{label:'学習コンテキスト長',unit:'トークン',scale:1,values:[512,1024,2048,4096,8192,16384,32768,65536,131072,262144,524288,1048576],min:512,max:1048576,unlock:{axes:['contextLength'],from:8192}},
+ tokens:{label:'学習トークン数',unit:'B',scale:1e9,values:[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000],min:1,max:10000,unlock:{axes:['tokens'],from:50}},
  quality:{label:'データ品質',unit:'',scale:1,min:.1,max:1,step:.1,percent:true},
  diversity:{label:'データ多様性',unit:'',scale:1,min:.1,max:1,step:.1,percent:true},
 } as const;

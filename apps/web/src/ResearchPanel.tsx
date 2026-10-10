@@ -1,10 +1,11 @@
 import {useState} from 'react';
-import {activeTechCatalog,researchDomains,axisLabels,hardwareKinds} from '../../../packages/content/src/research';
+import {researchDomains,axisLabels,hardwareKinds,visualKinds} from '../../../packages/content/src/research';
+import {activeTechCatalog,researchBranches} from '../../../packages/content/src/tech-catalog';
 import {researchPointCost,weeklyResearchPoints,hasRole} from '../../../packages/sim/src/business';
 import {hardwareBalance} from '../../../packages/content/src/hardware';
 import {marketYear} from '../../../packages/sim/src/market';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
-import {domainLabel,techEffectText,domainTechYear} from './research-hints';
+import {domainLabel,techEffectText,domainTechYear,prerequisiteNames} from './research-hints';
 /** Research tree browser: spend research points to unlock technologies instantly. */
 export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)=>void}){
  const [query,setQuery]=useState('');
@@ -22,6 +23,7 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
  const selectedYear=category?domainTechYear(category,state.research.completed):undefined;
  const year=selectedYear??Math.round(hardwareKinds.reduce((total,kind)=>total+(domainTechYear(kind,state.research.completed)??2000),0)/hardwareKinds.length);
  const market=marketYear(state.day),gap=year===undefined?undefined:year-market,canResearch=hasRole(state,'research');
+ const branches=category?[...researchBranches(category).map(b=>[b.axis,b.label] as const),...((visualKinds as readonly string[]).includes(category)?[['visual',axisLabels.visual] as const]:[])]:[];
  const doneIn=(c:string)=>activeTechCatalog.filter(t=>t.category===c&&completed.has(t.id)).length;
  return <section className="screen research-scene">
   <header className="research-head">
@@ -33,22 +35,22 @@ export function ResearchPanel({state,send}:{state:GameState,send:(c:GameCommand)
   </header>
   {!canResearch&&<p className="warning" role="status">研究を行うには研究担当を1名以上採用してください。</p>}
   <div className="chip-row domain-row" role="group" aria-label="研究分野">
-   <button aria-pressed={category===''} onClick={()=>update(setCategory,'')}>すべて</button>
-   {researchDomains.map(d=><button key={d} aria-pressed={category===d} onClick={()=>update(setCategory,d)}>{domainLabel(d)} <small>{doneIn(d)}</small></button>)}
+   <button aria-pressed={category===''} onClick={()=>{update(setCategory,'');setAxis('');}}>すべて</button>
+   {researchDomains.map(d=><button key={d} aria-pressed={category===d} onClick={()=>{update(setCategory,d);setAxis('');}}>{domainLabel(d)} <small>{doneIn(d)}</small></button>)}
   </div>
   <div className="research-filters">
    <label>技術を検索<input placeholder="技術を検索" value={query} onChange={e=>update(setQuery,e.target.value)}/></label>
-   <label>系統<select value={axis} onChange={e=>update(setAxis,e.target.value)}><option value="">すべて</option>{Object.entries(axisLabels).map(([k,l])=><option key={k} value={k}>{l}</option>)}</select></label>
+   <label>系統<select value={axis} disabled={!category} title={category?undefined:'研究分野を選ぶと系統で絞り込めます'} onChange={e=>update(setAxis,e.target.value)}><option value="">{category?'すべて':'分野を選択'}</option>{branches.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select></label>
    <label>表示<select value={view} onChange={e=>{setView(e.target.value as typeof view);setPage(0);}}><option value="available">研究可能</option><option value="all">すべて</option><option value="done">完了済み</option></select></label>
   </div>
   <div className="research-results">{filtered.slice(current*12,(current+1)*12).map(t=>{
    const done=completed.has(t.id),active=state.research.active.find(r=>r.id===t.id),locked=t.prerequisites.some(p=>!completed.has(p));
    const cost=researchPointCost(state,t.id),affordable=state.company.researchPoints>=cost;
    return <article className={`tech-card ${done?'done':locked?'locked':affordable?'ready':''}`} data-testid="research-card" key={t.id}>
-    <span className="tech-domain">{domainLabel(t.category)} · 第{t.generation}世代</span>
+    <span className="tech-domain">{domainLabel(t.category)} · {t.branchLabel}</span>
     <h3>{t.label}</h3>
     <p className="tech-effect">{techEffectText(t,state.research.completed)}</p>
-    {locked&&<small className="muted">前提：{t.prerequisites.join(' / ')}</small>}
+    {locked&&<small className="muted">前提：{prerequisiteNames(t).join(' / ')}</small>}
     <div className="tech-foot">{!done&&<span className={`rp-cost ${affordable?'':'short'}`}>{cost.toLocaleString('ja-JP')} RP</span>}
      <button className={done?'':'primary'} aria-label={done||active||locked?undefined:`${t.label} を研究`} disabled={done||!!active||locked||!affordable||!canResearch} onClick={()=>send({type:'research',id:t.id})}>{done?'完了':active?'研究中':locked?'前提研究が必要':!canResearch?'研究担当が必要':'研究する'}</button></div>
     {active&&<progress max={t.work} value={t.work-active.remaining}/>}

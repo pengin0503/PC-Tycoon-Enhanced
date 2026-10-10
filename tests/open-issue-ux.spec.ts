@@ -14,7 +14,7 @@ test('design selling price has precise numeric keyboard entry on narrow screens 
 test('portrait notifications do not cover two-row HUD controls (#27)',async({page})=>{
  await page.setViewportSize({width:390,height:844});await startCompany(page);
  await prepareTeam(page);await nav(page,'研究');
- await page.getByRole('button',{name:/CPU 基盤技術 1 を研究/}).click();
+ await page.getByRole('button',{name:/CPU 基盤技術 を研究/}).click();
  const notice=page.locator('.notice');
  await expect(notice).not.toBeEmpty();
  const position=await page.evaluate(()=>{

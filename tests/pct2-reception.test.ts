@@ -13,7 +13,7 @@ const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(seed=3)=>createGame({id:'g1',name:'評判社',difficulty:'normal',seed});
 const unlock=(s:GameState,...ids:string[])=>{s.research.completed.push(...ids);return s;};
 /** Year-2000 default CPU. */
-const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
+const cpu={cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'};
 const parts={cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
 function developed(spec=cpu,price=40000){
  let s=unlock(start(),'cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'C',spec,price});return cmd(s,{type:'advance',days:14});

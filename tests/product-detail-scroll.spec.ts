@@ -7,7 +7,7 @@ import {openProduct} from './ui-helpers';
 function launchedCpu():GameState{
  let s=withTestStaff(createGame({id:'scroll-regression',name:'部品社',difficulty:'normal',seed:9}));
  s.research.completed.push('cpu-compute-1');
- s=command(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
+ s=command(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'},price:40000});
  s=command(s,{type:'advance',days:14});
  s=command(s,{type:'launch',id:'p-1'});
  s=command(s,{type:'line',id:'p-1',target:50});

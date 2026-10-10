@@ -1,10 +1,16 @@
 import {useId,type ReactNode} from 'react';
 import type {Spec} from '../../../packages/content/src/hardware';
 import {formatValue} from './RangeField';
+import {productCatalog} from '../../../packages/content/src/devices';
 
 type Props={kind:string,tier:number,color:string,spec?:Spec};
 type V3=readonly [number,number,number];
 type Paint={top:string,left:string,right:string};
+
+/** Names shown to players and screen readers: the same category names as the development screen. */
+const kindLabels:Record<string,string>={'ai-cluster':'計算クラスタ','ai-model':'AIモデル'};
+export const illustrationKindLabel=(kind:string)=>kindLabels[kind]??productCatalog[kind as keyof typeof productCatalog]?.label??kind;
+const colorLabels:Record<string,string>={graphite:'グラファイト',silver:'シルバー',teal:'ティール'};
 
 const COS=Math.cos(Math.PI/6),SIN=.5;
 const INK='#08121f',GOLD='#e4b54a',GOLD_DARK='#a8781f',PCB='#1d5843',PCB_DARK='#152b33',CHIP='#141c26',SLOT='#0f1720';
@@ -360,9 +366,9 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
   art=c.box(0,0,0,160,160,120,body);
  }
 
- const label=specLabel(kind,spec);
- return <svg className="product-illustration" role="img" aria-label={`${kind.toUpperCase()} ゲーム調3D製品 グレード${tier} ${color}`} viewBox="0 0 520 320">
- <title>{`${kind.toUpperCase()} グレード ${tier}`}</title>
+ const label=specLabel(kind,spec),name=illustrationKindLabel(kind);
+ return <svg className="product-illustration" role="img" aria-label={`${name} 製品イメージ 外観グレード${tier} ${colorLabels[color]??color}`} viewBox="0 0 520 320">
+ <title>{`${name} 外観グレード ${tier}`}</title>
  <defs>
   <radialGradient id={id} cx=".48" cy=".4" r=".8"><stop stopColor="#365570"/><stop offset="1" stopColor="#101c30"/></radialGradient>
   <linearGradient id={sheen} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ffffff" stopOpacity=".9"/><stop offset=".5" stopColor="#ffffff" stopOpacity="0"/><stop offset="1" stopColor="#ffffff" stopOpacity=".35"/></linearGradient>
@@ -375,7 +381,7 @@ export function ProductIllustration({kind,tier,color,spec}:Props){
  {art}
  {tier>=1&&<><circle cx="44" cy="42" r="19" fill="#172a3a" stroke={accent} strokeWidth="3"/><text x="44" y="48" textAnchor="middle" fill={accent} fontWeight="bold" fontSize="17">{tier}</text></>}
  {tier>=5&&<path d="M474 28l6 12 12 5 -12 4 -6 13 -6 -13 -12 -4 12 -5Z" fill="#ffcf75"/>}
- <text x="25" y="303" fill="#a6d6d5" fontSize="12" letterSpacing="3">{kind.toUpperCase()} / VISUAL STUDIO</text>
+ <text x="25" y="303" fill="#a6d6d5" fontSize="12" letterSpacing="1">{name}</text>
  {label&&<text x="495" y="303" fill="#a6d6d5" textAnchor="end" fontSize="12" fontWeight="700">{label}</text>}
  </svg>;
 }

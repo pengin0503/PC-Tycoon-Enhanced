@@ -1,13 +1,14 @@
 import {withTestStaff} from './staff-fixture';
 const createGame=(...args:Parameters<typeof baseGame>)=>withTestStaff(baseGame(...args),false);
 import {it,expect} from 'vitest';
+import {unlockBranch} from './research-helpers';
 import {createGame as baseGame,command} from '../packages/sim/src/index';
 const cmd=(s:any,c:any)=>command(s,c);const parts={cpu:'v-cpu',gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'};
 function ready(kind='pc'){let s=createGame({id:'dev',name:'端末社',difficulty:'normal',seed:42});return cmd(cmd(s,{type:'research',id:`${kind}-compute-1`}),{type:'advance',days:7});}
 const assembly=(kind='pc',purpose='gaming',selected=parts)=>({type:'assemble',kind,name:'Polar Station',parts:selected,purpose,appearance:'graphite',price:300000});
 it('assembles purpose-specific compatible devices',()=>{
  let s=ready();s.research.completed.push('cpu-compute-1');
- s=cmd(s,{type:'design',kind:'cpu',name:'Compute',spec:{cores:1,clock:1,ipc:1,process:180,cache:.5,cooling:60,socket:'Atlas'},price:50000});s=cmd(s,{type:'advance',days:14});
+ s=cmd(s,{type:'design',kind:'cpu',name:'Compute',spec:{cores:1,clock:1,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:60,socket:'Atlas'},price:50000});s=cmd(s,{type:'advance',days:14});
  const selected={...parts,cpu:'p-1'};
  const gaming=cmd(s,assembly('pc','gaming',selected)).products[1];const office=cmd(s,assembly('pc','office',selected)).products[1];
  expect(gaming.unitCost).toBeGreaterThan(1000);expect(gaming.performance).not.toBe(office.performance);expect(gaming.spec.appearance).toBe('graphite');
@@ -23,10 +24,10 @@ it('case cooling must cover the parts, is research limited, priced and stored wi
  const small=cmd(s,{...assembly(),cooling:70}).products[0],large=cmd(s,{...assembly(),cooling:200}).products[0];
  expect(large.unitCost).toBeGreaterThan(small.unitCost);expect(large.reliability).toBeGreaterThan(small.reliability);expect(large.spec.cooling).toBe(200);
  const laptop=ready('laptop');expect(()=>cmd(laptop,{...assembly('laptop'),cooling:150})).toThrow(/10～80W/);
- // Cost research discounts the case cooler together with the rest of the case overhead.
- const cheaper=ready();cheaper.research.completed.push('pc-cost-1','pc-cost-2','pc-cost-3');
+ // Cooling research makes every watt of case cooling cheaper to produce.
+ const cheaper=unlockBranch(ready(),'pc','cooling',3);
  const coolerCost=(state:any)=>cmd(state,{...assembly(),cooling:200}).products[0].unitCost-cmd(state,{...assembly(),cooling:70}).products[0].unitCost;
- expect(coolerCost(cheaper)).toBe(coolerCost(s));
+ expect(coolerCost(cheaper)).toBeLessThan(coolerCost(s));
 });
 it('laptop packaging has a cost and cooling tradeoff',()=>{
  const pc=cmd(ready(),assembly()).products[0];const laptop=cmd(ready('laptop'),assembly('laptop')).products[0];
@@ -39,7 +40,7 @@ it('monitor choices affect performance cost and appearance',()=>{
  expect(()=>d(0,60)).toThrow();
 });
 it('assembly consumes own component stock and pays only unowned inputs',()=>{
- let s=ready();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'Own CPU',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});s=cmd(s,{type:'advance',days:14});
+ let s=ready();s.research.completed.push('cpu-compute-1');s=cmd(s,{type:'design',kind:'cpu',name:'Own CPU',spec:{cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'},price:40000});s=cmd(s,{type:'advance',days:14});
  s=cmd(s,assembly('pc','gaming',{...parts,cpu:'p-1'}));s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-2'});s=cmd(s,{type:'line',id:'p-2',target:100});
  expect(cmd(s,{type:'advance',days:1}).products[1].inventory).toBe(0);
  s=cmd(s,{type:'launch',id:'p-1'});s.products[0].inventory=5;const n=cmd(s,{type:'advance',days:1});expect(n.products[0].inventory).toBe(0);expect(n.products[1].inventory).toBe(5);

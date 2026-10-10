@@ -9,7 +9,7 @@ import {companyValue} from '../packages/sim/src/management';
 const cmd=(s:any,c:any)=>command(s,c);
 function ownGPUReady(){
  let s=createGame({id:'own',name:'AI社',difficulty:'normal',seed:1});
- s.day=12*360;s.year=2012;s.research.completed=['ai-compute-1','gpu-compute-1'];unlockBranch(s,'gpu','capacity',5);
+ s.day=12*360;s.year=2012;s.research.completed=['ai-compute-1','gpu-compute-1'];unlockBranch(unlockBranch(s,'gpu','units',5),'gpu','vram',5);
  s=cmd(s,{type:'design',kind:'gpu',name:'Own GPU',spec:{...defaultSpec('gpu'),vram:1},price:20000});
  s=cmd(s,{type:'advance',days:14});
  s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:100});

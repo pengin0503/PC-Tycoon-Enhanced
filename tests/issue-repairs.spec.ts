@@ -40,7 +40,7 @@ async function loadHackerDefense(page:import('@playwright/test').Page,startDefen
 test('notification inbox categorizes and acknowledges durable notices',async({page})=>{
  await page.setViewportSize({width:844,height:390});
  await startCompany(page);await prepareTeam(page);await nav(page,'研究');
- await page.getByRole('button',{name:'CPU 基盤技術 1 を研究'}).click();
+ await page.getByRole('button',{name:'CPU 基盤技術 を研究'}).click();
  await advanceDays(page,30);
  const bell=page.getByRole('button',{name:/^通知センター（未読/});
  await expect(bell).toHaveAccessibleName(/未読[1-9][0-9]*件/);

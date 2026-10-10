@@ -49,7 +49,7 @@ it('repairs missing or stale staff sequence numbers after layoffs for both hirin
 });
 it('values stock at its recorded moving-average cost rather than the design estimate',()=>{
  const ready=withTestStaff(start());ready.research.completed.push('cpu-compute-1');
- const designed=cmd(ready,{type:'design',kind:'cpu',name:'Inventory CPU',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
+ const designed=cmd(ready,{type:'design',kind:'cpu',name:'Inventory CPU',spec:{cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'},price:40000});
  const empty=structuredClone(designed);const stocked=structuredClone(designed);
  stocked.products[0].inventory=3;(stocked.products[0] as any).inventoryValue=2100;
  expect(companyValue(stocked)-companyValue(empty)).toBe(2100);

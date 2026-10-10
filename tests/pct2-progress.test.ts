@@ -8,7 +8,7 @@ import {researchPointCost} from '../packages/sim/src/business';
 const cmd=(s:any,c:any)=>command(s,c) as GameState;
 const start=(mode?:'standard'|'tycoon'|'long'|'sandbox',difficulty:'normal'|'hard'='normal')=>createGame({id:'g5',name:'進行社',difficulty,seed:5,...(mode?{mode}:{})});
 /** Year-2000 default CPU. */
-const cpu={cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'};
+const cpu={cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'};
 
 it('game modes change research cost, rival speed and demand',()=>{
  expect(start().mode).toBe('standard');

@@ -6,7 +6,7 @@ import {availableForAI} from './inventory-allocation';
 import {estimateLLM,estimateInference,benchmarks,clusterCost,type AIResearchEffects,type LLMDesign} from './ai-math';
 import {workBonus} from './management';
 import {requireRole,hasRole} from './business';
-import {techEffect} from '../../content/src/research';
+import {techEffect} from '../../content/src/tech-catalog';
 import {nextRandom} from './random';
 /** Current selectable range of a model-design slider, in its display unit (parameters/tokens in billions). */
 export function aiDesignRange(key:AISlider,completed:readonly string[]){return unlockedRange(aiDesignSliders[key],'ai',completed);}

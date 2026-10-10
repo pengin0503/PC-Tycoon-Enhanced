@@ -13,7 +13,7 @@ export function managementCommand(s:GameState,c:GameCommand):boolean{
   case'factory':if(c.level!==s.factoryLevel+1)throw new Error('次の工場段階を選択してください');expense(s,Math.round(b.factoryUpgrade*c.level**b.factoryExponent),false,true);s.factoryLevel=c.level;return true;
   case'train':{const e=s.staff.find(e=>e.id===c.id);if(!e||e.skill>=100)throw new Error('育成対象を確認してください');expense(s,b.trainingCost);e.skill=Math.min(100,e.skill+b.trainingGain);e.salary=salaryFor(e.skill,e.trait);return true;}
   case'marketing':s.advertising=c.budget;return true;
-  case'borrow':{const cap=s.difficulty==='hard'?b.hardLoanCap:b.normalLoanCap;if(s.company.loan+c.amount>cap)throw new Error('借入枠を超えています');s.company.loan+=c.amount;const overdue=Math.min(c.amount,s.company.debt);s.company.debt-=overdue;s.company.cash+=c.amount-overdue;return true;}
+  case'borrow':{const cap=loanCap(s);if(s.company.loan+c.amount>cap)throw new Error(`借入枠を超えています（上限 ${cap.toLocaleString('ja-JP')}円）`);s.company.loan+=c.amount;const overdue=Math.min(c.amount,s.company.debt);s.company.debt-=overdue;s.company.cash+=c.amount-overdue;return true;}
   case'repay':if(c.amount>s.company.loan||c.amount>s.company.cash)throw new Error('返済額を確認してください');s.company.cash-=c.amount;s.company.loan-=c.amount;return true;
   default:return false;
  }
@@ -30,3 +30,12 @@ export function companyValue(s:GameState){
  return Math.max(0,Math.round(s.company.cash-s.company.debt-s.company.loan+stock+compute+s.officeLevel*b.officeValue+s.company.reputation*b.reputationValue+s.finance.revenue*b.revenueValue));
 }
 
+/**
+ * Borrowing limit: the larger of the difficulty's base limit and a share of the company's value (`companyValue`, which
+ * already nets out the loan itself, so borrowing never raises its own limit), rounded down to ¥1M.
+ */
+export function loanCap(s:GameState){
+ const hard=s.difficulty==='hard';
+ const byValue=Math.floor(companyValue(s)*(hard?b.hardLoanValueShare:b.normalLoanValueShare)/1000000)*1000000;
+ return Math.max(hard?b.hardLoanCap:b.normalLoanCap,byValue);
+}

@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {startCompany,nav,openDesigner,launchFirst,openProduct,closeDialog,prepareTeam,advanceDays} from './ui-helpers';
 test('research design launch with a presentation, review, manufacture and sell from mobile controls',async({page})=>{
  await page.setViewportSize({width:390,height:844});await startCompany(page);await prepareTeam(page);
- await nav(page,'研究');await page.getByRole('button',{name:'CPU 基盤技術 1 を研究'}).click();
+ await nav(page,'研究');await page.getByRole('button',{name:'CPU 基盤技術 を研究'}).click();
  await openDesigner(page,'CPU');await page.getByRole('tab',{name:'販売'}).click();await page.getByLabel('製品名').fill('Polar C1');await page.getByRole('button',{name:'開発を開始'}).click();
  await advanceDays(page,30);
  await launchFirst(page,'オンライン配信');

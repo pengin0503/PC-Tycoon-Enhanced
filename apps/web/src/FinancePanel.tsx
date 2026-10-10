@@ -1,7 +1,8 @@
 import type {GameState} from '../../../packages/sim/src/index';
 import {companyValue} from '../../../packages/sim/src/management';
 import {companyStats} from '../../../packages/sim/src/progress';
-import {productCatalog} from '../../../packages/content/src/devices';
+import {useState} from 'react';
+import {productCatalog,productKinds} from '../../../packages/content/src/devices';
 import {tieredAchievements,milestoneAchievements,achievementLabelMap} from '../../../packages/content/src/achievements';
 import {PanelPages} from './PanelPages';
 import {Stars,compact} from './ui';
@@ -23,6 +24,28 @@ function CashChart({state}:{state:GameState}){
   <text x="60" y="210" fill="#6a7a8f" fontSize="11">{values[0].day}日</text><text x="480" y="210" fill="#6a7a8f" fontSize="11">{values.at(-1)!.day}日</text></svg>;
 }
 
+/** Product performance, filterable by product type, with totals of the selected type. */
+function ProductStats({state}:{state:GameState}){
+ const [kind,setKind]=useState<string>('all');
+ const rivals=state.rivals.filter(r=>!r.acquired);
+ const kinds=productKinds.filter(k=>state.products.some(p=>p.kind===k)||rivals.some(r=>r.products.some(p=>p.kind===k)));
+ const match=(k:string)=>kind==='all'||k===kind;
+ const own=state.products.filter(p=>match(p.kind));
+ const others=rivals.flatMap(r=>r.products.filter(p=>match(p.kind)).map(p=>({r,p})));
+ const sold=own.reduce((n,p)=>n+p.sold,0),total=sold+others.reduce((n,{p})=>n+p.sold,0);
+ return <div>
+  <div className="chip-row" role="group" aria-label="製品成績の種類">
+   <button aria-pressed={kind==='all'} onClick={()=>setKind('all')}>すべて</button>
+   {kinds.map(k=><button key={k} aria-pressed={kind===k} onClick={()=>setKind(k)}>{productCatalog[k].label}</button>)}
+  </div>
+  <div className="metrics" data-testid="product-stats-summary"><article className="metric"><span>自社製品</span><strong>{own.length}<small> 件（販売中 {own.filter(p=>p.discontinuedDay===undefined).length}）</small></strong></article><article className="metric"><span>累計販売</span><strong>{sold.toLocaleString('ja-JP')}台</strong></article><article className="metric"><span>累計売上</span><strong>{yen(own.reduce((n,p)=>n+p.revenue,0))}</strong></article><article className="metric"><span>累計利益</span><strong className={own.reduce((n,p)=>n+p.profit,0)<0?'bad':''}>{yen(own.reduce((n,p)=>n+p.profit,0))}</strong></article><article className="metric"><span>販売台数シェア</span><strong>{total?(sold/total*100).toFixed(1):'0.0'}%</strong></article></div>
+  <div className="scroll-table"><table><thead><tr><th>製品</th><th>種類</th><th>評価</th><th>性能</th><th>価格</th><th>販売</th><th>売上</th><th>利益</th></tr></thead>
+   <tbody>{own.map(p=><tr key={p.id} className={p.discontinuedDay!==undefined?'ended-row':''}><td>{state.company.name} / {p.name}{p.discontinuedDay!==undefined&&<span className="chip muted">販売終了</span>}</td><td>{productCatalog[p.kind].label}</td><td>{p.review?<Stars value={p.review.stars} size="sm"/>:'—'}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td className={p.profit<0?'bad':''}>{yen(p.profit)}</td></tr>)}
+    {others.map(({r,p})=><tr key={`${r.id}-${p.id}`} className="rival-row"><td>{r.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>—</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>)}
+    {!own.length&&!others.length&&<tr><td colSpan={8} className="empty">この種類の製品はまだありません。</td></tr>}</tbody></table></div>
+ </div>;
+}
+
 /** Statistics: finance, product performance, market log and achievements. */
 export function FinancePanel({state}:{state:GameState}){
  const stats=companyStats(state);
@@ -32,9 +55,7 @@ export function FinancePanel({state}:{state:GameState}){
    <CashChart state={state}/>
    <div className="scroll-table"><table><caption>月次決算</caption><thead><tr><th>日</th><th>現金</th><th>月間売上</th><th>月間費用</th><th>借入</th><th>シェア</th></tr></thead>
     <tbody>{state.history.map((h,i)=>{const prev=state.history[i-1];const known=!!prev||h.day===30;return <tr key={h.day}><td>{h.day}</td><td>{yen(h.cash)}</td><td>{known?yen(h.revenue-(prev?.revenue??0)):'—'}</td><td>{known?yen(h.expenses-(prev?.expenses??0)):'—'}</td><td>{yen(h.loan)}</td><td>{(h.share*100).toFixed(1)}%</td></tr>;}).slice(-24).reverse()}</tbody></table></div></div>
-  <div className="scroll-table"><table><thead><tr><th>製品</th><th>種類</th><th>評価</th><th>性能</th><th>価格</th><th>販売</th><th>売上</th><th>利益</th></tr></thead>
-   <tbody>{state.products.map(p=><tr key={p.id}><td>{state.company.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>{p.review?<Stars value={p.review.stars} size="sm"/>:'—'}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td className={p.profit<0?'bad':''}>{yen(p.profit)}</td></tr>)}
-    {state.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(p=><tr key={`${r.id}-${p.id}`} className="rival-row"><td>{r.name} / {p.name}</td><td>{productCatalog[p.kind].label}</td><td>—</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>))}</tbody></table></div>
+  <ProductStats state={state}/>
   <div><p>需要係数 ×{state.modifiers.demand.toFixed(2)} · 生産係数 ×{state.modifiers.production.toFixed(2)} · 効果終了 {state.modifiers.expiresDay||'—'}日{state.osIncident&&` · OS需要 ×${state.osIncident.demand.toFixed(2)}（${state.osIncident.expiresDay}日まで）`}</p>
    <ul className="events">{state.events.filter(e=>!['daily','weekly','sales'].includes(e.kind)).slice(-60).reverse().map((e,i)=><li key={`${e.day}-${i}`}><span>{e.day}日</span>{eventLabel(e.kind)}<small>{e.kind==='achievement'?achievementLabelMap[e.detail]??e.detail:e.detail}</small></li>)}</ul></div>
   <div>{state.mode==='sandbox'&&<p className="warning">サンドボックスモードでは実績を獲得できません。</p>}

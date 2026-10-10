@@ -1,9 +1,8 @@
-import {researchShare,type Unlock,type OptionUnlock} from './unlocks';
-import {researchAxes,researchLevels} from './research';
+import {researchShare,type OptionUnlock} from './unlocks';
 /**
  * Technology eras. Every game starts on 1 January 2000 with year-2000 technology; completing every stage of a
- * category's research reaches year-2100 technology. A category's technology year is the mean research share of the
- * branches that widen its design sliders, so one stage of those branches advances it by about two years.
+ * category's research reaches year-2100 technology. A category's technology year is the mean research share of its
+ * slider branches, so one stage of a branch advances that specification by two years.
  */
 export const eraBalance={startYear:2000,endYear:2100,daysPerYear:360} as const;
 const span=eraBalance.endYear-eraBalance.startYear;
@@ -11,20 +10,10 @@ const span=eraBalance.endYear-eraBalance.startYear;
 export function yearAtShare(share:number){return eraBalance.startYear+span*Math.min(1,Math.max(0,share));}
 /** Research share whose technology year is `year`. */
 export function shareAtYear(year:number){return Math.min(1,Math.max(0,(year-eraBalance.startYear)/span));}
-/** Branches that widen a category's sliders (deduplicated, in research-axis order). */
-export function eraAxes(unlocks:readonly (Unlock|OptionUnlock|undefined)[]):string[]{
- const used=new Set(unlocks.flatMap(u=>u?[...u.axes]:[]));
- return researchAxes.filter(a=>used.has(a));
-}
 /** Technology year a category's research has reached (fractional). */
 export function techYear(completed:readonly string[],category:string,axes:readonly string[]){return yearAtShare(researchShare(completed,category,axes));}
 /** Market technology share: the industry advances one research share per century of game time. */
 export function marketShareAt(day:number){return shareAtYear(eraBalance.startYear+day/eraBalance.daysPerYear);}
-/** Completed research ids equivalent to `share` of every branch of a category (used for rival designs). */
-export function researchAtShare(category:string,share:number,axes:readonly string[]=researchAxes):string[]{
- const level=(axis:string)=>axis==='compute'?1+Math.round(Math.min(1,Math.max(0,share))*(researchLevels-1)):Math.round(Math.min(1,Math.max(0,share))*researchLevels);
- return axes.flatMap(axis=>Array.from({length:level(axis)},(_,i)=>`${category}-${axis}-${i+1}`));
-}
 /** Options of a field available at a category's research; options without a year are always available. */
 export function unlockedOptions(options:readonly string[],unlock:OptionUnlock|undefined,category:string,completed:readonly string[]){
  if(!unlock)return [...options];

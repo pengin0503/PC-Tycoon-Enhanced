@@ -12,7 +12,7 @@ function withOS(){
 }
 function withCPU(){
  let s=withTestStaff(createGame({id:'ui-cpu',name:'部品社',difficulty:'normal',seed:9}));s.research.completed.push('cpu-compute-1');
- s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,cache:.25,cooling:40,socket:'Atlas'},price:40000});
+ s=cmd(s,{type:'design',kind:'cpu',name:'Polar C1',spec:{cores:1,clock:.8,ipc:1,process:180,l1Cache:.0625,l2Cache:.125,l3Cache:.0625,cooling:40,socket:'Atlas'},price:40000});
  s=cmd(s,{type:'advance',days:14});s=cmd(s,{type:'launch',id:'p-1'});s=cmd(s,{type:'line',id:'p-1',target:50});return cmd(s,{type:'advance',days:2});
 }
 
@@ -29,12 +29,20 @@ test('hacker attack pauses time and the defence minigame resolves it',async({pag
  await expect(page.getByRole('button',{name:'1x',exact:true})).toBeEnabled();
 });
 
-test('bulk offer can be accepted from the companies screen',async({page})=>{
+test('a bulk offer stops time in a full-screen event and can be accepted there',async({page})=>{
  const s=withCPU();s.products[0].inventory=10;s.products[0].inventoryValue=s.products[0].unitCost*10;s.offerSeq=1;s.offers=[{id:1,productId:'p-1',buyer:'Helix 物流',quantity:10,unitPrice:35000,expiresDay:s.day+14}];
- await load(page,s);await nav(page,'企業');await page.getByRole('tab',{name:/^取引/}).click();
- await expect(page.getByText('Helix 物流')).toBeVisible();await page.getByRole('button',{name:'承諾'}).click();
- await expect(page.getByText('現在、大口取引の打診はありません。',{exact:false})).toBeVisible();
+ await load(page,s);
+ const dialog=page.getByRole('dialog',{name:'大口取引の打診'});
+ await expect(dialog).toBeVisible();await expect(dialog.getByText('Helix 物流')).toBeVisible();
+ await expect(page.getByRole('button',{name:'1x',exact:true})).toBeDisabled();
+ const box=await dialog.boundingBox();const viewport=page.viewportSize()!;
+ expect(box!.width).toBeGreaterThanOrEqual(viewport.width-2);expect(box!.height).toBeGreaterThanOrEqual(viewport.height-2);
+ await dialog.getByRole('button',{name:'承諾する'}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(page.getByTestId('cash')).toHaveText(new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(s.company.cash+350000));
+ await expect(page.getByRole('button',{name:'1x',exact:true})).toBeEnabled();
+ await nav(page,'企業');await page.getByRole('tab',{name:/^取引/}).click();
+ await expect(page.getByText('現在、大口取引の打診はありません。',{exact:false})).toBeVisible();
 });
 
 test('acquisition negotiation shows odds and completes at full valuation',async({page})=>{

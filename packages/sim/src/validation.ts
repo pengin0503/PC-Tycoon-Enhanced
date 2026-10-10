@@ -1,5 +1,6 @@
 import {gameSchema} from './schema';
-import {techById,hardwareKinds,type HardwareKind} from '../../content/src/research';
+import {hardwareKinds,type HardwareKind} from '../../content/src/research';
+import {techById} from '../../content/src/tech-catalog';
 import {aiGPUs} from '../../content/src/ai';
 import {offices} from '../../content/src/management';
 import {evaluateHardware} from './hardware';
@@ -31,11 +32,11 @@ export function validateGame(value:unknown):GameState{
   prevNotice=notice.id;
  }
  if(s.pendingAttack&&!s.products.some(p=>p.id===s.pendingAttack!.osId&&p.kind==='os'))fail('攻撃対象のOSが見つかりません');
- for(const o of s.offers)if(!s.products.some(p=>p.id===o.productId))fail('取引対象の製品が見つかりません');
+ for(const o of s.offers)if(!s.products.some(p=>p.id===o.productId&&p.discontinuedDay===undefined))fail('取引対象の製品が見つかりません');
  unique(s.offers.map(o=>String(o.id)),'取引');unique(s.candidates.map(k=>k.id),'候補者');
  for(const p of s.products)if(p.inventoryValue!==undefined&&p.inventory===0&&p.inventoryValue!==0)fail('空在庫に原価が残っています');
  let previous=0;for(const h of s.history){if(h.day>s.day||h.day<=previous)fail('決算履歴の日付が不正です');previous=h.day;}
- for(const p of s.products){if(p.launched&&p.remaining>0)fail('開発中の製品が発売されています');if(!p.launched&&(p.inventory>0||p.line))fail('発売前製品の生産状態が不正です');if(p.releaseDay>s.day)fail('発売日が未来です');
+ for(const p of s.products){if(p.launched&&p.remaining>0)fail('開発中の製品が発売されています');if(p.discontinuedDay!==undefined&&(!p.launched||p.line||p.discontinuedDay>s.day||p.discontinuedDay<p.releaseDay))fail('販売終了の状態が不正です');if(!p.launched&&(p.inventory>0||p.line))fail('発売前製品の生産状態が不正です');if(p.releaseDay>s.day)fail('発売日が未来です');
   if((hardwareKinds as readonly string[]).includes(p.kind))evaluateHardware(p.kind as HardwareKind,p.spec,s.research.completed,{stored:true});
   if(p.kind==='pc'||p.kind==='laptop'){const parts=deviceParts(p.spec);if(!['gaming','office','server'].includes(String(p.spec.purpose)))fail('端末用途が不正です');evaluateDevice(s,parts,p.spec.purpose as 'gaming'|'office'|'server',p.kind,p.spec.osId?String(p.spec.osId):undefined,true,typeof p.spec.cooling==='number'?p.spec.cooling:undefined);}
  }

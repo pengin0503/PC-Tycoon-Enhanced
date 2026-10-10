@@ -1,8 +1,8 @@
 import {researchLevels} from './research';
 /**
  * Research-gated slider ranges. A field starts with its better-side bound at `from` and moves towards its
- * absolute bound (`max`, or `min` when `lowerIsBetter`) as the listed research branches of the product
- * category are completed. Research no longer multiplies performance directly; it widens the design space.
+ * absolute bound (`max`, or `min` when `lowerIsBetter`) as its own research branch (`axes`, normally the field key)
+ * of the product category is completed. Research does not multiply performance; it widens the design space.
  * `log` fields grow geometrically (cores, capacities, bandwidths), so each stage multiplies the bound instead of
  * adding a fixed amount; the hardware catalog uses them to go from year-2000 technology to year-2100 technology.
  */
@@ -15,11 +15,10 @@ export function researchLevel(completed:readonly string[],category:string,axis:s
  for(const id of completed)if(id.startsWith(prefix)){const n=Number(id.slice(prefix.length));if(Number.isInteger(n)&&n>level)level=n;}
  return level;
 }
-/** Mean completed share (0..1) of a branch set. The first compute stage only unlocks the category, so it does not count. */
+/** Mean completed share (0..1) of a branch set; every branch has `researchLevels` stages of two technology years. */
 export function researchShare(completed:readonly string[],category:string,axes:readonly string[]){
  if(!axes.length)return 1;
- const share=axes.reduce((n,axis)=>{const level=researchLevel(completed,category,axis);
-  return n+(axis==='compute'?Math.max(0,level-1)/(researchLevels-1):level/researchLevels);},0)/axes.length;
+ const share=axes.reduce((n,axis)=>n+researchLevel(completed,category,axis)/researchLevels,0)/axes.length;
  return Math.min(1,Math.max(0,share));
 }
 /** 0..1 open fraction of a branch set: the research share raised to `unlockBalance.exponent`, so early stages open noticeably. */

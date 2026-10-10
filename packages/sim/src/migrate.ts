@@ -4,18 +4,71 @@ import {eventBalance} from '../../content/src/events';
 import {rivalBalance} from '../../content/src/management';
 import {salaryFor} from './business';
 import {newRivals} from './rivals';
+import {researchBranches,techById} from '../../content/src/tech-catalog';
+import {researchDomains,researchLevels} from '../../content/src/research';
+import {rivalFanBalance} from '../../content/src/management';
 import type {GameState,Product} from './types';
 
-/** Converts a save from any earlier economy version to the current one (see `toVersion2` and `toVersion3`). */
+/**
+ * Research of economy version 3 and older: four shared branches per category (`compute`, `power`, `capacity`,
+ * `compatibility`; `cost`/`reliability` retired) each widened several specifications. Version 4 gives every
+ * specification its own branch; this table lists which old branches each new branch inherits its progress from.
+ */
+const legacyUnlocks:Record<string,Record<string,readonly string[]>>={
+ cpu:{cores:['capacity'],clock:['compute'],ipc:['compute'],process:['power'],l1Cache:['compatibility'],l2Cache:['compatibility'],l3Cache:['capacity'],smt:['compute'],memoryChannels:['compatibility'],cooling:['power']},
+ gpu:{units:['capacity'],clock:['compute'],vram:['capacity'],bandwidth:['compatibility'],busWidth:['compatibility'],process:['power'],cooling:['power']},
+ motherboard:{memoryGen:['compatibility'],slots:['compatibility'],usb:['compute'],storagePorts:['compute'],lan:['compute'],bus:['compute','compatibility']},
+ ram:{memoryGen:['compatibility'],capacity:['capacity'],latency:['compatibility'],speed:['compute','compatibility']},
+ storage:{capacity:['capacity'],speed:['compute','compatibility'],writeSpeed:['compute','compatibility'],iops:['compute']},
+ psu:{wattage:['capacity','compute'],efficiency:['power','compatibility'],modular:['compatibility']},
+ monitor:{size:['capacity'],resolution:['capacity'],refresh:['compute'],panel:['compatibility'],response:['compute'],brightness:['compute'],gamut:['compatibility']},
+ pc:{cooling:['power','compute','compatibility']},laptop:{cooling:['power','compute','compatibility']},
+ os:{quality:['compute','reliability'],compatibility:['compatibility'],support:['capacity']},
+ ai:{params:['compute'],layers:['architecture'],hidden:['architecture'],contextLength:['context'],tokens:['data']},
+};
+/** OS features used to be gated by stages of the shared branches. */
+const legacyFeatures:Record<string,string>={'os-security-1':'os-reliability-1','os-media-1':'os-capacity-1','os-games-1':'os-compute-2','os-store-1':'os-compatibility-1'};
+/**
+ * Converts research ids of a save older than economy version 4 (a raw, not yet validated save object) to per-specification
+ * branches. A new branch receives the stages matching the old research share of the branches that used to widen it,
+ * rounded up so no designed range is lost. Category foundations, appearance research and AI bonus branches keep their ids.
+ */
+export function migrateResearchIds(raw:Record<string,unknown>):Record<string,unknown>{
+ const version=raw.economyVersion;
+ const research=raw.research as {completed?:unknown,active?:unknown}|undefined;
+ if(typeof version==='number'&&version>=4||!research||!Array.isArray(research.completed))return raw;
+ const old=new Set(research.completed.filter((id):id is string=>typeof id==='string'));
+ const level=(category:string,axis:string)=>{let n=0;for(let i=1;old.has(`${category}-${axis}-${i}`);i++)n=i;return n;};
+ const share=(category:string,axis:string)=>axis==='compute'?Math.max(0,level(category,axis)-1)/(researchLevels-1):level(category,axis)/researchLevels;
+ const completed:string[]=[];
+ for(const category of researchDomains){
+  if(!old.has(`${category}-compute-1`))continue;
+  for(const b of researchBranches(category)){
+   const inherited=legacyUnlocks[category]?.[b.axis];
+   let stages=0;
+   if(b.axis==='compute'&&category!=='ai')stages=1;
+   else if(category==='ai'&&b.kind!=='slider')stages=level(category,b.axis);
+   else if(inherited)stages=Math.min(b.levels,Math.ceil(inherited.reduce((n,a)=>n+share(category,a),0)/inherited.length*researchLevels-1e-9));
+   else if(b.kind==='feature')stages=old.has(legacyFeatures[`${category}-${b.axis}-1`]??'')?1:0;
+   for(let i=1;i<=stages;i++)completed.push(`${category}-${b.axis}-${i}`);
+  }
+  for(let i=1;old.has(`${category}-visual-${i}`);i++)completed.push(`${category}-visual-${i}`);
+ }
+ const done=new Set(completed);
+ const active=Array.isArray(research.active)?research.active.filter(r=>typeof r==='object'&&r!==null&&techById.has(String((r as {id?:unknown}).id))&&!done.has(String((r as {id?:unknown}).id))):[];
+ return {...raw,research:{...research,completed,active}};
+}
+
+/** Converts a save from any earlier economy version to the current one (see `toVersion2`, `toVersion3` and `toVersion4`). */
 export function migrateEconomy(input:GameState):GameState{
  const legacyRivalRoster=input.rivals.length===3&&input.rivals.every((r,i)=>r.id===`r-${i+1}`);
  const needsEconomyMigration=input.economyVersion!==balance.economyVersion;
  if(!needsEconomyMigration&&!legacyRivalRoster)return input;
  const s=structuredClone(input);
+ const from=s.economyVersion;
  if(needsEconomyMigration){
-  if(s.economyVersion===undefined)toVersion2(s);
-  toVersion3(s);
-  s.economyVersion=balance.economyVersion;
+  if(from===undefined)toVersion2(s);
+  if((from??2)<3)toVersion3(s);
  }
  // Preserve the original companies' state, ownership, inventory, and seed when upgrading a 3-rival save.
  // Expand only known legacy rosters; custom rosters must never be silently replaced.
@@ -23,7 +76,19 @@ export function migrateEconomy(input:GameState):GameState{
   const existing=new Set(s.rivals.map(r=>r.id));
   s.rivals.push(...newRivals(s.initialSeed,s.difficulty,s.mode).filter(r=>!existing.has(r.id)));
  }
+ if(needsEconomyMigration){
+  if((from??2)<4)toVersion4(s);
+  s.economyVersion=balance.economyVersion;
+ }
  return s;
+}
+/**
+ * Version 4 gives every specification its own research branch (research ids are converted before validation by
+ * `migrateResearchIds`) and gives rivals a fan base that an acquisition transfers. Rivals start from the base of a new
+ * game plus fans from what they have already sold; acquired rivals' fans are treated as already absorbed.
+ */
+function toVersion4(s:GameState){
+ for(const r of s.rivals)if(r.fans===undefined)r.fans=r.acquired?0:Math.round(rivalFanBalance.initial+r.products.reduce((n,p)=>n+p.sold,0)*rivalFanBalance.perUnit);
 }
 /**
  * Version 2 introduced real-world design, office and salary costs, a venture-funded start and ×10 sales volumes.

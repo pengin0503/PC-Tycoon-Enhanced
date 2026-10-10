@@ -1,4 +1,4 @@
-import {unlockedVisualTier} from '../../content/src/research';
+import {unlockedVisualTier} from '../../content/src/tech-catalog';
 export type VisualChoice={tier:number,color:'graphite'|'silver'|'teal'};
 export const visualBalance={finishCostPerTier:800,demandPerTier:.02} as const;
 export function validateVisual(completed:string[],kind:string,choice?:VisualChoice):number{

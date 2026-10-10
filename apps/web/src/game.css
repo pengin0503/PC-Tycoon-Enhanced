@@ -342,6 +342,13 @@ progress{width:100%;accent-color:var(--accent)}
 .modal-header h2{font-size:19px}
 .modal.decision,.modal.game-over{border-top:6px solid var(--gold)}
 .modal.hacker{border-top:6px solid var(--bad)}
+/* Event that stops the clock and takes the whole screen until answered (bulk-deal offers). */
+.modal-overlay.fullscreen{padding:0;background:#0d1626}
+.modal.fullscreen{width:100%;height:100%;max-height:none;border-radius:0;display:flex;flex-direction:column;justify-content:center;padding:16px max(16px,calc((100% - 760px)/2));border-top:6px solid var(--gold)}
+.modal.fullscreen .modal-body{display:flex;flex-direction:column;gap:8px}
+.offer-hero{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:14px;background:linear-gradient(135deg,#fff6dc,#ffe9b0);color:#4a3600}
+.offer-hero strong{font-size:20px}
+.overflow-score{margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--gold);color:#3b2a00;font-size:12px;font-weight:700;vertical-align:middle}
 .intrusion-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:10px 0}
 .intrusion{aspect-ratio:1;border-radius:12px;font-size:22px;padding:0;min-height:40px;background:#e8eef6}
 .intrusion.active{background:#ffdcdd;border-color:var(--bad);animation:pulse .5s infinite alternate}
@@ -392,4 +399,43 @@ progress{width:100%;accent-color:var(--accent)}
  .home-screen{grid-template-columns:minmax(0,1.2fr) minmax(250px,1fr)}
  .research-head .research-progress:not(.research-era){display:none}.research-filters label{font-size:0;gap:0}.research-filters label input,.research-filters label select{font-size:12px}
  .workspace-tabs button{min-height:30px;padding:3px 14px}
+}
+
+/* Discontinued products */
+.product-card.ended{opacity:.62;filter:grayscale(.5)}
+.chip.muted{background:#e6e9ee;color:#5b6676}
+.end-confirm{display:flex;flex-direction:column;gap:6px}
+button.danger{background:var(--bad);border-color:#c23338;color:#fff}
+button.ghost-danger{background:transparent;border-color:#f0b4b6;color:#c23338}
+.stats-screen .metric small{font-size:11px;font-weight:600;color:var(--muted)}
+.stats-screen .chip-row{margin-bottom:8px}
+tr.ended-row td{color:var(--muted)}
+tr.ended-row .chip{margin-left:6px}
+/* Short landscape screens with a design action bar (#38): the dock shrinks to an icon rail on the left and the action
+   bar moves onto the same row on the right, so only one fixed row sits at the bottom. Labels stay in the accessibility
+   tree (visually hidden) so every dock button keeps its name. */
+@media(max-height:500px) and (min-width:600px){
+ .app-shell:has(.action-bar){--dock-h:42px}
+ .app-shell:has(.action-bar) .screen-nav{left:calc(var(--dock-gap) + env(safe-area-inset-left));transform:none;gap:2px;padding:4px 6px;border-radius:16px}
+ .app-shell:has(.action-bar) .screen-nav button{min-width:36px;min-height:34px;padding:0 1px 4px}
+ .app-shell:has(.action-bar) .screen-nav button svg{width:30px;height:30px}
+ .app-shell:has(.action-bar) .screen-nav button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+ .app-shell:has(.action-bar) .screen-nav button.selected::after{bottom:0}
+ .app-shell:has(.action-bar) .action-bar{position:fixed;z-index:21;right:calc(var(--dock-gap) + env(safe-area-inset-right));bottom:calc(var(--dock-gap) + env(safe-area-inset-bottom));
+  left:calc(var(--dock-gap) * 2 + 9 * 38px + 12px);min-height:var(--dock-h);margin:0;padding:3px 6px 3px 4px;border-radius:16px}
+ .app-shell:has(.action-bar) .action-bar .back-button{padding:4px 10px;min-height:32px;font-size:13px}
+ .app-shell:has(.action-bar) .action-bar span{font-size:12px}
+ .app-shell:has(.action-bar) .action-bar .primary.big{padding:5px 14px;min-height:34px}
+}
+@media(max-height:500px) and (min-width:600px){
+ .app-shell:has(.action-bar) .action-bar button{white-space:nowrap}
+}
+@media(max-height:500px) and (min-width:600px) and (max-width:780px){
+ .app-shell:has(.action-bar) .screen-nav button{min-width:32px}
+ .app-shell:has(.action-bar) .screen-nav button svg{width:28px;height:28px;padding:6px}
+ .app-shell:has(.action-bar) .action-bar{left:calc(var(--dock-gap) * 2 + 9 * 34px + 12px);gap:6px}
+ .app-shell:has(.action-bar) .action-bar span{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;font-size:10px}
+ .app-shell:has(.action-bar) .action-bar span b{font-size:12px}
+ .app-shell:has(.action-bar) .action-bar .back-button{padding:4px 8px;font-size:12px}
+ .app-shell:has(.action-bar) .action-bar .primary.big{padding:5px 10px;font-size:13px}
 }

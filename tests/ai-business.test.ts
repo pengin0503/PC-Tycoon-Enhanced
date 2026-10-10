@@ -41,7 +41,7 @@ it('model size, context and data limits open up through AI research instead of b
  const s=ready();
  expect(()=>cmd(s,{...train,design:{...design,context:16384},budget:1e9})).toThrow('学習コンテキスト長は現在の研究では8,192トークンまでです');
  expect(()=>cmd(s,{...train,design:{...design,tokens:100e9},budget:1e9})).toThrow('学習トークン数は現在の研究では50Bまでです');
- const researched=unlockBranch(structuredClone(s),'ai','context',10);
+ const researched=unlockBranch(structuredClone(s),'ai','contextLength',10);
  expect(cmd(researched,{...train,design:{...design,context:16384},budget:1e9}).models[0].design.context).toBe(16384);
 });
 it('benchmarks saturate and data quality is consequential',()=>{

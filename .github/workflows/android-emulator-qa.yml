@@ -40,6 +40,13 @@ jobs:
           PCT_VERSION_CODE: '1001'
           PCT_VERSION_NAME: emulator.qa.1
         run: ./gradlew --no-daemon assembleDebug
+      # Hosted Linux runners only give the emulator hardware acceleration when /dev/kvm is accessible; without it the
+      # emulator falls back to software emulation and needs ~15 minutes just to boot (the endless boot_completed polling).
+      - name: Enable KVM for the Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Run an Android emulator and verify in-place upgrade, Back and offline restart
         uses: reactivecircus/android-emulator-runner@v2
         with:

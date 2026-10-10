@@ -50,12 +50,12 @@ it('company share is a numeric fraction of cumulative units sold',()=>{
 it('research never requires a calendar date, but still requires staff, prerequisites and RP',()=>{
  const s=withTestStaff(start());s.company.researchPoints=100000;
  const cpu=command(s,{type:'research',id:'cpu-compute-1'});
- expect(command(cpu,{type:'research',id:'cpu-capacity-1'}).research.completed).toContain('cpu-capacity-1');
+ expect(command(cpu,{type:'research',id:'cpu-cores-1'}).research.completed).toContain('cpu-cores-1');
  expect(command(cpu,{type:'research',id:'ai-compute-1'}).research.completed).toContain('ai-compute-1');
- expect(()=>command(s,{type:'research',id:'cpu-capacity-1'})).toThrow(/前提研究/);
+ expect(()=>command(s,{type:'research',id:'cpu-cores-1'})).toThrow(/前提研究/);
  expect(()=>command(s,{type:'research',id:'ai-architecture-2'})).toThrow(/前提研究/);
  const withoutRP=structuredClone(cpu);withoutRP.company.researchPoints=0;
- expect(()=>command(withoutRP,{type:'research',id:'cpu-capacity-1'})).toThrow(/研究ポイント/);
+ expect(()=>command(withoutRP,{type:'research',id:'cpu-cores-1'})).toThrow(/研究ポイント/);
 });
 
 it('small GPU production lines still make daily retail sales before AI research is unlocked',()=>{

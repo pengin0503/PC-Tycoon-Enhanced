@@ -7,14 +7,14 @@ export type DeviceSlot=typeof deviceSlots[number];
 export const productCatalog={...hardwareCatalog,pc:{label:'完成PC',demand:900,reference:1000},laptop:{label:'ノートPC',demand:1000,reference:850},os:{label:'OS',demand:2000,reference:600}};
 /** Money in yen. `caseCost`/`laptopPackaging` are per unit; case cooling adds `deviceCoolingCost` per W. */
 export const deviceBalance={caseCost:8000,laptopPackaging:40000,laptopCooling:.8,designCost:30000000,work:20,
- referencePerformance:[1200,1600,320,150],scoreScale:1000,packagingResearchScale:.4,
+ referencePerformance:[1200,1600,320,150],scoreScale:1000,
  purposeWeights:{gaming:[.35,.4,.15,.1],office:[.4,.1,.2,.3],server:[.3,.1,.45,.15]},
- os:{designCost:1000000000,work:20,licenseCost:1000,supportMonthly:10000000,withoutOS:.8,baseCompatibility:.5,compatibilityWeight:.5,qualityFloor:.8,qualityWeight:.2,supportFloor:.8,supportWeight:.2,designQualityFloor:.5,designQualityWeight:.5,designCompatibilityFloor:.5,designCompatibilityWeight:.5,powerCostScale:.5,costScale:.2,browserCompatibility:.6},
+ os:{designCost:1000000000,work:20,licenseCost:1000,supportMonthly:10000000,withoutOS:.8,baseCompatibility:.5,compatibilityWeight:.5,qualityFloor:.8,qualityWeight:.2,supportFloor:.8,supportWeight:.2,designQualityFloor:.5,designQualityWeight:.5,designCompatibilityFloor:.5,designCompatibilityWeight:.5,browserCompatibility:.6},
 } as const;
-/** Case cooling of PCs/laptops in W; must cover the parts' power draw. Thermal, layout and interface research widen it. */
+/** Case cooling of PCs/laptops in W; must cover the parts' power draw. Its own research branch (`cooling`) widens it. */
 export const deviceCooling={
- pc:{label:'冷却性能',unit:'W',min:30,max:2500,step:10,default:150,unlock:{axes:['power','compute','compatibility'],from:200}},
- laptop:{label:'冷却性能',unit:'W',min:10,max:600,step:5,default:80,unlock:{axes:['power','compute','compatibility'],from:80}},
+ pc:{label:'冷却性能',unit:'W',min:30,max:2500,step:10,default:150,unlock:{axes:['cooling'],from:200}},
+ laptop:{label:'冷却性能',unit:'W',min:10,max:600,step:5,default:80,unlock:{axes:['cooling'],from:80}},
 } satisfies Record<'pc'|'laptop',Field>;
 export const deviceCoolingCost={pc:30,laptop:60} as const;
 const variant:Partial<Record<string,string>>={socket:'ソケット',memoryGen:'メモリ'};

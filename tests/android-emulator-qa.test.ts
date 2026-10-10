@@ -17,6 +17,11 @@ it('runs an ADB install/update/back/offline/relaunch smoke on pull requests (#4)
  // Android's app-private files/ dir need not exist on first launch: create it under run-as before writing.
  expect(script).toMatch(/run-as\s+"\$PACKAGE"\s+mkdir\s+-p\s+files/);
  expect(script.indexOf('mkdir -p files')).toBeLessThan(script.indexOf('echo keep-save-data'));
+ // adb shell joins its arguments, so a redirect must be quoted for the device shell to run inside run-as.
+ expect(script).toMatch(/adb shell "run-as \$PACKAGE sh -c 'echo keep-save-data > files\//);
+ // Without KVM the hosted runner emulates the CPU in software and the boot alone takes about 15 minutes.
+ expect(workflow).toMatch(/99-kvm4all\.rules/);
+ expect(workflow.indexOf('99-kvm4all.rules')).toBeLessThan(workflow.indexOf('reactivecircus/android-emulator-runner'));
  expect(script).toMatch(/svc wifi disable/);
  expect(script).not.toMatch(/adb uninstall/);
  expect(workflow).toMatch(/if: always\(\)/);
