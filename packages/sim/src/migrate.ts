@@ -3,7 +3,7 @@ import {eraBalance} from '../../content/src/era';
 import {eventBalance} from '../../content/src/events';
 import {rivalBalance} from '../../content/src/management';
 import {salaryFor} from './business';
-import {newRivals} from './rivals';
+import {newRivals,retireRivalModels} from './rivals';
 import {researchBranches,techById} from '../../content/src/tech-catalog';
 import {researchDomains,researchLevels} from '../../content/src/research';
 import {rivalFanBalance} from '../../content/src/management';
@@ -59,7 +59,7 @@ export function migrateResearchIds(raw:Record<string,unknown>):Record<string,unk
  return {...raw,research:{...research,completed,active}};
 }
 
-/** Converts a save from any earlier economy version to the current one (see `toVersion2`, `toVersion3` and `toVersion4`). */
+/** Converts a save from any earlier economy version to the current one (see `toVersion2` … `toVersion5`). */
 export function migrateEconomy(input:GameState):GameState{
  const legacyRivalRoster=input.rivals.length===3&&input.rivals.every((r,i)=>r.id===`r-${i+1}`);
  const needsEconomyMigration=input.economyVersion!==balance.economyVersion;
@@ -78,9 +78,18 @@ export function migrateEconomy(input:GameState):GameState{
  }
  if(needsEconomyMigration){
   if((from??2)<4)toVersion4(s);
+  if((from??2)<5)toVersion5(s);
   s.economyVersion=balance.economyVersion;
  }
  return s;
+}
+/**
+ * Version 5 adds the year-2200 research tier, company sockets and per-kind monthly sales (new data needs no conversion)
+ * and has rivals retire old models: each independent rival keeps its newest `rivalBalance.activeModels` models and clears
+ * the stock of older ones at the clearance price, as it now does whenever it launches a model.
+ */
+function toVersion5(s:GameState){
+ for(const r of s.rivals)if(!r.acquired)retireRivalModels(s,r);
 }
 /**
  * Version 4 gives every specification its own research branch (research ids are converted before validation by

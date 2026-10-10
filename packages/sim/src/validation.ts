@@ -33,6 +33,7 @@ export function validateGame(value:unknown):GameState{
  }
  if(s.pendingAttack&&!s.products.some(p=>p.id===s.pendingAttack!.osId&&p.kind==='os'))fail('攻撃対象のOSが見つかりません');
  for(const o of s.offers)if(!s.products.some(p=>p.id===o.productId&&p.discontinuedDay===undefined))fail('取引対象の製品が見つかりません');
+ unique(s.sockets.map(x=>x.id),'ソケット');unique(s.sockets.map(x=>x.name.toLowerCase()),'ソケット名');
  unique(s.offers.map(o=>String(o.id)),'取引');unique(s.candidates.map(k=>k.id),'候補者');
  for(const p of s.products)if(p.inventoryValue!==undefined&&p.inventory===0&&p.inventoryValue!==0)fail('空在庫に原価が残っています');
  let previous=0;for(const h of s.history){if(h.day>s.day||h.day<=previous)fail('決算履歴の日付が不正です');previous=h.day;}

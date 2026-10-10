@@ -111,7 +111,7 @@ export default function App(){
    {offlineStatus&&<p className="offline-status">{ja[offlineStatus]}</p>}
    {error&&<div role="alert" className="error"><span>{error}</span><button className="icon-button" aria-label="エラーを閉じる" onClick={()=>setError('')}>×</button></div>}
    <div role="status" className="notice">{notice}</div>
-   {loading?<p>読み込み中…</p>:!state?<section className="start-card"><div className="start-hero"><Logo id={logo} size={64}/><div><p className="eyebrow">PC TYCOON ENHANCED</p><h1>新しい会社を設立</h1><p>ガレージから世界的テック企業へ。部品を設計し、レビューで評価され、ファンを増やしましょう。</p><p className="start-era">{ja.year}：2000年1月1日（技術水準も2000年から。研究を重ねると2100年の技術に到達します）</p></div></div>
+   {loading?<p>読み込み中…</p>:!state?<section className="start-card"><div className="start-hero"><Logo id={logo} size={64}/><div><p className="eyebrow">PC TYCOON ENHANCED</p><h1>新しい会社を設立</h1><p>ガレージから世界的テック企業へ。部品を設計し、レビューで評価され、ファンを増やしましょう。</p><p className="start-era">{ja.year}：2000年1月1日（技術水準も2000年から。研究を重ねると2100年、さらに上位研究で2200年の技術に到達します）</p></div></div>
     <div className="form-grid"><label>{ja.name}<input value={name} maxLength={80} onChange={e=>setName(e.target.value)}/></label>
      <label>{ja.difficulty}<select value={difficulty} onChange={e=>setDifficulty(e.target.value as 'normal'|'hard')}><option value="normal">{ja.normal}</option><option value="hard">{ja.hard}（倒産あり）</option></select></label>
      <label>{ja.seed}<input type="number" min={0} max={4294967295} value={seed} onChange={e=>setSeed(Number(e.target.value))}/></label></div>

@@ -16,5 +16,12 @@ export const aiResearchAxes=['compute','architecture','quantization','data','con
 export const axisLabels:Record<string,string>={compute:'演算効率',architecture:'経路・構造設計',quantization:'量子化精度維持',data:'データ整備',context:'Attention効率',economics:'サービス運用効率',visual:'製品の外観・意匠'};
 export const researchBalance={cost:4000,costExponent:1.3,work:10,workExponent:1.2,diminishing:.02,
  effects:{compute:.08,architecture:.12,quantization:.12,data:.1,context:.12,economics:.1} as Record<string,number>};
-/** Stages of a full research branch: stage N is technology year 2000 + 100·N/50. */
+/** Stages from year-2000 to year-2100 technology: stage N is technology year 2000 + 2·N. */
 export const researchLevels=50;
+/**
+ * Stages of a hardware slider branch including the advanced tier: stages 51–100 continue from year-2100 to year-2200
+ * technology, widening each slider from its year-2100 bound (`unlock.base`) to its final bound.
+ */
+export const maxResearchLevels=100;
+/** Highest research share (`level / researchLevels`): 1 is year-2100 technology, 2 is year-2200 technology. */
+export const maxResearchShare=maxResearchLevels/researchLevels;

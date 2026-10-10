@@ -29,7 +29,7 @@ export function describeWithResearch(description:string|undefined,category:strin
 
 /**
  * Technology year a product domain's research has reached (games start with year-2000 technology and full research
- * reaches 2100). AI and OS sliders are not tied to hardware eras, so they have none.
+ * reaches 2200 through the advanced tier). AI and OS sliders are not tied to hardware eras, so they have none.
  */
 export function domainTechYear(category:string,completed:readonly string[]):number|undefined{
  if(category in hardwareCatalog)return Math.floor(hardwareTechYear(category as keyof typeof hardwareCatalog,completed));
@@ -67,7 +67,7 @@ export function techEffectText(t:Tech,completed:readonly string[]){
  });
  const direct=hasDirectEffect(t)?[`${axisLabels[t.axis]??t.branchLabel} +${(t.effect*100).toFixed(1)}%`]:[];
  if(t.kind==='foundation'&&t.category!=='ai')return `${domainLabel(t.category)}の開発を解放`;
- if(t.kind==='feature')return `OS機能「${osFeatureLabels[t.axis as OSFeature]??t.branchLabel}」を解放`;
+ if(t.kind==='feature')return t.category==='cpu'?'自社独自のCPUソケットを開発できるようになります':`OS機能「${osFeatureLabels[t.axis as OSFeature]??t.branchLabel}」を解放`;
  if(t.kind==='option'&&t.category in hardwareCatalog){
   const f=designFields(t.category as HardwareKind).find(([k])=>k===t.axis)?.[1];
   if(f?.options){

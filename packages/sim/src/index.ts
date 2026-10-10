@@ -12,6 +12,7 @@ import {osCommand,attackDaily,attackMonthly} from './os';
 import {progressCommand,checkAchievements,checkGameOver} from './progress';
 import {businessCommand,businessWeekly,businessMonthly,expireOffers,generateCandidates} from './business';
 import {researchPointBalance} from '../../content/src/management';
+import {socketCommand} from './sockets';
 export {validateGame} from './validation';
 import { expense, logEvent } from './finance';
 import type { GameState, GameCommand, NewGameOptions } from './types';
@@ -31,6 +32,7 @@ export function command(state: GameState, input: GameCommand): GameState {
   if(s.gameOver&&c.type!=='markNotificationsRead')throw new Error('ゲームオーバーです。新しいゲームを始めてください');
   progressCommand(s,c);
   hardwareCommand(s,c);
+  socketCommand(s,c);
   deviceCommand(s,c);
   managementCommand(s,c);
   businessCommand(s,c);

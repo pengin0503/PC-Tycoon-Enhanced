@@ -16,6 +16,10 @@ import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
 import {priceRange} from '../../../packages/sim/src/pricing';
 import {vendorPartsAt} from '../../../packages/sim/src/vendor-market';
+import {companySockets,socketLimits} from '../../../packages/sim/src/sockets';
+import {researchLink} from './research-plan';
+import {socketResearch,socketDesignCost,socketPins,socketBoardCost,socketBalance,industrySockets,mainstreamSocket} from '../../../packages/content/src/sockets';
+import {calendarYearAt} from '../../../packages/content/src/era';
 import type {GameState,GameCommand} from '../../../packages/sim/src/index';
 import type {Product} from '../../../packages/sim/src/types';
 import {PanelPages} from './PanelPages';
@@ -31,10 +35,11 @@ type Send=(c:GameCommand)=>boolean;
 /** Lock marker for a slider whose absolute bound still needs research. */
 export function lockFor(field:RangeSpec,range:{min:number,max:number},category:string){
  if(!canUnlockMore(field,range))return undefined;
- return {value:Number(field.lowerIsBetter?field.min:field.max),side:field.lowerIsBetter?'min' as const:'max' as const,hint:researchHint(category,field.unlock!.axes)};
+ return {value:Number(field.lowerIsBetter?field.min:field.max),side:field.lowerIsBetter?'min' as const:'max' as const,hint:researchHint(category,field.unlock!.axes),href:researchLink(category,field.unlock!.axes[0])};
 }
-type Category=HardwareKind|'pc'|'laptop'|'os';
-const categories:Category[]=[...hardwareKinds,'pc','laptop','os'];
+type ProductCategory=HardwareKind|'pc'|'laptop'|'os';
+type Category=ProductCategory|'socket';
+const categories:ProductCategory[]=[...hardwareKinds,'pc','laptop','os'];
 const colors=[['graphite','グラファイト'],['silver','シルバー'],['teal','ティール']] as const;
 
 function Forecast({state,draft}:{state:GameState,draft:Parameters<typeof estimateReview>[1]}){
@@ -52,6 +57,13 @@ export function DevelopScreen({state,send,go}:{state:GameState,send:Send,go:(scr
  const [category,setCategory]=useState<Category|null>(null);
  useBackHandler(()=>{setCategory(null);return true;},category!==null,70);
  const done=()=>{setCategory(null);go('products');};
+ const socketReady=state.research.completed.includes(socketResearch),socketCost=researchPointCost(state,socketResearch);
+ const socketTile=<article key="socket" className={`category-tile ${socketReady?'':'locked'}`}>
+  <div className="tile-art"><ProductIllustration kind="cpu" tier={0} color="graphite"/></div>
+  <h3>CPUソケット</h3>
+  {socketReady?<><small>{state.sockets.length?`${state.sockets.length}種類`:'未開発'}</small><button className="primary" aria-label="CPUソケットを設計" onClick={()=>setCategory('socket')}>設計する</button></>
+   :<><small>🔒 研究が必要</small><button aria-label="CPUソケットを解放" disabled={!state.research.completed.includes('cpu-compute-1')||state.company.researchPoints<socketCost||!hasRole(state,'research')} onClick={()=>send({type:'research',id:socketResearch})}>解放 {socketCost.toLocaleString('ja-JP')} RP</button></>}
+ </article>;
  if(category===null)return <section className="screen develop-home"><header className="screen-title"><h2>新製品を開発</h2><p>カテゴリを選んで仕様とデザインを決めます。未解放のカテゴリは研究ポイントで解放できます。</p></header>
   <div className="category-grid">{categories.map(k=>{
    const ready=state.research.completed.includes(`${k}-compute-1`);const cost=researchPointCost(state,`${k}-compute-1`);
@@ -61,8 +73,9 @@ export function DevelopScreen({state,send,go}:{state:GameState,send:Send,go:(scr
     <h3>{productCatalog[k].label}</h3>
     {ready?<><small>{count?`${count}製品`:'未開発'}</small><button className="primary" aria-label={`${productCatalog[k].label}を設計`} onClick={()=>setCategory(k)}>設計する</button></>
      :<><small>🔒 研究が必要</small><button aria-label={`${productCatalog[k].label}を解放`} disabled={state.company.researchPoints<cost||!hasRole(state,'research')} onClick={()=>send({type:'research',id:`${k}-compute-1`})}>解放 {cost.toLocaleString('ja-JP')} RP</button></>}
-   </article>;})}</div></section>;
+   </article>;})}{socketTile}</div></section>;
  const back=<button className="back-button" onClick={()=>setCategory(null)}>← カテゴリ選択</button>;
+ if(category==='socket')return <SocketDesigner state={state} send={send} back={back}/>;
  if(category==='os')return <OSDesigner state={state} send={send} back={back} done={done}/>;
  if(category==='pc'||category==='laptop')return <DeviceDesigner key={category} kind={category} state={state} send={send} back={back} done={done}/>;
  return <ComponentDesigner key={category} kind={category} state={state} send={send} back={back} done={done}/>;
@@ -88,8 +101,9 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  const [visual,setVisual]=useState<VisualChoice>({tier:0,color:'graphite'});
  const tier=Math.min(visual.tier,unlockedVisualTier(state.research.completed,kind));
  // Metrics are previewed even for an invalid draft (e.g. too little cooling); the problem blocks the start button.
- const preview=evaluateHardware(kind,spec,state.research.completed,{stored:true});
- let problem='';try{evaluateHardware(kind,spec,state.research.completed);}catch(e){problem=e instanceof Error?e.message:String(e);}
+ const sockets=companySockets(state);
+ const preview=evaluateHardware(kind,spec,state.research.completed,{stored:true,sockets});
+ let problem='';try{evaluateHardware(kind,spec,state.research.completed,{sockets});}catch(e){problem=e instanceof Error?e.message:String(e);}
  const cooling=typeof spec.cooling==='number'?spec.cooling:undefined;
  const unitCost=preview.unitCost+visualFinishCost(tier);
  const range=priceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}});
@@ -110,6 +124,8 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
    <section className="card design-controls">
     <PanelPages labels={['仕様','デザイン','販売']}>
      <div className="range-grid">{designFields(kind).map(([key,field])=>{
+      if(key==='socket')return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={`${hardwareExplanations[key]} ${state.research.completed.includes(socketResearch)?'開発画面の「CPUソケット」で自社ソケットを開発できます。':'「CPU 独自ソケット設計」の研究で自社ソケットを開発できます。'}`}/></span>
+       <select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{sockets.map(x=><option key={x.name} value={x.name}>{x.name}（{x.power}W / {x.channels}ch）</option>)}</select></label>;
       if(field.options){const open=fieldOptions(kind,key,state.research.completed);
        return <label key={key} className="select-field"><span>{field.label}<TermHelp label={field.label} description={describeWithResearch(hardwareExplanations[key],kind,field.optionUnlock?.axes)}/></span><select value={spec[key]} onChange={e=>setSpec({...spec,[key]:e.target.value})}>{field.options.map(v=>{const locked=!open.includes(v);
         return <option key={v} value={v} disabled={locked}>{field.optionLabels?.[v]??v}{locked?` 🔒 追加研究が必要`:''}</option>;})}</select></label>;}
@@ -144,7 +160,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const [coolingChoice,setCooling]=useState<number>(coolingField.default);
  const cooling=Math.max(coolingRange.min,Math.min(coolingRange.max,coolingChoice));
  const tier=Math.min(visual.tier,unlockedVisualTier(state.research.completed,kind));
- const competitor=state.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.filter(p=>p.remaining===0&&p.launched).map(p=>({...p,supplier:r.name})));
+ const competitor=state.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.filter(p=>p.remaining===0&&p.launched&&p.discontinuedDay===undefined).map(p=>({...p,supplier:r.name})));
  const chosen=Object.fromEntries(Object.entries(parts).filter(([,v])=>v)) as Record<string,string>;
  let estimate:ReturnType<typeof evaluateDevice>|null=null,problem='';
  try{estimate=evaluateDevice(state,chosen,purpose,kind,osId||undefined,false,cooling,true);}catch(e){problem=e instanceof Error?e.message:String(e);}
@@ -188,6 +204,47 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
    </section>
   </div>
   <ActionBar back={back} cost={designCost} label="組立設計を開始" note={!hasRole(state,'engineering')?'開発担当の採用が必要です':undefined} disabled={!estimate||!!coolingIssue||!name.trim()||!hasRole(state,'engineering')||state.company.cash<designCost} onClick={submit}/>
+ </section>;
+}
+
+/** Socket development: power delivery and memory channels within the company's CPU research. */
+function SocketDesigner({state,send,back}:{state:GameState,send:Send,back:React.ReactNode}){
+ const limits=socketLimits(state.research.completed);
+ const [name,setName]=useState(`Socket ${state.sockets.length+1}`);
+ const [powerChoice,setPower]=useState(limits.powers.at(-1)??socketBalance.minPower);
+ const [channelChoice,setChannels]=useState(limits.channels.at(-1)??1);
+ const power=limits.powers.includes(powerChoice)?powerChoice:limits.powers.at(-1)??socketBalance.minPower;
+ const channels=limits.channels.includes(channelChoice)?channelChoice:limits.channels.at(-1)??1;
+ const cost=socketDesignCost({power,channels}),engineer=hasRole(state,'engineering');
+ const cooling=hardwareCatalog.cpu.fields.cooling,memory=hardwareCatalog.cpu.fields.memoryChannels;
+ const taken=[...industrySockets,...state.sockets].some(x=>x.name.toLowerCase()===name.trim().toLowerCase());
+ const year=calendarYearAt(state.day),mainstream=mainstreamSocket(year).name;
+ const rows=[...industrySockets.map(x=>({...x,status:x.year>year?`${x.year}年に登場`:x.name===mainstream?'業界標準（主流）':'業界標準'})),
+  ...state.sockets.map(x=>({...x,status:x.remaining>0?`開発中 ${Math.round((1-x.remaining/socketBalance.work)*100)}%`:'自社'}))];
+ return <section className="screen designer">
+  <div className="workbench">
+   <section className="card product-stage"><p className="eyebrow">SOCKET LAB / CPUソケット</p>
+    <ProductIllustration kind="cpu" tier={0} color="graphite"/>
+    <h2>{name||'新しいソケット'}</h2>
+    <div className="preview-metrics"><span>電力供給<strong>{power}W</strong></span><span>メモリチャネル<strong>{channels}ch</strong></span><span>ピン数<strong>{socketPins({power,channels}).toLocaleString('ja-JP')}</strong></span><span>マザーボード原価<strong>+{yen(socketBoardCost({power,channels}))}</strong></span></div>
+    <p className="hint">CPUはソケットの電力供給とメモリチャネル数を超えて設計できません。PCにはCPUとマザーボードを同じソケットでそろえる必要があります。業界標準ソケットは年とともに新しい規格が登場し、競合や汎用部品はその年の主流規格を使います。自社ソケットなら次の業界標準を待たずに大電力・多チャネルのCPUを作れます。</p>
+   </section>
+   <section className="card design-controls">
+    <PanelPages labels={['仕様','一覧']}>
+     <div><div className="range-grid">
+      <RangeField label="電力供給" unit="W" description={describeWithResearch('CPUへ供給できる電力の上限。CPUの消費電力はこの値以下にする必要があります。',`cpu`,cooling.unlock?.axes)} min={limits.powers[0]??power} max={limits.powers.at(-1)??power} step={1} values={limits.powers} value={power} onChange={setPower}
+       researchLimit={limits.powers.at(-1)!==undefined&&limits.powers.at(-1)!<Number(cooling.max)?{value:Number(cooling.max),side:'max',hint:researchHint('cpu',cooling.unlock!.axes),href:researchLink('cpu','cooling')}:undefined}/>
+      <RangeField label="メモリチャネル" unit="ch" description={describeWithResearch('ソケットが配線するメモリチャネル数。CPUのメモリチャネル数はこの値以下にする必要があります。','cpu',memory.unlock?.axes)} min={limits.channels[0]??1} max={limits.channels.at(-1)??1} step={1} values={limits.channels} value={channels} onChange={setChannels}
+       researchLimit={(limits.channels.at(-1)??1)<Number(memory.max)?{value:Number(memory.max),side:'max',hint:researchHint('cpu',memory.unlock!.axes),href:researchLink('cpu','memoryChannels')}:undefined}/>
+     </div>
+     <div className="sales-form"><label>ソケット名<input maxLength={socketBalance.nameLength} value={name} onChange={e=>setName(e.target.value)}/></label>
+      {taken&&<p role="alert" className="warning">この名前のソケットはすでにあります。</p>}</div></div>
+     <div className="scroll-table"><table><caption>ソケット一覧</caption><thead><tr><th>名前</th><th>電力供給</th><th>チャネル</th><th>状態</th></tr></thead>
+      <tbody>{rows.map(x=><tr key={x.name}><td>{x.name}</td><td>{x.power}W</td><td>{x.channels}ch</td><td>{x.status}</td></tr>)}</tbody></table></div>
+    </PanelPages>
+   </section>
+  </div>
+  <ActionBar back={back} cost={cost} label="ソケット開発を開始" note={!engineer?'開発担当の採用が必要です':undefined} disabled={!name.trim()||taken||!engineer||state.company.cash<cost||!limits.powers.length} onClick={()=>{if(send({type:'designSocket',name:name.trim(),power,channels}))setName(`Socket ${state.sockets.length+2}`);}}/>
  </section>;
 }
 

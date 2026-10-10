@@ -1,9 +1,9 @@
-import {hardwareKinds,researchDomains,visualKinds,aiResearchAxes,axisLabels,researchBalance,researchLevels,type Tech,type TechKind,type HardwareKind} from './research';
+import {hardwareKinds,researchDomains,visualKinds,aiResearchAxes,axisLabels,researchBalance,researchLevels,maxResearchLevels,maxResearchShare,type Tech,type TechKind,type HardwareKind} from './research';
 import {designFields} from './hardware';
 import {productCatalog,deviceCooling} from './devices';
 import {osSliders,osFeatureResearch,osFeatureLabels,type OSFeature} from './os';
 import {aiDesignSliders} from './ai';
-import {eraBalance} from './era';
+import {eraBalance,yearsPerStage} from './era';
 
 /**
  * One research branch. Every branch improves exactly one thing: a design slider's range, the choices of one option
@@ -15,19 +15,22 @@ const isHardware=(category:string):category is HardwareKind=>(hardwareKinds as r
 /** Category name shown in research names: the same label as the development screen (e.g. マザーボード). */
 export const domainLabel=(category:string)=>category==='ai'?'AI':productCatalog[category as keyof typeof productCatalog]?.label??category;
 /** Stages an option branch needs: one stage per two technology years up to its last option. */
-const optionLevels=(yearsByOption:Readonly<Record<string,number>>)=>Math.max(1,Math.ceil((Math.max(...Object.values(yearsByOption))-eraBalance.startYear)/((eraBalance.endYear-eraBalance.startYear)/researchLevels)));
+const optionLevels=(yearsByOption:Readonly<Record<string,number>>)=>Math.max(1,Math.ceil((Math.max(...Object.values(yearsByOption))-eraBalance.startYear)/yearsPerStage));
+/** Stages of a slider branch: 100 when the slider has an advanced tier (`unlock.base`), otherwise 50. */
+const sliderLevels=(unlock:{base?:number})=>unlock.base===undefined?researchLevels:maxResearchLevels;
 /** Slider branches of earlier versions' shared research per category, used to keep total research cost comparable. */
 const previousBranches:Record<string,number>={pc:3,laptop:3,os:3};
 const featureLabel:Record<string,string>={security:'セキュリティ機能',media:'メディア機能',games:'ゲーム機能',store:'アプリストア'};
 function specBranches(category:string):Branch[]{
  const raw:Omit<Branch,'weight'>[]=[];
  if(isHardware(category))for(const [key,f] of designFields(category)){
-  if(f.unlock)raw.push({category,axis:key,label:f.label,levels:researchLevels,kind:'slider'});
+  if(f.unlock)raw.push({category,axis:key,label:f.label,levels:sliderLevels(f.unlock),kind:'slider'});
   else if(f.optionUnlock)raw.push({category,axis:key,label:f.label,levels:optionLevels(f.optionUnlock.years),kind:'option'});
  }
- if(category==='pc'||category==='laptop')raw.push({category,axis:'cooling',label:deviceCooling[category].label,levels:researchLevels,kind:'slider'});
+ if(category==='pc'||category==='laptop')raw.push({category,axis:'cooling',label:deviceCooling[category].label,levels:sliderLevels(deviceCooling[category].unlock),kind:'slider'});
  if(category==='os')for(const [key,f] of Object.entries(osSliders))raw.push({category,axis:key,label:f.label,levels:researchLevels,kind:'slider'});
- const span=raw.reduce((n,b)=>n+b.levels/researchLevels,0);
+ // Weights are set on the first tier (up to year 2100) so the advanced tier does not make earlier stages cheaper.
+ const span=raw.reduce((n,b)=>n+Math.min(b.levels,researchLevels)/researchLevels,0);
  const weight=span?(previousBranches[category]??4)/span:1;
  return raw.map(b=>({...b,weight}));
 }
@@ -39,7 +42,9 @@ export function researchBranches(category:string):Branch[]{
   return [...aiResearchAxes.map(axis=>({category,axis,label:axisLabels[axis],levels:researchLevels,kind:'effect' as const,weight:1})),...sliders];
  }
  const foundation:Branch={category,axis:'compute',label:'基盤技術',levels:1,kind:'foundation',weight:1};
- const features:Branch[]=category==='os'?Object.keys(osFeatureResearch).map(f=>({category,axis:f,label:featureLabel[f]??osFeatureLabels[f as OSFeature],levels:1,kind:'feature' as const,weight:1})):[];
+ const features:Branch[]=category==='os'?Object.keys(osFeatureResearch).map(f=>({category,axis:f,label:featureLabel[f]??osFeatureLabels[f as OSFeature],levels:1,kind:'feature' as const,weight:1}))
+  // Developing the company's own CPU sockets (`packages/content/src/sockets.ts`).
+  :category==='cpu'?[{category,axis:'socket',label:'独自ソケット設計',levels:1,kind:'feature' as const,weight:10}]:[];
  return [foundation,...specBranches(category),...features];
 }
 const stageLabel=(b:Branch,level:number)=>{
@@ -77,11 +82,11 @@ export const techById=new Map(techCatalog.map(t=>[t.id,t]));
 /** Summed direct bonus of an AI branch (other categories' research only widens ranges and unlocks options). */
 export function techEffect(completed:readonly string[],category:string,axis:string){if(category!=='ai')return 0;return completed.reduce((n,id)=>{const t=techById.get(id);return n+(t?.category===category&&t.axis===axis?t.effect:0);},0);}
 /**
- * Completed research ids equivalent to `share` (0..1) of every branch of a category: what a rival or the market of that
- * technology level has. Option branches stop at their last stage; the foundation is always included.
+ * Completed research ids equivalent to `share` (0..2, 1 = year 2100) of every branch of a category: what a rival or the
+ * market of that technology level has. Branches stop at their last stage; the foundation is always included.
  */
 export function researchAtShare(category:string,share:number):string[]{
- const s=Math.min(1,Math.max(0,share));
+ const s=Math.min(maxResearchShare,Math.max(0,share));
  return researchBranches(category).flatMap(b=>{
   const level=b.axis==='compute'?1+Math.round(s*(b.levels-1)):b.kind==='feature'?(s>0?1:0):Math.min(b.levels,Math.round(s*researchLevels));
   return Array.from({length:level},(_,i)=>`${category}-${b.axis}-${i+1}`);

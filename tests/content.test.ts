@@ -47,27 +47,32 @@ it('hardware research widens one slider range per branch instead of multiplying 
  expect(()=>evaluateHardware('cpu',dual,base)).toThrow(/コア数/);
  expect(evaluateHardware('cpu',dual,[...base,'cpu-cores-1']).performance).toBeGreaterThan(a.performance);
 });
-it('slider ranges start narrow, grow monotonically with research and reach the absolute bound at the last stage',()=>{
+it('slider ranges start narrow, grow monotonically, reach the year-2100 bound at stage 50 and the absolute bound at stage 100',()=>{
  for(const kind of hardwareKinds)for(const [key,field] of designFields(kind)){
   if(field.options)continue;
   const start=fieldRange(kind,key,[`${kind}-compute-1`]);
   if(field.lowerIsBetter)expect(start.min).toBeGreaterThan(Number(field.min));else expect(start.max).toBeLessThan(Number(field.max));
   expect(Number(field.default)).toBeGreaterThanOrEqual(start.min);expect(Number(field.default)).toBeLessThanOrEqual(start.max);
   let previous=start;
-  for(const level of [5,10,25,50]){
+  for(const level of [5,10,25,50,60,75,100]){
    const s={research:{completed:[] as string[]}};for(const axis of field.unlock!.axes)unlockBranch(s,kind,axis,level);
    const r=fieldRange(kind,key,s.research.completed);
    if(field.lowerIsBetter)expect(r.min).toBeLessThanOrEqual(previous.min);else expect(r.max).toBeGreaterThanOrEqual(previous.max);
+   if(level===50)expect(field.lowerIsBetter?r.min:r.max,`${kind}.${key} year 2100`).toBe(field.unlock!.base);
+   if(level===60)expect(field.lowerIsBetter?r.min<previous.min:r.max>previous.max,`${kind}.${key} the advanced tier widens early`).toBe(true);
    previous=r;
   }
   expect(field.lowerIsBetter?previous.min:previous.max,`${kind}.${key}`).toBe(Number(field.lowerIsBetter?field.min:field.max));
+  // The advanced tier takes every slider several times beyond its year-2100 bound (bounded percentages excepted).
+  const growth=field.lowerIsBetter?field.unlock!.base!/Number(field.min):Number(field.max)/field.unlock!.base!;
+  expect(growth,`${kind}.${key} growth`).toBeGreaterThan(1);
  }
 });
 it('list-valued hardware sliders contain their bounds, default and starting limit, and only unlock listed values',()=>{
  for(const kind of hardwareKinds)for(const [key,field] of designFields(kind)){
   if(!field.values)continue;
-  for(const v of [field.min,field.max,field.default,field.unlock?.from])expect(field.values,`${kind}.${key} ${v}`).toContain(v);
-  for(let level=0;level<=50;level+=7){
+  for(const v of [field.min,field.max,field.default,field.unlock?.from,field.unlock?.base])expect(field.values,`${kind}.${key} ${v}`).toContain(v);
+  for(let level=0;level<=100;level+=7){
    const s={research:{completed:[`${kind}-compute-1`]}};if(level)for(const axis of field.unlock!.axes)unlockBranch(s,kind,axis,level);
    const r=fieldRange(kind,key,s.research.completed);expect(field.values).toContain(field.lowerIsBetter?r.min:r.max);
   }

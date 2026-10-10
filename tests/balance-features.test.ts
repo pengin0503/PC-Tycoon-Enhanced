@@ -3,6 +3,7 @@ import {it,expect} from 'vitest';
 import {createGame,command,advanceInteractive,awaitingPlayer,type GameState} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
 import {evaluateHardware} from '../packages/sim/src/hardware';
+import {companySockets} from '../packages/sim/src/sockets';
 import {companyValue,loanCap} from '../packages/sim/src/management';
 import {valuation,rivalFans} from '../packages/sim/src/rivals';
 import {softScore,reviewDemandFactor,starsFor} from '../packages/sim/src/reception';
@@ -103,8 +104,10 @@ it('review scores keep rising above 100 with diminishing returns, and stars stay
  expect(reviewDemandFactor({review:{score:140} as any})).toBeGreaterThan(reviewDemandFactor({review:{score:100} as any}));
  // A product far ahead of its market reviews above 100 and the score survives a save round trip.
  let s=start();researchTo(s,'cpu',.3);s.company.cash=10_000_000_000;
- const spec=frontier('cpu',.3).spec;
- s=cmd(s,{type:'design',kind:'cpu',name:'Ahead',spec,price:Math.round(evaluateHardware('cpu',spec,s.research.completed).unitCost*1.2)});
+ // A frontier CPU draws more than the year-2000 industry sockets deliver, so it uses a company socket.
+ s.sockets.push({id:'s-1',name:'Frontier',power:1000,channels:16,remaining:0,day:0});
+ const spec={...frontier('cpu',.3).spec,socket:'Frontier'};
+ s=cmd(s,{type:'design',kind:'cpu',name:'Ahead',spec,price:Math.round(evaluateHardware('cpu',spec,s.research.completed,{sockets:companySockets(s)}).unitCost*1.2)});
  s=cmd(s,{type:'advance',days:60});s=cmd(s,{type:'launch',id:'p-1'});
  const score=s.products[0].review!.score;expect(score).toBeGreaterThan(100);
  expect(importSave(exportSave(s)).products[0].review!.score).toBe(score);
@@ -136,7 +139,7 @@ it('saves before per-specification research keep their researched ranges under t
  json.research.completed=['cpu-compute-1',...Array.from({length:10},(_,i)=>`cpu-capacity-${i+1}`),'cpu-compute-2','cpu-compute-3','cpu-visual-1','os-compute-1','os-reliability-1'];
  json.research.active=[{id:'cpu-capacity-11',remaining:3}];
  const loaded=importSave(JSON.stringify(json));
- expect(loaded.economyVersion).toBe(4);
+ expect(loaded.economyVersion).toBe(5);
  const done=loaded.research.completed;
  // Capacity used to widen cores and L3 cache: both branches receive the same ten stages.
  expect(done).toContain('cpu-cores-10');expect(done).not.toContain('cpu-cores-11');expect(done).toContain('cpu-l3Cache-10');

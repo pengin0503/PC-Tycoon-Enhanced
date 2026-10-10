@@ -12,23 +12,27 @@ import {researchTo,frontierSpec} from './research-helpers';
 const start=()=>createGame({id:'era',name:'年代社',difficulty:'normal',seed:2});
 
 it('games start on 1 January 2000 with year-2000 technology',()=>{
- const s=start();expect(s.year).toBe(2000);expect(s.day).toBe(0);expect(s.economyVersion).toBe(4);
+ const s=start();expect(s.year).toBe(2000);expect(s.day).toBe(0);expect(s.economyVersion).toBe(5);
  expect(hardwareTechYear('cpu',[])).toBe(2000);expect(domainTechYear('pc',[])).toBe(2000);expect(domainTechYear('ai',[])).toBeUndefined();
  expect(fieldRange('cpu','cores',['cpu-compute-1'])).toEqual({min:1,max:1});
  expect(fieldRange('cpu','process',['cpu-compute-1']).min).toBe(180);
  expect(fieldOptions('ram','memoryGen',['ram-compute-1'])).toEqual(['SDR','DDR']);
 });
 
-it('research moves the technology year to 2100 and opens year-2100 limits',()=>{
+it('research moves the technology year to 2100, then through the advanced tier to 2200',()=>{
  const year=(share:number)=>hardwareTechYear('gpu',researchTo({research:{completed:[] as string[]}},'gpu',share).research.completed);
  // One stage is two technology years, so a share lands within a year of its calendar year.
- expect(Math.abs(year(.25)-2025)).toBeLessThanOrEqual(1);expect(Math.abs(year(.5)-2050)).toBeLessThanOrEqual(1);expect(year(1)).toBe(eraBalance.endYear);
+ expect(Math.abs(year(.25)-2025)).toBeLessThanOrEqual(1);expect(Math.abs(year(.5)-2050)).toBeLessThanOrEqual(1);expect(year(1)).toBe(eraBalance.baseEndYear);expect(Math.abs(year(1.5)-2150)).toBeLessThanOrEqual(1);expect(year(2)).toBe(eraBalance.endYear);
  const all=researchTo({research:{completed:[] as string[]}},'cpu',1).research.completed;
  expect(frontierSpec('cpu',all)).toMatchObject({cores:4096,process:.1});
  expect(techYear(all,'cpu',['cores','clock'])).toBe(2100);
  // DDR2 is 2004 technology: it opens once RAM research reaches 2004, not before.
  const ram=(share:number)=>fieldOptions('ram','memoryGen',researchTo({research:{completed:[] as string[]}},'ram',share).research.completed);
- expect(ram(.02)).not.toContain('DDR2');expect(ram(.04)).toContain('DDR2');expect(ram(1).at(-1)).toBe('DDR9');
+ expect(ram(.02)).not.toContain('DDR2');expect(ram(.04)).toContain('DDR2');expect(ram(1).at(-1)).toBe('DDR9');expect(ram(2).at(-1)).toBe('DDR11');
+ // The advanced tier: every specification several times beyond year-2100 technology.
+ const final=researchTo({research:{completed:[] as string[]}},'cpu',2).research.completed;
+ expect(frontierSpec('cpu',final)).toMatchObject({cores:16384,process:.025,clock:25,ipc:25,memoryChannels:64});
+ expect(techYear(final,'cpu',['cores','clock'])).toBe(2200);
 });
 
 it('market expectations rise with the calendar so products age',()=>{
@@ -52,13 +56,13 @@ it('economy version 2 saves receive the larger starting capital and the new pay 
  const rival=s.rivals[0].cash;
  const loaded=importSave(exportSave(s));
  expect(loaded.company.cash).toBe(30_000_000+950_000_000);expect(loaded.staff[0].salary).toBe(450000);
- expect(loaded.rivals[0].cash).toBe(rival+1_980_000_000);expect(loaded.economyVersion).toBe(4);
+ expect(loaded.rivals[0].cash).toBe(rival+1_980_000_000);expect(loaded.economyVersion).toBe(5);
 });
 it('economy version 1 saves are migrated to real-world yen and the 2000 calendar once',()=>{
  const s=start();s.company.cash=500000;s.finance.revenue=1234;s.year=2026;delete (s as any).economyVersion;
  s.staff=[{id:'e-1',role:'research',skill:50,salary:1500}];s.staffSeq=1;
  const loaded=importSave(exportSave(s));
  expect(loaded.company.cash).toBe(1_000_000_000);expect(loaded.finance.revenue).toBe(123400);expect(loaded.staff[0].salary).toBe(450000);
- expect(loaded.year).toBe(2000);expect(loaded.economyVersion).toBe(4);
+ expect(loaded.year).toBe(2000);expect(loaded.economyVersion).toBe(5);
  expect(migrateEconomy(loaded)).toBe(loaded);expect(importSave(exportSave(loaded))).toEqual(loaded);
 });

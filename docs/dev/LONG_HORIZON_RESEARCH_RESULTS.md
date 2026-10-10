@@ -55,5 +55,37 @@ Same seeds and policies, with each annual policy buying the cheapest available s
 | Commercial | 2010 / 2020 / 2030 | 2019.3 / 2029.8 / 2037.1 | 2018.6 / 2029.1 / 2036.7 |
 
 - Research pace is unchanged within one year: per-category cost weights keep the total price of a category's research comparable even though it is split into more branches.
-- Commercial cash was ¥2.05B / ¥2.09B / ¥1.59B (version 3: ¥1.77B / ¥1.67B / ¥1.17B) with 198,650 lifetime units (175,547). The difference comes from the new cost model: an older design keeps getting cheaper to make while its price stays fixed, so a long-running product earns more margin. Frontier refreshes cost more than before.
+- Commercial cash was ¥2.05B / ¥2.09B / ¥1.59B (version 3: ¥1.77B / ¥1.67B / ¥1.17B) with 198,650 lifetime units (175,547). Frontier refreshes cost more than before. *(Corrected in version 5: this run attributed the higher cash to old designs getting cheaper to make, but manufacturing charges the unit cost fixed at design time; an old model's cost does not fall. See #44 below.)*
 - The one-purchase-per-year smoke test now reaches 2006 (2030) and 2022 (2100); it is a lower-effort baseline and still not evidence about RP balance.
+
+## Two centuries to year 2200 (economy version 5)
+
+`tests/long-horizon-2200.test.ts` (opt-in: `PCT_LONG_HORIZON=1 npx vitest run tests/long-horizon-2200.test.ts`, about three minutes) runs 200 game years on normal difficulty for seeds 3, 11 and 47 with real commands only. Each year the firm buys the cheapest available CPU research stage while its RP lasts; every four years it designs the best CPU that fits its cooler and the strongest socket it can use (industry sockets by calendar year), launches it and discontinues the previous model. Two policies:
+
+- **Five-person company:** research, engineering and marketing hires, office level 2 and two more researchers in year 6, nothing else.
+- **Growing company:** the same, then one office level every four years and two researchers a year, each only while ten years of the added running cost plus ¥1B stay in the bank (reaches office 10 with 40 staff by 2050).
+
+Seed 47 (the other seeds differ by less than 0.3% in every column):
+
+| Policy | Game year | CPU tech-equivalent year | Cash | Lifetime units | Rival max level |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Five-person | 2050 | 2048.0 | ¥118B | 2,491,789 | 25 |
+| Five-person | 2100 | 2067.3 | ¥203B | 3,617,850 | 50 |
+| Five-person | 2150 | 2081.8 | ¥216B | 3,711,980 | 75 |
+| Five-person | 2200 | 2093.6 | ¥219B | 3,756,659 | 99 |
+| Growing | 2050 | 2129.6 | ¥123B | 2,550,791 | 25 |
+| Growing | 2100 | 2200 (all CPU research done) | ¥332B | 5,203,048 | 50 |
+| Growing | 2150 | 2200 | ¥690B | 7,903,048 | 75 |
+| Growing | 2200 | 2200 | ¥1.32T | 10,573,289 | 99 |
+
+- Both policies stay solvent for 200 years with no debt, and every refresh design is accepted (no socket, cooling or price rejection).
+- A five-person company keeps pace until about 2050, then falls behind the calendar market (−33 years in 2100, −106 years in 2200) and its sales fade to under 2,000 units a year after 2100 (about 900 a year after 2150). The research cost curve outgrows a fixed RP income; the player has to grow the research team to stay current. This matches the design intent but is now measured.
+- A growing company is about 80 years ahead of the market in 2050 and finishes every CPU research stage around game year 2095. From then on its RP accumulates unused (6.9M RP by 2200) and its lead shrinks as the market catches up to 2200. Large research teams therefore exhaust the extended tier a century before the calendar does; recorded as a follow-up balance issue rather than tuned here.
+- Rivals reach level 99 (year-2200 technology) exactly in 2200, as `rivalShare` intends.
+
+These are two scripted policies, not human play. They do not cover GPU/PC/AI-focused companies, hard mode or socket development strategies.
+
+## Old models do not get cheaper (#44)
+
+`tests/sales-stats.test.ts` checks that a product's unit cost stays at its design-time value while research advances, and that refreshing the CPU every four years beats keeping the first model. Scratch runs of the same two policies (seeds 3/11/47): after 30 years, keeping the first CPU ended with about ¥1.20B and 53k units, refreshing with about ¥12.24B and 772k units; after 50 years ¥0.80B against ¥11.35B. The first model's unit cost was ¥18,900 at design and still ¥18,900 at the end. An old model's margin does not grow; it loses demand as the market moves on, so no cost-model change was made.
+
