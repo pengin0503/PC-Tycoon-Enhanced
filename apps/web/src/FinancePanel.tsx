@@ -1,6 +1,7 @@
 import type {GameState} from '../../../packages/sim/src/index';
 import {companyValue} from '../../../packages/sim/src/management';
 import {companyStats} from '../../../packages/sim/src/progress';
+import {currentUnitCost} from '../../../packages/sim/src/hardware';
 import {useState} from 'react';
 import {productCatalog,productKinds} from '../../../packages/content/src/devices';
 import {tieredAchievements,milestoneAchievements,achievementLabelMap} from '../../../packages/content/src/achievements';
@@ -57,8 +58,8 @@ function ProductStats({state}:{state:GameState}){
   <div className="metrics" data-testid="product-stats-summary"><article className="metric"><span>自社製品</span><strong>{own.length}<small> 件（販売中 {own.filter(p=>p.discontinuedDay===undefined).length}）</small></strong></article><article className="metric"><span>累計販売</span><strong>{sold.toLocaleString('ja-JP')}台</strong></article><article className="metric"><span>累計売上</span><strong>{yen(own.reduce((n,p)=>n+p.revenue,0))}</strong></article><article className="metric"><span>累計利益</span><strong className={own.reduce((n,p)=>n+p.profit,0)<0?'bad':''}>{yen(own.reduce((n,p)=>n+p.profit,0))}</strong></article><article className="metric"><span>販売台数シェア</span><strong>{total?(sold/total*100).toFixed(1):'0.0'}%</strong></article></div>
   <KindChart state={state} kind={kind}/>
   <div className="scroll-table"><table><thead><tr><th>製品</th><th>種類</th><th>評価</th><th>性能</th><th>価格</th><th>製造原価</th><th>粗利率</th><th>販売</th><th>売上</th><th>利益</th></tr></thead>
-   <tbody>{own.map(p=>{const hint=discontinueHint(state.day,p),margin=p.kind==='os'?undefined:(p.price-p.unitCost)/p.price;
-    return <tr key={p.id} className={p.discontinuedDay!==undefined?'ended-row':''}><td>{state.company.name} / {p.name}{p.discontinuedDay!==undefined&&<span className="chip muted">販売終了</span>}{hint&&<span className="chip warn" data-testid="discontinue-hint" title="販売終了を検討">終了検討：{hint}</span>}</td><td>{productCatalog[p.kind].label}</td><td>{p.review?<Stars value={p.review.stars} size="sm"/>:'—'}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{yen(p.unitCost)}</td><td className={margin!==undefined&&margin<0?'bad':''}>{margin===undefined?'—':`${Math.round(margin*100)}%`}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td className={p.profit<0?'bad':''}>{yen(p.profit)}</td></tr>;})}
+   <tbody>{own.map(p=>{const cost=currentUnitCost(state,p),hint=discontinueHint(state.day,p,cost),margin=p.kind==='os'?undefined:(p.price-cost)/p.price;
+    return <tr key={p.id} className={p.discontinuedDay!==undefined?'ended-row':''}><td>{state.company.name} / {p.name}{p.discontinuedDay!==undefined&&<span className="chip muted">販売終了</span>}{hint&&<span className="chip warn" data-testid="discontinue-hint" title="販売終了を検討">終了検討：{hint}</span>}</td><td>{productCatalog[p.kind].label}</td><td>{p.review?<Stars value={p.review.stars} size="sm"/>:'—'}</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>{yen(cost)}</td><td className={margin!==undefined&&margin<0?'bad':''}>{margin===undefined?'—':`${Math.round(margin*100)}%`}</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td className={p.profit<0?'bad':''}>{yen(p.profit)}</td></tr>;})}
     {others.map(({r,p})=><tr key={`${r.id}-${p.id}`} className="rival-row"><td>{r.name} / {p.name}{p.discontinuedDay!==undefined&&<span className="chip muted">販売終了</span>}</td><td>{productCatalog[p.kind].label}</td><td>—</td><td>{p.performance}</td><td>{yen(p.price)}</td><td>—</td><td>—</td><td>{p.sold}</td><td>{yen(p.revenue)}</td><td>{yen(p.profit)}</td></tr>)}
     {!own.length&&!others.length&&<tr><td colSpan={10} className="empty">この種類の製品はまだありません。</td></tr>}</tbody></table></div>
  </div>;

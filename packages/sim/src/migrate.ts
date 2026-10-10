@@ -84,12 +84,16 @@ export function migrateEconomy(input:GameState):GameState{
  return s;
 }
 /**
- * Version 5 adds the year-2200 research tier, company sockets and per-kind monthly sales (new data needs no conversion)
- * and has rivals retire old models: each independent rival keeps its newest `rivalBalance.activeModels` models and clears
- * the stock of older ones at the clearance price, as it now does whenever it launches a model.
+ * Version 5 adds the year-2200 research tier, company sockets and per-kind monthly sales (new data needs no
+ * conversion). It starts the last-sale date of products that have sold at the migration day and has rivals retire old
+ * models: each independent rival keeps its newest `rivalBalance.activeModels` released models and clears the stock of
+ * older ones at the clearance price, as it now does whenever a new model is released.
  */
 function toVersion5(s:GameState){
  for(const r of s.rivals)if(!r.acquired)retireRivalModels(s,r);
+ // Older saves never recorded the last sale; treat products that have sold as selling up to now, so the 90-day
+ // "no sales" hint starts counting from the migration instead of from their release.
+ for(const p of s.products)if(p.sold>0&&p.lastSaleDay===undefined)p.lastSaleDay=s.day;
 }
 /**
  * Version 4 gives every specification its own research branch (research ids are converted before validation by

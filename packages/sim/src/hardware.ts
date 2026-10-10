@@ -197,18 +197,35 @@ export function discontinue(s:GameState,p:GameState['products'][number]){
  if(clearance>0){const price=Math.max(1,Math.round(p.price*b.clearanceShare));recordProductSale(s,p,clearance,price,removeStock(p,clearance));}
  logEvent(s,'discontinued',clearance?`${p.name}（在庫 ${clearance.toLocaleString('ja-JP')}台を処分）`:p.name);
 }
+/** Rival parts a PC/laptop buys from independent rivals at their current price, slot by slot. */
+function sourcedParts(s:GameState,p:GameState['products'][number]){
+ return deviceSlots.map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x);
+}
+/** Cash paid per manufactured unit: assembly, generic and rival parts for PCs/laptops (own parts move from stock). */
+function cashUnitCost(s:GameState,p:GameState['products'][number]){
+ if(p.kind!=='pc'&&p.kind!=='laptop')return p.unitCost;
+ const generic=deviceSlots.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0);
+ return Math.max(1,assemblyOverhead(s,p)+generic+sourcedParts(s,p).reduce((n,x)=>n+x.part.price,0));
+}
+/**
+ * Current cost of making one more unit, for margins: the design-time unit cost for components, and for PCs/laptops
+ * what manufacturing pays now (rival parts at today's price) plus the unit cost of the company's own parts.
+ */
+export function currentUnitCost(s:GameState,p:GameState['products'][number]){
+ if(p.kind!=='pc'&&p.kind!=='laptop')return p.unitCost;
+ const own=deviceSlots.reduce((n,k)=>n+(s.products.find(part=>part.id===p.spec[k])?.unitCost??0),0);
+ return cashUnitCost(s,p)+own;
+}
 export function manufacture(s:GameState){
  if(s.company.debt>0)return;
  const lines=s.products.filter(p=>p.line&&p.launched&&p.kind!=='os');let capacity=Math.floor(b.baseFactoryCapacity*s.factoryLevel*s.modifiers.production);
  for(let i=0;i<lines.length;i++){
   const p=lines[(i+s.day)%lines.length];const allocation=Math.ceil(capacity/(lines.length-i));
   const own=p.kind==='pc'||p.kind==='laptop'?deviceSlots.map(k=>s.products.find(part=>part.id===p.spec[k])).filter((part):part is typeof p=>!!part):[];
-  const sourced=p.kind==='pc'||p.kind==='laptop'?deviceSlots.map(k=>s.rivals.filter(r=>!r.acquired).flatMap(r=>r.products.map(part=>({owner:r,part}))).find(x=>x.part.id===p.spec[k])).filter((x):x is NonNullable<typeof x>=>!!x):[];
   const device=p.kind==='pc'||p.kind==='laptop';
-  const keys=deviceSlots;
-  const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>keys.some(k=>part.id===p.spec[k])));
-  const generic=device?keys.reduce((n,k)=>n+(findVendorPart(String(p.spec[k]))?.unitCost??0),0):0;
-  const cashCost=Math.max(1,device?assemblyOverhead(s,p)+generic+sourced.reduce((n,x)=>n+x.part.price,0):p.unitCost);
+  const sourced=device?sourcedParts(s,p):[];
+  const missingAcquired=device&&s.rivals.some(r=>r.acquired&&r.products.some(part=>deviceSlots.some(k=>part.id===p.spec[k])));
+  const cashCost=cashUnitCost(s,p);
   const units=missingAcquired?0:Math.min(allocation,Math.max(0,p.target-p.inventory),Math.floor(s.company.cash/cashCost),...own.map(part=>availableForAssembly(part)),...sourced.map(x=>x.part.inventory));
   if(units>0){
    expense(s,units*cashCost);

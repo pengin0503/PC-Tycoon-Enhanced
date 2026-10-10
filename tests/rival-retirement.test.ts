@@ -2,9 +2,11 @@ import {it,expect} from 'vitest';
 import {withTestStaff} from './staff-fixture';
 import {createGame,command,type GameState} from '../packages/sim/src/index';
 import {exportSave,importSave} from '../packages/save/src/index';
-import {rivalMonthly,rivalWeekly,rivalDaily,competitorPressure,rivalOnSale} from '../packages/sim/src/rivals';
+import {rivalMonthly,rivalWeekly,rivalDaily,competitorPressure,rivalOnSale,retirementNotice} from '../packages/sim/src/rivals';
+import {currentUnitCost} from '../packages/sim/src/hardware';
+import {discontinueHint} from '../apps/web/src/sales-stats';
 import {rivalBalance} from '../packages/content/src/management';
-import {hardwareBalance} from '../packages/content/src/hardware';
+import {hardwareBalance,defaultSpec} from '../packages/content/src/hardware';
 
 const start=()=>withTestStaff(createGame({id:'ret',name:'競合観察社',difficulty:'normal',seed:21}));
 /** Lets every rival launch one model per level from 1 to `levels` (time is set directly; no retail involved). */
@@ -67,4 +69,43 @@ it('economy version 4 saves retire old rival models on load',()=>{
   expect(r.products.filter(p=>p.discontinuedDay===undefined).map(p=>p.spec.generation)).toEqual([6,7,8]);
   expect(r.products.filter(p=>p.discontinuedDay!==undefined).every(p=>p.inventory===0&&p.sold===40)).toBe(true);
  }
+ // Products that have sold get a last-sale date at the migration, so they are not flagged as unsold for 90 days.
+ let seller=start();seller.research.completed.push('cpu-compute-1');
+ seller=command(seller,{type:'design',kind:'cpu',name:'Old',spec:defaultSpec('cpu'),price:40000});seller=command(seller,{type:'advance',days:35});
+ const sold=JSON.parse(exportSave(seller));sold.economyVersion=4;sold.products[0].sold=500;
+ const migrated=importSave(JSON.stringify(sold));
+ expect(migrated.products[0].lastSaleDay).toBe(migrated.day);
+});
+
+it('a rival retires its oldest model only once the replacement is released',()=>{
+ const s=generations(start(),3),r=s.rivals[0];
+ expect(r.products.filter(rivalOnSale)).toHaveLength(3);
+ for(const x of s.rivals){x.researchLevel=4;x.researchRemaining=0;}
+ s.day+=30;rivalMonthly(s);
+ // The new model is still in development: the three released ones stay on sale.
+ expect(r.products).toHaveLength(4);expect(r.products.at(-1)!.remaining).toBeGreaterThan(0);
+ expect(r.products.filter(rivalOnSale).map(p=>p.spec.generation)).toEqual([1,2,3]);
+ for(let w=0;w<3;w++){s.day+=7;rivalWeekly(s);}
+ expect(r.products.filter(rivalOnSale).map(p=>p.spec.generation)).toEqual([2,3,4]);
+ expect(r.products[0].discontinuedDay).toBeDefined();
+});
+
+it('retirement notices stay within the notification length limit',()=>{
+ const names=Array.from({length:12},(_,i)=>`とても長い名前のゲーミングPCシリーズ ${i+1} 限定モデル`);
+ const text=retirementNotice('Vertex Works Vertex Works 12',names);
+ expect(text.length).toBeLessThanOrEqual(200);expect(text).toContain(names[0]);expect(text).toMatch(/ほか\d+件/);
+ expect(retirementNotice('A',['PC1','PC2'])).toBe('A（使用中: PC1、PC2）');
+ expect(retirementNotice('A'.repeat(300),['PC']).length).toBeLessThanOrEqual(200);
+});
+
+it('margins of a PC with rival parts follow the rival price manufacturing pays now',()=>{
+ let s=generations(start(),1);s.research.completed.push('pc-compute-1');s.company.cash=1e13;
+ const part=s.rivals[0].products[0];
+ s=command(s,{type:'assemble',kind:'pc',name:'Rival Inside',parts:{cpu:part.id,gpu:'v-gpu',motherboard:'v-board',ram:'v-ram',storage:'v-storage'},purpose:'office',appearance:'silver',price:300000,cooling:150});
+ const pc=s.products.at(-1)!,before=currentUnitCost(s,pc);
+ s.rivals[0].products[0].price+=50000;
+ expect(currentUnitCost(s,pc)-before).toBe(50000);
+ expect(discontinueHint(s.day,{...pc,launched:true,price:before+1},currentUnitCost(s,pc))).toBe('原価割れ');
+ // Components keep their design-time cost.
+ expect(currentUnitCost(s,part as never)).toBe(part.unitCost);
 });

@@ -2,10 +2,13 @@ import type {GameState} from '../../../packages/sim/src/index';
 
 /** Days without a sale after which an on-sale product is flagged for discontinuation. */
 const staleDays=90;
-/** Why an on-sale product may be worth discontinuing, or '' (no sale for `staleDays`, or sold below cost). */
-export function discontinueHint(day:number,p:GameState['products'][number]){
+/**
+ * Why an on-sale product may be worth discontinuing, or '' (no sale for `staleDays`, or priced below `cost`, the current
+ * cost of making a unit).
+ */
+export function discontinueHint(day:number,p:GameState['products'][number],cost=p.unitCost){
  if(!p.launched||p.discontinuedDay!==undefined)return '';
- if(p.price<p.unitCost)return '原価割れ';
+ if(p.price<cost)return '原価割れ';
  return day-(p.lastSaleDay??p.releaseDay)>=staleDays?`${staleDays}日以上販売なし`:'';
 }
 /** Monthly units sold and revenue of one product kind (or all), from the per-kind totals in the monthly history. */
