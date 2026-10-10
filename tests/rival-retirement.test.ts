@@ -75,6 +75,12 @@ it('economy version 4 saves retire old rival models on load',()=>{
  const sold=JSON.parse(exportSave(seller));sold.economyVersion=4;sold.products[0].sold=500;
  const migrated=importSave(JSON.stringify(sold));
  expect(migrated.products[0].lastSaleDay).toBe(migrated.day);
+ // A version 5 save from the first release can lack the date too; it is filled on load as well.
+ const v5=JSON.parse(exportSave(seller));v5.products[0].sold=500;delete v5.products[0].lastSaleDay;
+ expect(v5.economyVersion).toBe(5);
+ expect(importSave(JSON.stringify(v5)).products[0].lastSaleDay).toBe(seller.day);
+ // A product that never sold keeps counting from its release.
+ expect(importSave(exportSave(seller)).products[0].lastSaleDay).toBeUndefined();
 });
 
 it('a rival retires its oldest model only once the replacement is released',()=>{
