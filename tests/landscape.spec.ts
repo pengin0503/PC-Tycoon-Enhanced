@@ -17,10 +17,10 @@ test('hardware numeric specs use keyboard-accessible bounded sliders and render 
  await page.setViewportSize({width:844,height:390});await startCompany(page);
  await openDesigner(page,'CPU');
  // Games start in 2000: one core, up to 1GHz. Without research the sliders stop at the current limit and the locked
- // headroom (year-2100 technology) is shown next to them.
+ // headroom (year-2200 technology) is shown next to them as a link to its research.
  const core=page.getByRole('slider',{name:'コア数'});
  await expect(core).toHaveAttribute('aria-valuetext','1コア');
- await expect(page.locator('.range-field',{has:core}).locator('.research-lock')).toContainText('研究で4,096コアまで');
+ await expect(page.locator('.range-field',{has:core}).locator('.research-lock')).toContainText('研究で16,384コアまで');
  const clock=page.getByRole('slider',{name:'クロック'});
  await expect(clock).toHaveValue('0.8');await expect(clock).toHaveAttribute('max','1');
  await clock.focus();await page.keyboard.press('End');await page.keyboard.press('ArrowRight');await expect(clock).toHaveValue('1');

@@ -20,6 +20,8 @@ import {availableForRetail,availableForAssembly} from './inventory-allocation';
 import {marketReference} from './market';
 import {developmentCost} from './development-cost';
 import {eraDemandFactor} from './events';
+import {industrySockets,isIndustrySocket,socketBoardCost,type SocketSpec} from '../../content/src/sockets';
+import {companySockets,developSockets} from './sockets';
 import type {GameState,GameCommand} from './types';
 /** Performance score of a component specification (no research or validation involved). */
 export function hardwarePerformance(kind:HardwareKind,spec:Spec){
@@ -54,9 +56,10 @@ export function hardwarePerformance(kind:HardwareKind,spec:Spec){
  * its values were accepted under the rules of its time, so research ranges and cooling are not re-applied.
  * Manufacturing cost follows the company's technology (see `hardwareBalance`): CPU/GPU logic is priced per process node
  * and node maturity, other values relative to how far research has moved their frontier. Performance and power use
- * the designed values.
+ * the designed values. `sockets`: the sockets the company may design for (the industry sockets by default); a new CPU
+ * must fit its socket's power delivery and memory channels, and a motherboard pays for a company socket stronger than Atlas.
  */
-export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false}:{stored?:boolean}={}){
+export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly string[],{stored=false,sockets=industrySockets}:{stored?:boolean,sockets?:readonly SocketSpec[]}={}){
  const def=hardwareCatalog[kind];
  if(!completed.includes(`${kind}-compute-1`))throw new Error('基盤研究が必要です');
  if(!stored&&'cooling' in def.fields&&input.cooling===undefined)throw new Error('冷却性能を指定してください');
@@ -65,6 +68,9 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
   const v=spec[key];
   if(v===undefined)continue;
   if(field.legacy&&!stored)throw new Error(`${field.label}は旧データ専用の項目です`);
+  if(key==='socket'){
+   // Stored products may use sockets of acquired or older companies; new designs need one of the company's sockets.
+   if(typeof v!=='string'||!v||(!stored&&!sockets.some(x=>x.name===v)))throw new Error(`${field.label}「${String(v)}」は使用できません`);continue;}
   if(field.options){if(typeof v!=='string'||!field.options.includes(v))throw new Error(`${field.label}が不正です`);
    if(!stored&&!fieldOptions(kind,key,completed).includes(v))throw new Error(`${field.label}「${field.optionLabels?.[v]??v}」は研究が必要です`);continue;}
   if(typeof v!=='number'||!Number.isFinite(v)||v<0||(field.step===1&&!Number.isInteger(v)))throw new Error(`${field.label}が不正です`);
@@ -122,25 +128,47 @@ export function evaluateHardware(kind:HardwareKind,input:Spec,completed:readonly
  }
  const cooling='cooling' in def.fields?n('cooling'):undefined;
  if(cooling!==undefined)unitCost+=cv('cooling',b.cooling.frontierCost)*(b.cooling.cost[kind]??0);
+ const socket=spec.socket===undefined?undefined:[...sockets,...industrySockets].find(x=>x.name===spec.socket);
+ if(kind==='motherboard'&&socket&&!isIndustrySocket(socket.name))unitCost+=socketBoardCost(socket);
  power=Math.round(power);
  if(cooling!==undefined&&!stored&&power>cooling)throw new Error(`冷却性能が不足しています（消費電力 ${power}W / 冷却性能 ${cooling}W）`);
+ if(kind==='cpu'&&socket&&!stored){
+  if(power>socket.power)throw new Error(`ソケット「${socket.name}」の電力供給を超えています（消費電力 ${power}W / 上限 ${socket.power}W）`);
+  if(n('memoryChannels')>socket.channels)throw new Error(`ソケット「${socket.name}」のメモリチャネル数を超えています（${n('memoryChannels')}ch / 上限 ${socket.channels}ch）`);
+ }
  const reliability=b.reliabilityBase+(cooling?coolingReliability(power,cooling):0);
  return{performance:Math.max(1,Math.round(performance)),power,unitCost:Math.max(1,Math.round(unitCost)),reliability:Math.min(1,reliability)};
 }
+/** Completes one technology for its research points (needs a research employee and every prerequisite). */
+function research(s:GameState,id:string){
+ const t=techById.get(id);if(!t)throw new Error('研究が存在しません');
+ requireRole(s,'research');
+ if(s.research.completed.includes(id)||s.research.active.some(r=>r.id===id))throw new Error('研究は開始済みです');
+ if(t.prerequisites.some(p=>!s.research.completed.includes(p)))throw new Error('前提研究が必要です');
+ const points=researchPointCost(s,id);
+ if(s.company.researchPoints<points)throw new Error(`研究ポイントが不足しています（必要 ${points}）`);
+ s.company.researchPoints-=points;s.research.completed.push(id);logEvent(s,'researchComplete',t.label);
+}
+/** Next stage of a research branch (`${category}-${axis}-N`), or undefined when the branch is complete. */
+export function nextStage(completed:readonly string[],category:string,axis:string){
+ let level=0;while(completed.includes(`${category}-${axis}-${level+1}`))level++;
+ return techById.get(`${category}-${axis}-${level+1}`);
+}
 export function hardwareCommand(s:GameState,c:GameCommand):boolean{
- if(c.type==='research'){
-  const t=techById.get(c.id);if(!t)throw new Error('研究が存在しません');
-  requireRole(s,'research');
-  if(s.research.completed.includes(c.id)||s.research.active.some(r=>r.id===c.id))throw new Error('研究は開始済みです');
-  if(t.prerequisites.some(id=>!s.research.completed.includes(id)))throw new Error('前提研究が必要です');
-  const points=researchPointCost(s,c.id);
-  if(s.company.researchPoints<points)throw new Error(`研究ポイントが不足しています（必要 ${points}）`);
-  s.company.researchPoints-=points;s.research.completed.push(c.id);logEvent(s,'researchComplete',t.label);return true;
+ if(c.type==='research'){research(s,c.id);return true;}
+ if(c.type==='researchBranch'){
+  // Several stages of one branch in order; each stage is checked and paid like a single research, and any failure
+  // rejects the whole command.
+  for(let i=0;i<c.stages;i++){
+   const t=nextStage(s.research.completed,c.category,c.axis);if(!t)throw new Error('この系統は最後の段階まで研究済みです');
+   research(s,t.id);
+  }
+  return true;
  }
  if(c.type==='design'){
   requireRole(s,'engineering');
   if(s.products.length>=500)throw new Error('製品数の上限です');const def=hardwareCatalog[c.kind];
-  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed);const tier=validateVisual(s.research.completed,c.kind,c.visual);
+  for(const [key,field] of Object.entries(def.fields)){const v=c.spec[key];if(typeof v==='number'&&field.step&&field.min!==undefined&&Math.abs((v-field.min)/field.step-Math.round((v-field.min)/field.step))>1e-6)throw new Error(`${field.label}の刻みが不正です`);}const result=evaluateHardware(c.kind,c.spec,s.research.completed,{sockets:companySockets(s)});const tier=validateVisual(s.research.completed,c.kind,c.visual);
   assertProductPrice(c.price,{...result,kind:c.kind,unitCost:result.unitCost+visualFinishCost(tier),visual:c.visual},marketReference(c.kind,s.day));
   expense(s,developmentCost(c.kind,result.performance,s.day,def.designCost));s.products.push({id:`p-${s.products.length+1}`,name:c.name,kind:c.kind,spec:normalizeSpec(c.kind,c.spec),...(c.visual?{visual:c.visual}:{}),...result,unitCost:result.unitCost+visualFinishCost(tier),remaining:def.work,price:c.price,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0});logEvent(s,'designStarted',c.name);return true;
  }
@@ -245,7 +273,8 @@ export function researchAndDevelopment(s:GameState){
  if(hasRole(s,'research'))for(const r of s.research.active)r.remaining=Math.max(0,r.remaining-(b.researchPerWeek/founderProjects(s)+workBonus(s,'research'))/s.research.active.length);
  for(const r of s.research.active.filter(r=>r.remaining===0)){s.research.completed.push(r.id);logEvent(s,'researchComplete',techById.get(r.id)?.label??r.id);}
  s.research.active=s.research.active.filter(r=>r.remaining>0);
- const developing=s.products.filter(p=>p.remaining>0);
- if(hasRole(s,'engineering'))for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'designComplete',p.name);}
+ // Products and sockets in development share the engineers' weekly work.
+ const developing=[...s.products.filter(p=>p.remaining>0),...developSockets(s)];
+ if(hasRole(s,'engineering'))for(const p of developing){p.remaining=Math.max(0,p.remaining-(b.developmentPerWeek/founderProjects(s)+workBonus(s,'engineering'))/developing.length);if(p.remaining===0)logEvent(s,'kind' in p?'designComplete':'socketComplete',p.name);}
 }
 

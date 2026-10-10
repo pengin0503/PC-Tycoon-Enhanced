@@ -61,7 +61,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
  return false;
 }
 export function clusterBusy(s:GameState,id:string,except=''){return s.models.some(m=>m.id!==except&&(m.status==='training'&&m.clusterId===id||m.service?.enabled&&m.service.mode!=='open'&&m.service.clusterId===id));}
-export function founderProjects(s:GameState){return Math.max(1,Number(s.research.active.length>0)+Number(s.products.some(p=>p.remaining>0))+Number(s.models.some(m=>m.status==='training')));}
+export function founderProjects(s:GameState){return Math.max(1,Number(s.research.active.length>0)+Number(s.products.some(p=>p.remaining>0)||s.sockets.some(x=>x.remaining>0))+Number(s.models.some(m=>m.status==='training')));}
 export function aiWeekly(s:GameState){
  if(!hasRole(s,'ai'))return;
  const jobs=s.models.filter(m=>m.status==='training');const founder=1/founderProjects(s);const bonus=workBonus(s,'ai');

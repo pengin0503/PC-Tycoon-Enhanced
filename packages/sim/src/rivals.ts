@@ -1,6 +1,8 @@
 import {rivalBalance as b,rivalTemplates,rivalFanBalance} from '../../content/src/management';
 import {defaultSpec,hardwareCatalog} from '../../content/src/hardware';
 import {researchAtShare} from '../../content/src/tech-catalog';
+import {researchLevels,maxResearchShare} from '../../content/src/research';
+import {hardwareBalance} from '../../content/src/hardware';
 import {typicalSpec} from './market';
 import {evaluateHardware} from './hardware';
 import {assemblyOverhead} from './devices';
@@ -12,6 +14,11 @@ import {recordMarketSale} from './market-share';
 import {negotiateAcquisition} from './business';
 import type {GameState,GameCommand} from './types';
 type Rival=GameState['rivals'][number];
+type RivalProduct=Rival['products'][number];
+/** Research share of a rival technology level: level 1 is year 2000, level 50 year 2100, level 99 year 2200. */
+export function rivalShare(level:number){return Math.min(maxResearchShare,Math.max(0,(level-1)/(researchLevels-1)));}
+/** Whether a rival model is still produced and offered (not discontinued). */
+export const rivalOnSale=(p:RivalProduct)=>p.remaining===0&&p.discontinuedDay===undefined;
 export function newRivals(seed:number,difficulty:'normal'|'hard',mode:GameState['mode']='standard'):Rival[]{return rivalTemplates.map((t,i)=>({...t,cash:b.initialCash,debt:0,seed:(seed^(0x9e3779b9+i))>>>0,efficiency:(difficulty==='hard'?b.hardEfficiency:1)*(mode==='long'?b.longEfficiency:1),researchLevel:0,researchRemaining:0,products:[],acquired:false,fans:rivalFanBalance.initial}));}
 function cost(r:Rival,amount:number,mandatory=false){if(!mandatory&&amount>r.cash)return false;const paid=Math.min(r.cash,amount);r.cash-=paid;r.debt+=amount-paid;return true;}
 function revenue(r:Rival,amount:number){const repayment=Math.min(r.debt,amount);r.debt-=repayment;r.cash+=amount-repayment;}
@@ -19,7 +26,7 @@ export function settleProcurement(r:Rival,p:Rival['products'][number],units:numb
 export function rivalManufacture(s:GameState){
  // Keep production isolated so manufacturing tests do not run retail transactions.
  for(const r of s.rivals.filter(r=>!r.acquired&&r.debt===0)){
-  const products=r.products.filter(p=>p.remaining===0);let available=b.capacity;
+  const products=r.products.filter(rivalOnSale);let available=b.capacity;
   if(!products.length)continue;
   const offset=s.day%products.length;
   for(let i=0;i<products.length;i++){
@@ -32,7 +39,7 @@ export function rivalManufacture(s:GameState){
 export function rivalDaily(s:GameState){
  rivalManufacture(s);
  for(const r of s.rivals.filter(r=>!r.acquired)){
-  for(const p of r.products.filter(p=>p.remaining===0)){
+  for(const p of r.products.filter(rivalOnSale)){
    const [rand,seed]=nextRandom(r.seed);r.seed=seed;
    const player=s.products.filter(v=>onSale(v)&&v.kind===p.kind).reduce((n,v)=>n+v.performance/v.price,0);
    const competition=1/(1+player/(p.performance/p.price)*b.playerPressure);
@@ -60,24 +67,43 @@ export function rivalMonthly(s:GameState){
   // The first level is a quick catch-up to year-2000 technology; each later level is about two years of work.
   if(r.researchRemaining===0&&r.researchLevel<b.maxResearch&&cost(r,b.researchCost*(r.researchLevel+1)))r.researchRemaining=b.work*(r.researchLevel?b.levelWeeks:1);
   const latest=r.products.at(-1);if(r.researchLevel>0&&(!latest||Number(latest.spec.generation)<r.researchLevel)&&cost(r,hardwareCatalog[r.focus].designCost)){
-   // Rivals build the mainstream design of their technology level (level 50 = year-2100 technology).
-   const share=Math.min(1,(r.researchLevel-1)/(b.maxResearch-1));
+   // Rivals build the mainstream design of their technology level (level 50 = year 2100, level 99 = year 2200).
+   const share=rivalShare(r.researchLevel);
    const spec=typicalSpec(r.focus,share);const metrics=evaluateHardware(r.focus,spec,researchAtShare(r.focus,share),{stored:true});metrics.performance=Math.round(metrics.performance*r.efficiency);
    r.products.push({id:`${r.id}-p-${r.products.length+1}`,name:`${r.name} ${r.researchLevel}`,kind:r.focus,spec:{...spec,generation:r.researchLevel},...metrics,remaining:b.developmentWork,price:metrics.unitCost*b.priceCostMultiple,inventory:0,target:b.inventoryTarget,line:true,launched:true,sold:0,revenue:0,profit:0,releaseDay:s.day});
+   retireRivalModels(s,r);
   }
-  for(const p of r.products){const alternatives=s.products.filter(v=>v.kind===p.kind&&onSale(v));const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*b.priceUndercut:p.unitCost*b.priceCostMultiple;p.price=Math.max(Math.ceil(p.unitCost*b.minimumPriceCostMultiple),Math.round(price));}
+  for(const p of r.products.filter(p=>p.discontinuedDay===undefined)){const alternatives=s.products.filter(v=>v.kind===p.kind&&onSale(v));const price=alternatives.length?Math.min(...alternatives.map(v=>v.price))*b.priceUndercut:p.unitCost*b.priceCostMultiple;p.price=Math.max(Math.ceil(p.unitCost*b.minimumPriceCostMultiple),Math.round(price));}
+ }
+}
+/**
+ * Keeps a rival's line-up to its newest `rivalBalance.activeModels` models: older models stop production and their
+ * stock is cleared at `hardwareBalance.clearanceShare` of the price, like a player's discontinued product. A notice
+ * names the player's PCs/laptops that used a retired part, since they can no longer buy it.
+ */
+export function retireRivalModels(s:GameState,r:Rival){
+ const active=r.products.filter(p=>p.discontinuedDay===undefined);
+ for(const p of active.slice(0,Math.max(0,active.length-b.activeModels))){
+  if(p.inventory>0){
+   const price=Math.max(1,Math.round(p.price*hardwareBalance.clearanceShare)),units=p.inventory;
+   p.inventory=0;p.sold+=units;recordMarketSale(s,r.id,p.kind,units);p.revenue+=units*price;p.profit+=units*(price-p.unitCost);revenue(r,units*price);
+  }
+  p.line=false;p.target=0;p.discontinuedDay=s.day;
+  const users=s.products.filter(d=>(d.kind==='pc'||d.kind==='laptop')&&d.discontinuedDay===undefined&&deviceSlots.some(k=>d.spec[k]===p.id));
+  if(users.length)logEvent(s,'rivalDiscontinued',`${r.name} ${p.name}（使用中: ${users.map(d=>d.name).join('、')}）`);
  }
 }
 /** Fans of a rival brand (saves converted before rival fans existed derive them from sales). */
 export function rivalFans(r:Rival){return r.fans??rivalFanBalance.initial+r.products.reduce((n,p)=>n+p.sold,0)*rivalFanBalance.perUnit;}
 /** Whether a player product is currently offered to customers (launched and not discontinued). */
 export function onSale(p:GameState['products'][number]){return p.launched&&p.discontinuedDay===undefined;}
-export function competitorPressure(s:GameState,kind:string){return 1/(1+s.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+r.products.filter(p=>p.kind===kind&&p.remaining===0&&p.inventory>0).length*b.pressure,0));}
+export function competitorPressure(s:GameState,kind:string){return 1/(1+s.rivals.filter(r=>!r.acquired).reduce((n,r)=>n+r.products.filter(p=>p.kind===kind&&rivalOnSale(p)&&p.inventory>0).length*b.pressure,0));}
 export function marketShare(s:GameState){const own=s.products.reduce((n,p)=>n+p.sold,0);const other=s.rivals.reduce((n,r)=>n+r.products.reduce((v,p)=>v+p.sold,0),0);return own+other?own/(own+other):0;}
 export function valuation(s:GameState,id:string){const r=s.rivals.find(r=>r.id===id);if(!r)throw new Error('競合が存在しません');return Math.max(b.valuationBase,Math.round(r.cash-r.debt+r.researchLevel*b.valuationPerTech+b.valuationBase+r.products.reduce((n,p)=>n+p.inventory*p.unitCost,0)));}
 export function rivalCommand(s:GameState,c:GameCommand):boolean{
  if(c.type!=='acquire')return false;const r=s.rivals.find(r=>r.id===c.id);if(!r||r.acquired)throw new Error('買収対象を確認してください');
- const products=r.products.filter(p=>p.remaining===0);if(s.products.length+products.length>500)throw new Error('製品数の上限です');
+ // Retired models stay with the acquired brand's records; only the current line-up joins the company.
+ const products=r.products.filter(rivalOnSale);if(s.products.length+products.length>500)throw new Error('製品数の上限です');
  const price=negotiateAcquisition(s,r,valuation(s,r.id),c.offer);if(price===null)return true;
  expense(s,price,false,true);s.company.cash+=r.cash;s.company.debt+=r.debt;r.cash=0;r.debt=0;r.acquired=true;
  // The acquired brand's customers follow it: its whole fan base joins the company.

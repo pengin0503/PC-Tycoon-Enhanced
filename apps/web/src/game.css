@@ -177,7 +177,7 @@ progress{width:100%;accent-color:var(--accent)}
 .product-stage h2{margin:8px 0 4px}
 .preview-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px;margin-top:8px}
 .preview-metrics span.over{background:#ffe9ea;color:var(--bad)}.preview-metrics span.over strong{color:var(--bad)}
-.research-lock{color:var(--rp);font-weight:700;white-space:nowrap}
+.research-lock{color:var(--rp);font-weight:700;white-space:nowrap}a.research-lock{text-decoration:none;font-size:12px}
 .tech-effect{color:var(--ink);font-size:12px}
 .ai-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-items:start}
 .ai-roster .card{margin:0}.ai-roster .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent-2)}
@@ -439,3 +439,9 @@ tr.ended-row .chip{margin-left:6px}
  .app-shell:has(.action-bar) .action-bar .back-button{padding:4px 8px;font-size:12px}
  .app-shell:has(.action-bar) .action-bar .primary.big{padding:5px 10px;font-size:13px}
 }
+/* Research: branch shortcuts (#42) */
+@media(min-width:601px){.research-filters:has(.bulk-research){grid-template-columns:2fr 1fr 1fr auto}}
+.bulk-research{min-height:32px;padding:3px 10px;font-size:12px;white-space:nowrap}.bulk-research small{color:inherit;opacity:.9;font-weight:600}
+.recommend-row{flex-wrap:nowrap;overflow-x:auto;align-items:center;scrollbar-width:none}.recommend-row::-webkit-scrollbar{display:none}
+.recommend-row>span{font-size:12px;white-space:nowrap}.recommend-row button{white-space:nowrap}.recommend-row small{opacity:.75}
+td .chip.warn{margin-left:6px}

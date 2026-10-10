@@ -23,7 +23,13 @@ export function marketingWeek(s:GameState){
  if(s.advertising){if(s.company.cash<s.advertising||s.company.debt>0){s.advertising=0;logEvent(s,'marketingStopped');}else{expense(s,s.advertising);const staff=marketingStrength(s);s.company.awareness=Math.min(100,s.company.awareness+Math.sqrt(s.advertising)/b.advertisingAwareness*(1+staff/b.marketingSkillScale));s.company.reputation=Math.min(100,s.company.reputation+b.advertisingReputation);s.company.fans+=Math.round(Math.sqrt(s.advertising)*fanBalance.advertisingRoot*(1+staff/b.marketingSkillScale));}}
 }
 export function monthlyCosts(s:GameState){return offices[s.officeLevel-1].monthlyCost+(s.factoryLevel-1)*b.factoryMonthly+s.staff.reduce((n,e)=>n+e.salary,0)+osMonthlyCost(s)+distributionMonthly(s)+Math.round(s.company.loan*(s.difficulty==='hard'?b.hardInterest:b.normalInterest));}
-export function monthlyHistory(s:GameState,share=0){s.history.push({day:s.day,cash:s.company.cash,debt:s.company.debt,loan:s.company.loan,...s.finance,share});s.history=s.history.slice(-b.historyLimit);}
+/** Lifetime units, revenue and gross profit of the company's products per kind (monthly charts take differences). */
+export function salesByKind(s:GameState){
+ const kinds:NonNullable<GameState['history'][number]['kinds']>={};
+ for(const p of s.products){const k=kinds[p.kind]??={sold:0,revenue:0,profit:0};k.sold+=p.sold;k.revenue+=p.revenue;k.profit+=p.profit;}
+ return kinds;
+}
+export function monthlyHistory(s:GameState,share=0){s.history.push({day:s.day,cash:s.company.cash,debt:s.company.debt,loan:s.company.loan,...s.finance,share,kinds:salesByKind(s)});s.history=s.history.slice(-b.historyLimit);}
 export function companyValue(s:GameState){
  const stock=s.products.reduce((n,p)=>n+inventoryValue(p),0);
  const compute=s.clusters.reduce((n,c)=>n+Math.round(c.purchaseCost*Math.max(0,1-(s.day-c.purchaseDay)*86400/aiBalance.lifetimeSeconds)),0);

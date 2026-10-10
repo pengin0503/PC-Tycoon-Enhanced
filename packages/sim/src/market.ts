@@ -1,24 +1,27 @@
 import {designFields,defaultSpec,type Spec} from '../../content/src/hardware';
 import {productCatalog,deviceBalance} from '../../content/src/devices';
-import {frontierGrowth,unlockBalance} from '../../content/src/unlocks';
-import {marketShareAt,unlockedOptions,eraBalance} from '../../content/src/era';
+import {frontierGrowth,openFraction} from '../../content/src/unlocks';
+import {marketShareAt,unlockedOptions,yearAtShare,calendarYearAt} from '../../content/src/era';
+import {mainstreamSocket} from '../../content/src/sockets';
 import {researchAtShare} from '../../content/src/tech-catalog';
 import {hardwareKinds,type HardwareKind} from '../../content/src/research';
 import {hardwarePerformance} from './hardware';
 import {historicalRange,typicalRetailLimit} from '../../content/src/historical-limits';
 
 /** Years from which an option is the mainstream choice of the market (when later than its first availability). */
-const mainstreamOptionYears:Record<string,Record<string,number>>={'monitor.panel':{TN:2000,VA:2006,IPS:2012,OLED:2035,MicroLED:2050}};
+const mainstreamOptionYears:Record<string,Record<string,number>>={'monitor.panel':{TN:2000,VA:2006,IPS:2012,OLED:2035,MicroLED:2050,Holographic:2175}};
 const isHardware=(kind:string):kind is HardwareKind=>(hardwareKinds as readonly string[]).includes(kind);
 /**
- * Mainstream specification of a component when the industry has reached `share` of the 2000→2100 technology span:
+ * Mainstream specification of a component when the industry has reached research `share` (1 = year 2100, 2 = year 2200):
  * the year-2000 default scaled by how far the frontier has grown, snapped to a selectable value, with the newest
  * memory generation of that time. Rivals build these and the market judges performance against them.
  */
 export function typicalSpec(kind:HardwareKind,share:number):Spec{
- const p=Math.min(1,Math.max(0,share))**unlockBalance.exponent;const spec=defaultSpec(kind);
- const calendarYear=eraBalance.startYear+Math.floor(Math.min(1,Math.max(0,share))*100);
+ const p=openFraction(share);const spec=defaultSpec(kind);
+ const calendarYear=Math.floor(yearAtShare(share));
  for(const [key,f] of designFields(kind)){
+  // Rivals and suppliers build on the mainstream industry socket of their year.
+  if(key==='socket'){spec[key]=mainstreamSocket(calendarYear).name;continue;}
   if(f.options){if(f.optionUnlock){const mainstream=mainstreamOptionYears[`${kind}.${key}`]??f.optionUnlock.years;spec[key]=unlockedOptions(f.options,f.optionUnlock,kind,researchAtShare(kind,share)).filter(v=>(mainstream[v]??2000)<=calendarYear).at(-1)??f.default;}continue;}
   if(!f.unlock)continue;
   const growth=frontierGrowth(f,p),min=Number(f.min),max=Number(f.max),base=Number(f.default);
@@ -56,4 +59,4 @@ export function marketReference(kind:string,day:number):number{
  cache.set(key,value);return value;
 }
 /** Calendar year the market has reached on `day` (games start in 2000). */
-export function marketYear(day:number){return eraBalance.startYear+Math.floor(day/eraBalance.daysPerYear);}
+export function marketYear(day:number){return calendarYearAt(day);}

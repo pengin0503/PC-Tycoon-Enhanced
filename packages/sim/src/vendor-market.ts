@@ -3,6 +3,7 @@ import {marketShareAt,eraBalance} from '../../content/src/era';
 import {typicalSpec} from './market';
 import {researchAtShare} from '../../content/src/tech-catalog';
 import {productCatalog} from '../../content/src/devices';
+import {hardwareCatalog} from '../../content/src/hardware';
 import {evaluateHardware} from './hardware';
 import type {DeviceSlot} from '../../content/src/devices';
 
@@ -14,7 +15,7 @@ function generatedVendor(year:number,kind:DeviceSlot){
  const spec=typicalSpec(kind,share);
  if(kind==='psu'){
   const draw=(['cpu','gpu','motherboard','ram','storage'] as const).reduce((watts,part)=>watts+generatedVendor(year,part).power,0);
-  spec.wattage=Math.max(Number(spec.wattage),Math.min(3000,Math.ceil(draw*1.2/50)*50));
+  spec.wattage=Math.max(Number(spec.wattage),Math.min(Number(hardwareCatalog.psu.fields.wattage.max),Math.ceil(draw*1.2/50)*50));
  }
  // Suppliers build with the technology of the release year, so their costs follow that era's production technology.
  const metrics=evaluateHardware(kind,spec,researchAtShare(kind,share),{stored:true});
@@ -26,15 +27,15 @@ const cache=new Map<string,ReturnType<typeof generatedVendor>>();
 export function findVendorPart(id:string|undefined){
  if(!id)return undefined;
  const legacy=vendorParts.find(x=>x.id===id);if(legacy)return legacy;
- const match=/^v-(20\d\d|2100)-(cpu|gpu|motherboard|ram|storage|psu)$/.exec(id);
+ const match=/^v-(2[01]\d\d|2200)-(cpu|gpu|motherboard|ram|storage|psu)$/.exec(id);
  if(!match)return undefined;
  const year=Number(match[1]),kind=match[2] as DeviceSlot;
- if(year<=2000||year%5!==0||year>2100)return undefined;
+ if(year<=2000||year%5!==0||year>eraBalance.endYear)return undefined;
  let hit=cache.get(id);if(!hit){hit=generatedVendor(year,kind);cache.set(id,hit);}
  return hit;
 }
 /** The current catalog rotates every five game-years; historical parts resolve through findVendorPart. */
 export function vendorPartsAt(day:number){
- const year=Math.min(2100,2000+Math.floor(Math.max(0,day)/(eraBalance.daysPerYear*5))*5);
+ const year=Math.min(eraBalance.endYear,eraBalance.startYear+Math.floor(Math.max(0,day)/(eraBalance.daysPerYear*5))*5);
  return year<=2000?vendorParts:deviceSlots.map(kind=>findVendorPart(`v-${year}-${kind}`)!).filter(Boolean);
 }

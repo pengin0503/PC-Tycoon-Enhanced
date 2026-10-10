@@ -22,7 +22,7 @@ export const rivalTemplates=[
  {id:'r-9',name:'Clearview Display',focus:'monitor'},
 ] as const;
 /** Rivals pay the same design cost as the player for their focus (`hardwareCatalog[focus].designCost`). */
-export const rivalBalance={initialCash:2000000000,researchCost:50000000,monthlyCost:15000000,work:10,levelWeeks:100,hardEfficiency:1.5,longEfficiency:.7,capacity:120,inventoryTarget:1000,valuationBase:3000000000,valuationPerTech:300000000,pressure:.15,maxResearch:50,playerPressure:.2,demandFloor:.9,demandVariance:.2,priceCostMultiple:2,developmentWork:20,priceUndercut:.9,minimumPriceCostMultiple:1.2};
+export const rivalBalance={initialCash:2000000000,researchCost:50000000,monthlyCost:15000000,work:10,levelWeeks:100,hardEfficiency:1.5,longEfficiency:.7,capacity:120,inventoryTarget:1000,valuationBase:3000000000,valuationPerTech:300000000,pressure:.15,maxResearch:99,activeModels:3,playerPressure:.2,demandFloor:.9,demandVariance:.2,priceCostMultiple:2,developmentWork:20,priceUndercut:.9,minimumPriceCostMultiple:1.2};
 /** Rival fan bases: the starting base, fans per unit sold and weekly decay (same as the player's). Acquisitions transfer them. */
 export const rivalFanBalance={initial:3000,perUnit:.01,weeklyDecay:.995} as const;
 export const researchPointBalance={initial:100,pointsPerWork:3,officeBonus:.1,costPerWork:10} as const;

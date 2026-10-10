@@ -11,10 +11,10 @@ export const deviceBalance={caseCost:8000,laptopPackaging:40000,laptopCooling:.8
  purposeWeights:{gaming:[.35,.4,.15,.1],office:[.4,.1,.2,.3],server:[.3,.1,.45,.15]},
  os:{designCost:1000000000,work:20,licenseCost:1000,supportMonthly:10000000,withoutOS:.8,baseCompatibility:.5,compatibilityWeight:.5,qualityFloor:.8,qualityWeight:.2,supportFloor:.8,supportWeight:.2,designQualityFloor:.5,designQualityWeight:.5,designCompatibilityFloor:.5,designCompatibilityWeight:.5,browserCompatibility:.6},
 } as const;
-/** Case cooling of PCs/laptops in W; must cover the parts' power draw. Its own research branch (`cooling`) widens it. */
+/** Case cooling of PCs/laptops in W; must cover the parts' power draw. Its own research branch (`cooling`) widens it (year-2100 bound `base`). */
 export const deviceCooling={
- pc:{label:'冷却性能',unit:'W',min:30,max:2500,step:10,default:150,unlock:{axes:['cooling'],from:200}},
- laptop:{label:'冷却性能',unit:'W',min:10,max:600,step:5,default:80,unlock:{axes:['cooling'],from:80}},
+ pc:{label:'冷却性能',unit:'W',min:30,max:5000,step:10,default:150,unlock:{axes:['cooling'],from:200,base:2500}},
+ laptop:{label:'冷却性能',unit:'W',min:10,max:1200,step:5,default:80,unlock:{axes:['cooling'],from:80,base:600}},
 } satisfies Record<'pc'|'laptop',Field>;
 export const deviceCoolingCost={pc:30,laptop:60} as const;
 const variant:Partial<Record<string,string>>={socket:'ソケット',memoryGen:'メモリ'};

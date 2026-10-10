@@ -15,9 +15,9 @@ export const reviewSchema=z.object({score:reviewScore.int(),stars:z.number().min
 export const productSchema=z.object({stockAllocation:z.object({retail:z.number().int().min(0).max(1000000),assembly:z.number().int().min(0).max(1000000),ai:z.number().int().min(0).max(1000000)}).strict().optional(),visual:visualSchema.optional(),review:reviewSchema.optional(),hype:z.number().min(0).max(100).optional(),id:z.string().min(1),name:z.string().trim().min(1).max(80),kind:z.enum(productKinds),spec:specSchema,
  performance:z.number().positive(),power:z.number().nonnegative(),unitCost:z.number().int().positive(),remaining:z.number().nonnegative(),inventoryValue:z.number().int().min(0).max(1e15).optional(),
  reliability:z.number().min(.1).max(1).default(.9),price:z.number().int().min(1).max(1e8),inventory:z.number().int().min(0).max(10000000),target:z.number().int().min(0).max(10000000),
- line:z.boolean(),launched:z.boolean(),discontinuedDay:z.number().int().min(0).optional(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
+ line:z.boolean(),launched:z.boolean(),discontinuedDay:z.number().int().min(0).optional(),lastSaleDay:z.number().int().min(0).optional(),sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int(),releaseDay:z.number().int().nonnegative(),
 }).strict();
-export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(hardwareKinds),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(50),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(100),acquired:z.boolean(),fans:z.number().min(0).max(1e12).optional()}).strict();
+export const rivalSchema=z.object({id:z.string(),name:z.string(),focus:z.enum(hardwareKinds),cash:money,debt:money,seed:seedSchema,efficiency:z.number().min(.5).max(2),negotiationDay:z.number().int().min(0).optional(),researchLevel:z.number().int().min(0).max(100),researchRemaining:z.number().nonnegative(),products:z.array(productSchema).max(200),acquired:z.boolean(),fans:z.number().min(0).max(1e12).optional()}).strict();
 export const modeSchema=z.enum(['standard','tycoon','long','sandbox']);
 export const roleSchema=z.enum(['research','engineering','marketing','ai']);
 export const traitSchema=z.enum(['genius','efficient','charismatic','frugal','ai-specialist']);
@@ -28,7 +28,7 @@ export const newGameSchema = z.object({
   mode: modeSchema.optional(),
 }).strict();
 export const gameSchema = z.object({
-  version: z.literal(1), economyVersion: z.union([z.literal(2),z.literal(3),z.literal(4)]).optional(), id: z.string().min(1).max(80), seed: seedSchema,
+  version: z.literal(1), economyVersion: z.union([z.literal(2),z.literal(3),z.literal(4),z.literal(5)]).optional(), id: z.string().min(1).max(80), seed: seedSchema,
   initialSeed: seedSchema, day: z.number().int().min(0).max(1_000_000), year: z.number().int().min(1970).max(2200),
   difficulty: z.enum(['normal','hard']),
   mode: modeSchema.default('standard'),
@@ -37,6 +37,8 @@ export const gameSchema = z.object({
   research:z.object({completed:z.array(z.string()).max(5000),active:z.array(z.object({id:z.string(),remaining:z.number().nonnegative()}).strict()).max(20)}).default(()=>({completed:[],active:[]})),
   products:z.array(productSchema).max(500).default([]),
   rivals:z.array(rivalSchema).max(10).default([]),
+  /** CPU sockets the company developed (see `packages/content/src/sockets.ts`); `remaining` is development work left. */
+  sockets:z.array(z.object({id:z.string().min(1).max(20),name:z.string().trim().min(1).max(24),power:z.number().int().min(1).max(100000),channels:z.number().int().min(1).max(1024),remaining:z.number().nonnegative(),day:z.number().int().min(0)}).strict()).max(30).default(()=>[]),
   clusters:z.array(clusterSchema).max(20).default([]),
   models:z.array(modelSchema).max(100).default([]),
   modifiers:z.object({demand:z.number().min(.5).max(1.5),production:z.number().min(.5).max(1.5),expiresDay:z.number().int().min(0)}).default({demand:1,production:1,expiresDay:0}),
@@ -53,7 +55,9 @@ export const gameSchema = z.object({
   pendingAttack:z.object({osId:z.string(),day:z.number().int().min(0),deadlineDay:z.number().int().min(0),targets:z.number().int().min(1).max(100)}).strict().nullable().default(null),
   osIncident:z.object({demand:z.number().min(.1).max(1),expiresDay:z.number().int().min(0)}).strict().nullable().default(null),
   marketSales:z.array(z.object({day:z.number().int().min(0).max(1000000),company:z.string().min(1).max(80),kind:z.enum(productKinds),units:z.number().int().min(1).max(100000000)}).strict()).max(25000).default([]),
-  history:z.array(z.object({day:z.number().int(),cash:money,debt:money,loan:money,revenue:money,expenses:money,capital:money,share:z.number().min(0).max(1)}).strict()).max(240).default([]),
+  /** Monthly snapshots. `kinds`: lifetime units, revenue and gross profit of the company's products per kind (since economy version 5). */
+  history:z.array(z.object({day:z.number().int(),cash:money,debt:money,loan:money,revenue:money,expenses:money,capital:money,share:z.number().min(0).max(1),
+   kinds:z.partialRecord(z.enum(productKinds),z.object({sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int()}).strict()).optional()}).strict()).max(240).default([]),
   pendingDecision:z.object({id:z.enum(['supply-boost','demand-campaign']),title:z.string().min(1).max(80),description:z.string().min(1).max(200),cost:z.number().int().min(0).max(1e8)}).strict().nullable().default(null),
   notificationSeq:z.number().int().min(0).default(0),
   notificationReadId:z.number().int().min(0).default(0),
@@ -67,9 +71,11 @@ export const baseCommandSchema = z.discriminatedUnion('type',[
 export const gameCommandSchema=z.discriminatedUnion('type',[
  ...baseCommandSchema.options,
  z.object({type:z.literal('research'),id:z.string().min(1)}).strict(),
+ z.object({type:z.literal('researchBranch'),category:z.string().min(1).max(20),axis:z.string().min(1).max(40),stages:z.number().int().min(1).max(100)}).strict(),
  z.object({type:z.literal('eventDecision'),choice:z.enum(['invest','ignore'])}).strict(),
  z.object({type:z.literal('markNotificationsRead'),id:z.number().int().min(0)}).strict(),
  z.object({type:z.literal('design'),kind:z.enum(hardwareKinds),name:z.string().trim().min(1).max(80),spec:specSchema,visual:visualSchema.optional(),price:z.number().int().min(1).max(1e8)}).strict(),
+ z.object({type:z.literal('designSocket'),name:z.string().trim().min(1).max(24),power:z.number().int().min(1).max(100000),channels:z.number().int().min(1).max(1024)}).strict(),
  z.object({type:z.literal('launch'),id:z.string().min(1),presentation:z.enum(['none','online','event','keynote']).optional()}).strict(),
  z.object({type:z.literal('line'),id:z.string().min(1),target:z.number().int().min(0).max(1000000)}).strict(),
  z.object({type:z.literal('price'),id:z.string().min(1),price:z.number().int().min(1).max(1e8)}).strict(),

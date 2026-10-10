@@ -16,7 +16,7 @@ export function softScore(v:number){const x=Math.max(0,v);return x<=100?x:100+b.
 /** Deterministic review axes and score (no outlet noise); used for the launch review and design-time forecasts. */
 export function estimateReview(s:GameState,p:Pick<Product,'id'|'kind'|'performance'|'price'|'unitCost'|'reliability'|'spec'|'visual'>):{score:number,axes:Record<ReviewAxis,number>}{
  const reference=marketReference(p.kind,s.day);
- const others=[...s.products.filter(o=>o.id!==p.id&&o.launched&&o.discontinuedDay===undefined&&o.kind===p.kind),...s.rivals.flatMap(r=>r.products.filter(o=>o.kind===p.kind&&o.remaining===0))];
+ const others=[...s.products.filter(o=>o.id!==p.id&&o.launched&&o.discontinuedDay===undefined&&o.kind===p.kind),...s.rivals.flatMap(r=>r.products.filter(o=>o.kind===p.kind&&o.remaining===0&&o.discontinuedDay===undefined))];
  const best=Math.max(reference,...others.map(o=>o.performance));
  const relative=p.performance/best;
  const performance=softScore(b.performanceFloor+b.performanceScale*relative**b.performanceExponent);

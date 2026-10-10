@@ -1,4 +1,5 @@
 import type {Field} from './hardware';
+import {baseBound,finalBound} from './unlocks';
 
 /**
  * Evidence-anchored milestones with *gameplay-interpolated* intermediate maxima.
@@ -22,16 +23,19 @@ const maxByYear:Record<string,Timeline>={
  'monitor.resolution':[1200,1200,1600,1600,2160,4320,4320,8640],
  'monitor.refresh':[120,120,120,144,144,240,360,540],
 };
-/** Returns a conservative gameplay ceiling/floor, not a benchmark or historical market median. */
+/**
+ * Returns a conservative gameplay ceiling/floor, not a benchmark or historical market median. After 2025 it moves
+ * geometrically to the field's year-2100 bound, then to its year-2200 bound (the advanced research tier).
+ */
 export function historicalLimit(kind:string,key:string,year:number,field:Field):number|undefined{
  const table=maxByYear[`${kind}.${key}`];
  if(!table)return undefined;
  const j=milestoneYears.findIndex(y=>year<y);
  const cap=j<0?table.at(-1)!:table[Math.max(0,j-1)];
  if(year<=2025)return cap;
- const far=field.lowerIsBetter?Number(field.min):Number(field.max);
- const proportion=Math.min(1,Math.max(0,(year-2025)/75));
- return cap*(far/cap)**proportion;
+ const base=baseBound(field);
+ if(year<=2100)return cap*(base/cap)**((year-2025)/75);
+ return base*(finalBound(field)/base)**Math.min(1,(year-2100)/100);
 }
 /** Calendar ceilings intersect research-unlocked slider limits, snapping to actual supported choice values. */
 export function historicalRange(kind:string,key:string,field:Field,range:{min:number,max:number},year:number){
@@ -70,6 +74,6 @@ const retailGrowthPerDecade:Record<string,number>={'monitor.size':1.08,'monitor.
 export function typicalRetailLimit(kind:string,key:string,year:number):number|undefined{
  const row=retailTypical[`${kind}.${key}`];if(!row)return undefined;
  const j=milestoneYears.findIndex(y=>year<y);
- if(j<0){const last=row.at(-1)!;return year>2025?last*(retailGrowthPerDecade[`${kind}.${key}`]??2)**((Math.min(year,2100)-2025)/10):last;}
+ if(j<0){const last=row.at(-1)!;return year>2025?last*(retailGrowthPerDecade[`${kind}.${key}`]??2)**((Math.min(year,2200)-2025)/10):last;}
  return row[Math.max(0,j-1)];
 }
