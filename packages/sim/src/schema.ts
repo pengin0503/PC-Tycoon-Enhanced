@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { balance } from '../../content/src/balance';
 import {hardwareKinds} from '../../content/src/research';
 import {productKinds} from '../../content/src/devices';
-import {clusterSchema,designSchema,modelSchema} from './ai-schema';
+import {clusterSchema,designSchema,modelSchema,aiHistorySchema} from './ai-schema';
+import {marketLedgerLimit} from './market-share';
 export const money = z.number().int().min(0).max(balance.moneyLimit);
 export const seedSchema = z.number().int().min(0).max(0xffffffff);
 export const specSchema=z.record(z.string(),z.union([z.number(),z.string().max(80)]));
@@ -41,6 +42,9 @@ export const gameSchema = z.object({
   sockets:z.array(z.object({id:z.string().min(1).max(20),name:z.string().trim().min(1).max(24),power:z.number().int().min(1).max(100000),channels:z.number().int().min(1).max(1024),remaining:z.number().nonnegative(),day:z.number().int().min(0)}).strict()).max(30).default(()=>[]),
   clusters:z.array(clusterSchema).max(20).default([]),
   models:z.array(modelSchema).max(100).default([]),
+  clusterSeq:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).default(0),
+  modelSeq:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).default(0),
+  aiHistory:aiHistorySchema,
   modifiers:z.object({demand:z.number().min(.5).max(1.5),production:z.number().min(.5).max(1.5),expiresDay:z.number().int().min(0)}).default({demand:1,production:1,expiresDay:0}),
   officeLevel:z.number().int().min(1).max(10).default(1),factoryLevel:z.number().int().min(1).max(13).default(1),advertising:money.default(0),
   staff:z.array(z.object({id:z.string(),role:roleSchema,skill:z.number().int().min(20).max(100),salary:money,trait:traitSchema.optional()}).strict()).max(40).default([]),
@@ -54,7 +58,7 @@ export const gameSchema = z.object({
   gameOver:z.object({day:z.number().int().min(0),reason:z.string().min(1).max(120)}).strict().nullable().default(null),
   pendingAttack:z.object({osId:z.string(),day:z.number().int().min(0),deadlineDay:z.number().int().min(0),targets:z.number().int().min(1).max(100)}).strict().nullable().default(null),
   osIncident:z.object({demand:z.number().min(.1).max(1),expiresDay:z.number().int().min(0)}).strict().nullable().default(null),
-  marketSales:z.array(z.object({day:z.number().int().min(0).max(1000000),company:z.string().min(1).max(80),kind:z.enum(productKinds),units:z.number().int().min(1).max(100000000)}).strict()).max(25000).default([]),
+  marketSales:z.array(z.object({day:z.number().int().min(0).max(1000000),company:z.string().min(1).max(80),kind:z.enum(productKinds),units:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict()).max(marketLedgerLimit).default([]),
   /** Monthly snapshots. `kinds`: lifetime units, revenue and gross profit of the company's products per kind (since economy version 5). */
   history:z.array(z.object({day:z.number().int(),cash:money,debt:money,loan:money,revenue:money,expenses:money,capital:money,share:z.number().min(0).max(1),
    kinds:z.partialRecord(z.enum(productKinds),z.object({sold:z.number().int().nonnegative(),revenue:z.number().int().nonnegative(),profit:z.number().int()}).strict()).optional()}).strict()).max(240).default([]),
@@ -102,6 +106,8 @@ export const gameCommandSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('defendAttack'),blocked:z.number().int().min(0).max(100)}).strict(),
  z.object({type:z.literal('buyCluster'),gpuId:z.string(),serverId:z.string(),gpus:z.number().int().min(1).max(256),network:z.number().min(.1).max(1),cooling:z.number().min(.1).max(1)}).strict(),
  z.object({type:z.literal('trainModel'),name:z.string().trim().min(1).max(80),design:designSchema,clusterId:z.string(),budget:money.min(1)}).strict(),
+ z.object({type:z.literal('archiveModel'),id:z.string()}).strict(),
+ z.object({type:z.literal('disposeCluster'),id:z.string()}).strict(),
  z.object({type:z.literal('deployModel'),id:z.string(),clusterId:z.string(),bits:z.union([z.literal(4),z.literal(8),z.literal(16)]),context:z.number().int().min(128).max(1048576),batch:z.number().int().min(1).max(256),mode:z.enum(['api','subscription','open']),apiPrice:z.number().int().min(1).max(1000000),subscriptionPrice:z.number().int().min(1).max(1000000)}).strict(),
  z.object({type:z.literal('retireModel'),id:z.string()}).strict(),
 ]);

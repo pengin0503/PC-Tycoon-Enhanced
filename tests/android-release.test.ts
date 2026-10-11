@@ -3,8 +3,8 @@ import {readFileSync} from 'node:fs';
 const load=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 it('publishes personal debug APK releases automatically from main without signing Secrets',()=>{
- const workflow=load('.github/workflows/android-release.yml');
- expect(workflow).toMatch(/push:\s*\n\s*branches:\s*\n\s*- main/);
+ const workflow=load('.github/workflows/ci.yml');
+ expect(workflow).toMatch(/push:\s*\n\s*branches:\s*\[main\]/);
  expect(workflow).toContain('workflow_dispatch:');
  expect(workflow).toContain('refs/heads/main');
  expect(workflow).toContain('contents: write');
@@ -19,10 +19,11 @@ it('publishes personal debug APK releases automatically from main without signin
 });
 
 it('uses a unique semver-based beta tag for each run and matches Android manifest metadata',()=>{
- const workflow=load('.github/workflows/android-release.yml');
+ const workflow=load('.github/workflows/ci.yml');
  const gradle=load('apps/android/android/app/build.gradle');
  expect(workflow).toContain('tools/release_version.mjs');
- expect(workflow).toContain('GITHUB_RUN_NUMBER');
+ expect(workflow).toContain('GITHUB_RUN_ID');
+ expect(workflow).toContain('date +%s');
  expect(workflow).toContain('-beta.');
  expect(workflow).toContain('PCT_VERSION_CODE');
  expect(workflow).toContain('PCT_VERSION_NAME');
@@ -34,14 +35,14 @@ it('uses a unique semver-based beta tag for each run and matches Android manifes
 });
 
 it('verifies APK contents and signature and publishes a direct APK plus SHA256 only after upload',()=>{
- const workflow=load('.github/workflows/android-release.yml');
- expect(workflow).toContain('tools/verify_apk.py');
+ const workflow=load('.github/workflows/ci.yml');
+ expect(workflow).toContain('npm run android:verify');
  expect(workflow).toMatch(/apksigner["']? verify/);
  expect(workflow).toContain('app-debug.apk');
  expect(workflow).toContain('PC-Tycoon-Enhanced-');
  expect(workflow).toContain('.sha256');
  expect(workflow).toContain('gh release view');
  expect(workflow).toContain('gh release edit');
- expect(workflow).not.toContain('actions/upload-artifact');
+ expect(workflow).toContain('actions/download-artifact');
  expect(workflow).toMatch(/gh release create[\s\S]*?--draft/);
 });

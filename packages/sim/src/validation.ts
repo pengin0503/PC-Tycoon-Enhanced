@@ -7,11 +7,15 @@ import {evaluateHardware} from './hardware';
 import {evaluateDevice,deviceParts} from './devices';
 import {estimateInference} from './ai-math';
 import type {GameState} from './types';
+import {normalizeMarketSales} from './market-share';
+import {refreshInference} from './ai';
+import {normalizeAILifecycle} from './ai-lifecycle';
 export function validateGame(value:unknown):GameState{
  const input=typeof value==='object'&&value!==null&&!Array.isArray(value)&&Array.isArray((value as Record<string,unknown>).clusters)
   ?{...(value as Record<string,unknown>),clusters:((value as Record<string,unknown>).clusters as unknown[]).map(cluster=>typeof cluster==='object'&&cluster!==null&&!Array.isArray(cluster)&&!('purchaseDay'in cluster)?{...cluster,purchaseDay:(value as Record<string,unknown>).day}:cluster)}
   :value;
  const s=gameSchema.parse(input);const fail=(message:string):never=>{throw new Error(`セーブの整合性エラー: ${message}`);};
+ normalizeAILifecycle(s);
  const failIf=(condition:boolean,message:string)=>{if(condition)fail(message);};
  const highestStaffId=s.staff.reduce((max,employee)=>{
   const match=/^e-(\d+)$/.exec(employee.id);
@@ -20,11 +24,19 @@ export function validateGame(value:unknown):GameState{
  s.staffSeq=Math.max(s.staffSeq,highestStaffId);
  const unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)fail(`${label}のIDが重複しています`);};
  unique(s.products.map(p=>p.id),'製品');unique(s.staff.map(e=>e.id),'スタッフ');unique(s.clusters.map(c=>c.id),'クラスタ');unique(s.models.map(m=>m.id),'モデル');unique(s.rivals.map(r=>r.id),'競合');unique(s.research.completed,'研究');unique(s.research.active.map(r=>r.id),'進行中研究');
- for(const id of s.research.completed){const t=techById.get(id);if(!t||t.prerequisites.some(p=>!s.research.completed.includes(p)))fail('完了研究の前提条件が不正です');}
- for(const r of s.research.active){const t=techById.get(r.id);if(!t||s.research.completed.includes(r.id)||t.prerequisites.some(id=>!s.research.completed.includes(id)))fail('進行中研究が不正です');}
+ unique([...s.models,...s.aiHistory.models].map(x=>x.id),'モデル履歴');unique([...s.clusters,...s.aiHistory.clusters].map(x=>x.id),'クラスタ履歴');
+ for(const m of s.models)if(m.trainingCluster&&(m.trainingCluster.id!==m.clusterId||m.trainingCluster.purchaseDay>s.day))fail('学習設備の来歴が不正です');
+ for(const rows of [s.aiHistory.models,s.aiHistory.clusters])for(const row of rows)if(row.day>s.day)fail('AI履歴の日付が未来です');
+ for(const row of s.aiHistory.clusters)if(row.purchaseDay>row.day||row.writeoff>row.purchaseCost)fail('撤去履歴の会計が不正です');
+ const totals=s.aiHistory.totals,sum=<T>(rows:T[],get:(x:T)=>number)=>rows.reduce((n,x)=>n+get(x),0);
+ if(totals.models<s.aiHistory.models.length||totals.clusters<s.aiHistory.clusters.length||totals.failed>totals.models||totals.failed<sum(s.aiHistory.models,x=>Number(x.status==='failed'))||totals.trainingCost<sum(s.aiHistory.models,x=>x.trainingCost)||totals.revenue<sum(s.aiHistory.models,x=>x.revenue)||totals.cost<sum(s.aiHistory.models,x=>x.cost)||totals.purchaseCost<sum(s.aiHistory.clusters,x=>x.purchaseCost)||totals.writeoffs<sum(s.aiHistory.clusters,x=>x.writeoff)||totals.writeoffs>totals.purchaseCost)fail('AI履歴の累計が不正です');
+ const completed=new Set(s.research.completed);
+ for(const id of s.research.completed){const t=techById.get(id);if(!t||t.prerequisites.some(p=>!completed.has(p)))fail('完了研究の前提条件が不正です');}
+ for(const r of s.research.active){const t=techById.get(r.id);if(!t||completed.has(r.id)||t.prerequisites.some(id=>!completed.has(id)))fail('進行中研究が不正です');}
  const office=offices[s.officeLevel-1];if(s.staff.length>office.staffCapacity||s.research.active.length>office.researchSlots)fail('施設の枠を超えています');
  for(const e of s.events)if(e.day>s.day)fail('未来のイベントが保存されています');
  for(let i=0;i<s.marketSales.length;i++){const record=s.marketSales[i];if(record.day>s.day||(i>0&&record.day<s.marketSales[i-1].day))fail('販売履歴の日付が不正です');}
+ s.marketSales=normalizeMarketSales(s.marketSales,s.day);
  if(s.notificationReadId>s.notificationSeq)fail('通知既読位置が不正です');
  let prevNotice=0;
  for(const notice of s.notifications){
@@ -43,9 +55,10 @@ export function validateGame(value:unknown):GameState{
  }
  for(const c of s.clusters){failIf(c.purchaseDay>s.day,'クラスタ購入日が未来です');if(!aiGPUs.some(g=>g.id===c.gpuId)&&!s.products.some(p=>p.id===c.gpuId&&p.kind==='gpu'))fail('クラスタのGPU参照が不正です');if(c.serverId!=='vendor'&&!s.products.some(p=>p.id===c.serverId&&p.kind==='pc'&&p.spec.purpose==='server'))fail('クラスタのサーバー参照が不正です');}
  const occupied=new Set<string>();const reserve=(id:string)=>{if(occupied.has(id))fail('クラスタが重複割当されています');occupied.add(id);};
- for(const m of s.models){if(!s.clusters.some(c=>c.id===m.clusterId))fail('学習クラスタが見つかりません');if(m.status==='training')reserve(m.clusterId);else if(m.remainingSeconds!==0||m.preparationRemaining!==0)fail('モデルの完了状態が不正です');
-  if(m.service){const v=m.service,c=s.clusters.find(c=>c.id===v.clusterId);if(!c)fail('推論クラスタが見つかりません');const e=estimateInference(m.design,c!,v.bits,v.context,v.batch);if(v.memoryBytes!==e.memoryBytes)fail('推論メモリの保存値が不正です');if(v.enabled){if(m.status!=='ready')fail('未評価モデルのサービスが有効です');if(v.mode!=='open'){if(e.memoryBytes>c!.vramBytes)fail('推論VRAMが不足しています');reserve(v.clusterId);}}}
+ for(const m of s.models){if(!s.clusters.some(c=>c.id===m.clusterId)&&(m.status==='training'||!m.trainingCluster))fail('学習クラスタが見つかりません');if(m.status==='training')reserve(m.clusterId);else if(m.remainingSeconds!==0||m.preparationRemaining!==0)fail('モデルの完了状態が不正です');
+  if(m.service){const v=m.service,c=s.clusters.find(c=>c.id===v.clusterId);if(!c&&v.enabled&&v.mode!=='open')fail('推論クラスタが見つかりません');if(c){const e=estimateInference(m.design,c,v.bits,v.context,v.batch);if(v.memoryBytes!==e.memoryBytes)fail('推論メモリの保存値が不正です');if(v.enabled&&v.mode!=='open'){if(e.memoryBytes>c.vramBytes)fail('推論VRAMが不足しています');reserve(v.clusterId);}}if(v.enabled&&m.status!=='ready')fail('未評価モデルのサービスが有効です');}
  }
+ refreshInference(s);
  return s;
 }
 

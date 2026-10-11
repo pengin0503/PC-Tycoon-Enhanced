@@ -5,7 +5,7 @@ import {hardwareCommand,researchAndDevelopment,manufacture,sellProducts} from '.
 import {deviceCommand} from './devices';
 import {newRivals,rivalCommand,rivalDaily,rivalWeekly,rivalMonthly,marketShare} from './rivals';
 import {managementCommand,marketingWeek,monthlyCosts,monthlyHistory} from './management';
-import {aiCommand,aiDaily,aiWeekly,aiMonthly} from './ai';
+import {aiCommand,aiDaily,aiWeekly,aiMonthly,refreshInference} from './ai';
 import {marketDaily,marketMonthly,eventCommand} from './events';
 import {validateGame} from './validation';
 import {osCommand,attackDaily,attackMonthly} from './os';
@@ -29,6 +29,11 @@ export function createGame(options: NewGameOptions): GameState {
 }
 export function command(state: GameState, input: GameCommand): GameState {
   const c=gameCommandSchema.parse(input); const s=validateGame(state);
+  applyCommand(s,c);
+  return validateGame(s);
+}
+/** Internal only: operates on the independent, strictly validated transaction copy. */
+function applyCommand(s:GameState,c:GameCommand):void{
   if(s.gameOver&&c.type!=='markNotificationsRead')throw new Error('ゲームオーバーです。新しいゲームを始めてください');
   progressCommand(s,c);
   hardwareCommand(s,c);
@@ -51,7 +56,7 @@ export function command(state: GameState, input: GameCommand): GameState {
     if(s.gameOver)break;
   }
   checkAchievements(s);
-  return validateGame(s);
+  refreshInference(s);
 }
 
 /** Whether the player must answer something before time may run (a decision, an attack or a bulk-deal offer). */
@@ -62,10 +67,10 @@ export function awaitingPlayer(s:GameState){return !!(s.pendingDecision||s.pendi
  */
 export function advanceInteractive(state:GameState,days:number):GameState{
  if(!Number.isInteger(days)||days<0||days>31)throw new Error('時間操作の指定が不正です');
- let result=state;
+ const result=validateGame(state);
  for(let i=0;i<days;i++){
   if(awaitingPlayer(result))break;
-  result=command(result,{type:'advance',days:1});
+  applyCommand(result,{type:'advance',days:1});
  }
- return result;
+ return validateGame(result);
 }

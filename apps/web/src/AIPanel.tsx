@@ -15,6 +15,7 @@ import {describeWithResearch} from './research-hints';
 import {Meter,Empty,Chip} from './ui';
 import {yen} from './i18n';
 import {useBackHandler} from './app-gestures';
+import {clusterBookValue} from '../../../packages/sim/src/ai-lifecycle';
 
 type Send=(c:GameCommand)=>boolean;
 type View={kind:'home'}|{kind:'cluster'}|{kind:'model'}|{kind:'deploy',id:string};
@@ -42,7 +43,7 @@ export function AIPanel({state,send}:{state:GameState,send:Send}){
 function AIHome({state,send,open}:{state:GameState,send:Send,open:(v:View)=>void}){
  const ready=state.research.completed.includes('ai-compute-1');const unlockCost=researchPointCost(state,'ai-compute-1');
  return <section className="screen develop-home ai-home"><header className="screen-title"><h2>AI Lab</h2><p>すべての評価は架空のゲームスコアです。自社GPUでクラスタを組み、モデルを設計・学習してサービスとして提供します。</p></header>
-  <PanelPages labels={['開発','モデル','クラスタ']}>
+  <PanelPages labels={['開発','モデル','クラスタ','履歴']}>
    <div className="category-grid">
     <article className={`category-tile ${ready?'':'locked'}`}><div className="tile-art"><ProductIllustration kind="ai-cluster" tier={0} color="graphite"/></div><h3>計算クラスタ</h3>
      {ready?<><small>{state.clusters.length?`${state.clusters.length}基 稼働`:'未構築'}</small><button className="primary" aria-label="クラスタを構築" onClick={()=>open({kind:'cluster'})}>構築する</button></>
@@ -53,9 +54,17 @@ function AIHome({state,send,open}:{state:GameState,send:Send,open:(v:View)=>void
    </div>
    <div>{state.models.length?<div className="grid-list ai-roster">{state.models.map(m=><ModelCard key={m.id} model={m} send={send} configure={()=>open({kind:'deploy',id:m.id})}/>)}</div>:<Empty>まだモデルがありません。「開発」からAIモデルを設計しましょう。</Empty>}</div>
    <div>{state.clusters.length?<div className="grid-list ai-roster">{state.clusters.map(c=>{const user=state.models.find(m=>m.status==='training'&&m.clusterId===c.id)??state.models.find(m=>m.service?.enabled&&m.service.mode!=='open'&&m.service.clusterId===c.id);
-     return <article key={c.id} className="card"><h3>{c.id} · GPU {c.gpus}枚</h3><dl><dt>VRAM合計</dt><dd>{gb(c.vramBytes)}</dd><dt>演算性能</dt><dd>{formatFlops(c.peakFlops)}</dd><dt>消費電力</dt><dd>{(c.powerWatts/1000).toLocaleString('ja-JP',{maximumFractionDigits:1})}kW</dd><dt>設備投資</dt><dd>{yen(c.purchaseCost)}</dd><dt>使用状況</dt><dd>{user?`${user.name}（${user.status==='training'?'学習':'推論'}）`:'空き'}</dd></dl></article>;})}</div>
+     return <article key={c.id} className="card"><h3>{c.id} · GPU {c.gpus}枚</h3><dl><dt>VRAM合計</dt><dd>{gb(c.vramBytes)}</dd><dt>演算性能</dt><dd>{formatFlops(c.peakFlops)}</dd><dt>消費電力</dt><dd>{(c.powerWatts/1000).toLocaleString('ja-JP',{maximumFractionDigits:1})}kW</dd><dt>設備投資</dt><dd>{yen(c.purchaseCost)}</dd><dt>残存簿価</dt><dd>{yen(clusterBookValue(state,c))}</dd><dt>使用状況</dt><dd>{user?`${user.name}（${user.status==='training'?'学習':'推論'}）`:'空き'}</dd></dl><ConfirmLifecycle label="撤去" disabled={!!user} reason={user?'使用中の設備は撤去できません':''} message={`在庫は戻りません。除却損 ${yen(clusterBookValue(state,c))}を記録します。更新には新規構築が必要です。`} run={()=>send({type:'disposeCluster',id:c.id})}/></article>;})}</div>
     :<Empty>クラスタがありません。「開発」から構築しましょう。</Empty>}</div>
+   <div><h3>全期間の累計（アーカイブ・撤去済み）</h3><p>モデル {state.aiHistory.totals.models}件（失敗 {state.aiHistory.totals.failed}件） / 学習費 {yen(state.aiHistory.totals.trainingCost)} / 売上 {yen(state.aiHistory.totals.revenue)} / 運用費 {yen(state.aiHistory.totals.cost)} / 利益 {yen(state.aiHistory.totals.revenue-state.aiHistory.totals.cost-state.aiHistory.totals.trainingCost)}</p><p>撤去 {state.aiHistory.totals.clusters}基 / 設備投資 {yen(state.aiHistory.totals.purchaseCost)} / 除却損 {yen(state.aiHistory.totals.writeoffs)}</p><p className="hint">個別履歴は各直近200件です。古い記録も累計に残ります。履歴へ移したモデルは再開できません。</p>
+    {state.aiHistory.models.slice().reverse().map(m=><article className="card" key={m.id}><h4>{m.name} · {m.id}</h4><p>{m.day}日目 / {m.status==='failed'?'学習失敗':'評価完了'} / {m.architecture.toUpperCase()} · {formatValue(m.total/1e9,'B')} / 学習元 {m.clusterId}</p><p>{Object.entries(m.scores).map(([key,value])=>`${scoreLabels[key as keyof Model['scores']]} ${value}`).join(' / ')}</p><p>学習費 {yen(m.trainingCost)} / 売上 {yen(m.revenue)} / 運用費 {yen(m.cost)} / 利益 {yen(m.revenue-m.cost-m.trainingCost)}</p></article>)}
+    {state.aiHistory.clusters.slice().reverse().map(c=><article className="card" key={c.id}><h4>撤去設備 {c.id}</h4><p>GPU {c.gpus}枚 · {c.gpuId} / サーバー {c.serverId} / 購入 {c.purchaseDay}日目 / 撤去 {c.day}日目 / 設備投資 {yen(c.purchaseCost)} / 除却損 {yen(c.writeoff)}</p></article>)}</div>
   </PanelPages></section>;
+}
+function ConfirmLifecycle({label,disabled=false,reason,message,run}:{label:string,disabled?:boolean,reason?:string,message:string,run:()=>boolean}){
+ const [confirm,setConfirm]=useState(false);
+ if(confirm&&!disabled)return <div role="group" aria-label={`${label}の確認`}><p className="warning">{message}</p><button onClick={()=>setConfirm(false)}>やめる</button><button className="danger" onClick={()=>{if(run())setConfirm(false);}}>{label}を確定</button></div>;
+ return <div><button disabled={disabled} onClick={()=>setConfirm(true)}>{label}…</button>{reason&&<small>{reason}</small>}</div>;
 }
 
 function ModelCard({model:m,send,configure}:{model:Model,send:Send,configure:()=>void}){
@@ -65,7 +74,7 @@ function ModelCard({model:m,send,configure}:{model:Model,send:Send,configure:()=
   {m.status==='ready'&&<dl>{(Object.keys(scoreLabels) as (keyof Model['scores'])[]).map(k=><div key={k}><dt>{scoreLabels[k]}</dt><dd>{m.scores[k]}</dd></div>)}</dl>}
   {m.service&&<><p>利用トークン {m.service.tokens.toLocaleString('ja-JP')} / 契約 {m.service.users.toLocaleString('ja-JP')}</p><p>サービス売上 <b data-testid={`ai-revenue-${m.id}`}>{yen(m.service.revenue)}</b> / 運用費 {yen(m.service.cost)}</p><p>学習費を含む利益 {yen(m.service.revenue-m.service.cost-m.trainingCost)}</p></>}
   <div className="button-row">{m.status==='ready'&&<button className="primary" onClick={configure}>{m.service?.enabled?'サービスを変更':'サービスを設定'}</button>}
-   {m.service?.enabled&&<button onClick={()=>send({type:'retireModel',id:m.id})}>サービスを停止</button>}</div></article>;
+   {m.service?.enabled&&<button onClick={()=>send({type:'retireModel',id:m.id})}>サービスを停止</button>}<ConfirmLifecycle label="履歴へ移す" disabled={m.status==='training'||!!m.service?.enabled} reason={m.status==='training'?'学習中は移せません':m.service?.enabled?'サービスを停止してください':''} message="現役枠を空け、履歴に記録します。このモデルは再開できなくなります。" run={()=>send({type:'archiveModel',id:m.id})}/></div></article>;
 }
 
 function Stage({eyebrow,kind,title,children}:{eyebrow:string,kind:string,title:string,children:ReactNode}){
@@ -89,7 +98,7 @@ function ClusterDesigner({state,send,back,done}:{state:GameState,send:Send,back:
  const submit=()=>{if(own&&send({type:'buyCluster',gpuId:own.id,serverId,gpus,network,cooling}))done();};
  return <section className="screen designer">
   <div className="workbench">
-   <Stage eyebrow="CLUSTER BUILDER / AI LAB" kind="ai-cluster" title={`クラスタ c-${state.clusters.length+1}`}>
+   <Stage eyebrow="CLUSTER BUILDER / AI LAB" kind="ai-cluster" title={`クラスタ c-${state.clusterSeq+1}`}>
     {own?<div className="preview-metrics"><span>GPU<strong>{gpus}枚</strong></span><span>VRAM合計<strong>{formatValue(Number(own.spec.vram)*gpus,'GB')}</strong></span>
      <span>演算性能<strong>{formatFlops(gpuFlops(own.performance)*gpus)}</strong></span>
      <span>消費電力<strong>{((own.power*gpus+(server?.power??0))/1000).toLocaleString('ja-JP',{maximumFractionDigits:2})}kW</strong></span>

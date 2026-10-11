@@ -1,5 +1,8 @@
 import {productCatalog} from '../../content/src/devices';
 import {hardwareBalance} from '../../content/src/hardware';
+import {marketReference} from './market';
+/** UI and command previews use the same monthly market reference. */
+export function productPriceRange(p:Parameters<typeof priceRange>[0],day:number){return priceRange(p,marketReference(p.kind,day));}
 /**
  * Simulation-only, deterministic allowable product pricing, not a real-world price claim. `reference` is the market's
  * mainstream performance for the kind (`marketReference`); it defaults to the year-2000 catalog value.

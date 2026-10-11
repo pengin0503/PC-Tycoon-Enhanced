@@ -146,6 +146,9 @@ function toVersion2(s:GameState){
   s.pendingDecision={...s.pendingDecision,cost,description:s.pendingDecision.description.replace(/^[\d,]+円/,`${cost.toLocaleString('ja-JP')}円`)};
  }
  for(const c of s.clusters)c.purchaseCost=scale(c.purchaseCost);
- for(const m of s.models){m.trainingCost=scale(m.trainingCost);if(m.service){m.service.revenue=scale(m.service.revenue);m.service.cost=scale(m.service.cost);}}
+ for(const m of s.models){m.trainingCost=scale(m.trainingCost);if(m.trainingCluster)m.trainingCluster.purchaseCost=scale(m.trainingCluster.purchaseCost);if(m.service){m.service.revenue=scale(m.service.revenue);m.service.cost=scale(m.service.cost);}}
+ for(const m of s.aiHistory.models){m.trainingCost=scale(m.trainingCost);m.revenue=scale(m.revenue);m.cost=scale(m.cost);}
+ for(const c of s.aiHistory.clusters){c.purchaseCost=scale(c.purchaseCost);c.writeoff=scale(c.writeoff);}
+ for(const key of ['trainingCost','revenue','cost','purchaseCost','writeoffs'] as const)s.aiHistory.totals[key]=scale(s.aiHistory.totals[key]);
  s.year=eraBalance.startYear;
 }

@@ -1,0 +1,21 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-10-11-review-remediation.md
+
+Baseline: branch codex/review-remediation-2026-10-11 at 39110a7, clean independent clone. 255 tests passed, 2 skipped.
+Spec approved 2026-10-11; user explicitly requested continuation through implementation. Native execution.
+Pre-flight: Task 1 market normalization must validate raw input before aggregation; Task 4 lifecycle normalization must precede strict reference checks; Task 3 inference refresh is needed before Task 5 exit validation. No signature conflicts.
+Ruling: cloud execution helper scripts/supplemental TDD reference could not be resolved; maintain task briefs, RED/GREEN logs and ledger directly — core skill instructions remain applied — cost if wrong: audit detail, not product behavior.
+Task 1: complete — all 3 new tests RED→GREEN; full suite 258 passed / 2 skipped; commit 8c6f511. Normalization occurs after raw schema/date validation.
+Task 2: complete — 2030/2100/2200 editor max mismatch RED→GREEN; 4 pricing tests, typecheck and full suite 262 passed / 2 skipped; commit 61bf18e.
+Task 3: complete — inference stale values, ended-OS attack and help each RED→GREEN; full suite 265 passed / 2 skipped; commit 9754751.
+Task 4: complete — lifecycle commands RED→GREEN, 7 tests including UI history and legacy equipment monetary migration; typecheck/full suite 272 passed / 2 skipped. UI commands have confirm/cancel and busy reasons; history 200 details plus cumulative values.
+Task 5: 14→2 full validations and invalid-zero-day tests RED→GREEN; full suite 274 passed / 2 skipped.
+Task 5: complete — same-environment 7-day benchmark before→after (ms): 1 research ×100/500 PCs 20.02→8.09 / 161.51→41.25; 1000 ×100/500 80.58→8.48 / 257.90→46.47; 4806 ×100/500 737.59→25.68 / 1133.87→87.69. Engine only, not Android measurements.
+Task 6: complete — duplicate-release regression RED→GREEN; 5 workflow tests, full suite 275 passed / 2 skipped; production build and Python 6 tests passed. Version tags use globally unique run ID; versionCode is Unix seconds, so manual/automatic workflow counters cannot decrease installed versions. Main-only release consumes same-run APK; runtime verification awaits Actions.
+Ruling: choose Unix-second APK versionCode and global run-ID tags instead of per-workflow run numbers — manual and automatic reusable entry points have independent counters — cost if wrong: versionCode reaches Android's signed-32-bit ceiling in 2038 and then needs a versioning redesign (current build verifies manifest values).
+Task 7: resumed 2026-10-11 after the previous usage-limit interruption. Fresh verification: 275 Vitest tests passed, 2 skipped; typecheck/build passed; Python 6 passed; lifecycle confirmation/cancel/busy refusal/history persistence browser test passed; production PWA 2 passed. Full browser suite and PR Actions pending.
+Final review: fresh reviewer checked 0c856dd..30355bb against the spec, plan and all five Review Focus items; independently ran 27 focused tests and edge probes. No Critical/Important findings. No implementation fix pass needed.
+Final: minor (deferred): hand-edited history can report all-time failures contradicting retained ready records; ordinary commands cannot generate this, and only displayed history totals are affected.
+Final: minor (deferred): empty model/cluster history IDs survive validation; generated IDs are nonempty and malformed-input history display is the affected behavior.
+Final: Ruling: workflow permissions and artifact execution cannot be judged from static review — verify them on actual PR Actions before handoff — cost if wrong: runtime workflow failure remains visible and must be resolved.
+Final: Ruling: Android real-device behavior and debug signing continuity are outside this remediation's local verification — retain the existing signing approach and record device testing as a limitation — cost if wrong: device-specific issues or update installation incompatibility need separate follow-up.
+Final: Ruling: balance and historical tuning remain unchanged — the approved spec excludes calibration, and #55 changes help text to match the linear engine — cost if wrong: any simulation realism concern remains unresolved.
