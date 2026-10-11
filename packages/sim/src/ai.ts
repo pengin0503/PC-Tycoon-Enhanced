@@ -8,6 +8,7 @@ import {workBonus} from './management';
 import {requireRole,hasRole} from './business';
 import {techEffect} from '../../content/src/tech-catalog';
 import {nextRandom} from './random';
+import {settleSubscription,aiLifecycleCommand} from './ai-lifecycle';
 /** Current selectable range of a model-design slider, in its display unit (parameters/tokens in billions). */
 export function aiDesignRange(key:AISlider,completed:readonly string[]){return unlockedRange(aiDesignSliders[key],'ai',completed);}
 /** Rejects model designs beyond what AI research has unlocked. */
@@ -20,15 +21,16 @@ export function assertAIDesignUnlocked(d:LLMDesign,completed:readonly string[]){
 /** FLOPS of one own GPU: grows with the square of its score, so year-2000 cards are far too slow for language models. */
 export function gpuFlops(score:number){return b.gpuFlopsAtReference*(score/b.gpuReferenceScore)**b.gpuFlopsExponent;}
 export function aiEffects(s:GameState):AIResearchEffects{return Object.fromEntries(['compute','architecture','quantization','data','context','economics'].map(axis=>[axis,techEffect(s.research.completed,'ai',axis)]));}
-import type {GameState,GameCommand} from './types';
-function settleSubscription(s:GameState,service:NonNullable<GameState['models'][number]['service']>){
- const userDays=service.subscriptionUserDays;
- if(service.mode!=='subscription'||userDays===0)return;
- const amount=Math.round(userDays*service.subscriptionPrice/30*(1-b.fee-b.refund));
- if(amount){income(s,amount);service.revenue+=amount;}
- service.subscriptionUserDays=0;
+export function refreshInference(s:GameState){
+ const effects=aiEffects(s);
+ for(const m of s.models){const v=m.service;if(!v)continue;const c=s.clusters.find(c=>c.id===v.clusterId);if(!c)continue;
+  const e=estimateInference(m.design,c,v.bits,v.context,v.batch,effects);
+  v.speed=e.tokensPerSecond;v.memoryBytes=e.memoryBytes;v.qualityPenalty=e.qualityPenalty;
+ }
 }
+import type {GameState,GameCommand} from './types';
 export function aiCommand(s:GameState,c:GameCommand):boolean{
+ if(aiLifecycleCommand(s,c))return true;
  if(c.type==='buyCluster'){
   if(!s.research.completed.includes('ai-compute-1'))throw new Error('AI基盤研究が必要です');if(s.clusters.length>=20)throw new Error('クラスタ数の上限です');
   const own=s.products.find(p=>p.id===c.gpuId&&p.kind==='gpu'&&p.launched&&p.remaining===0);
@@ -39,7 +41,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   if(c.serverId!=='vendor'&&(!server||availableForAI(s,server)<1))throw new Error('自社サーバー在庫が必要です');
   const cost=server?0:b.serverCost;expense(s,cost,false,true);
   const ownGpuValue=removeStock(own,c.gpus);const ownServerValue=server?removeStock(server,1):0;
-  s.clusters.push({id:`c-${s.clusters.length+1}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:gpuFlops(own.performance)*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
+  s.clusters.push({id:`c-${++s.clusterSeq}`,gpuId:c.gpuId,serverId:c.serverId,gpus:c.gpus,peakFlops:gpuFlops(own.performance)*c.gpus,vramBytes:Number(own.spec.vram)*1e9*c.gpus,powerWatts:own.power*c.gpus+(server?.power??0),network:c.network*Math.min(1,server?server.performance/b.serverPerformanceReference:1),cooling:c.cooling,purchaseCost:cost+ownGpuValue+ownServerValue,purchaseDay:s.day});
   logEvent(s,'clusterPurchased',String(c.gpus));return true;
  }
  if(c.type==='trainModel'){
@@ -47,7 +49,7 @@ export function aiCommand(s:GameState,c:GameCommand):boolean{
   if(!s.research.completed.includes('ai-compute-1')||c.design.architecture==='moe'&&!s.research.completed.includes('ai-architecture-1'))throw new Error('AI設計の研究が必要です');
   const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!cluster)throw new Error('クラスタが存在しません');if(clusterBusy(s,c.clusterId))throw new Error('クラスタは使用中です');
   if(s.models.length>=100)throw new Error('モデル数の上限です');assertAIDesignUnlocked(c.design,s.research.completed);const e=estimateLLM(c.design,cluster,aiEffects(s));if(e.trainingMemoryBytes>cluster.vramBytes)throw new Error('学習VRAMが不足しています');if(e.cost>c.budget)throw new Error('学習予算が不足しています');
-  expense(s,e.cost);s.models.push({id:`m-${s.models.length+1}`,name:c.name,design:c.design,clusterId:c.clusterId,status:'training',remainingSeconds:e.seconds,initialSeconds:e.seconds,preparationRemaining:b.preparationDays,trainingCost:e.cost,scores:{math:0,coding:0,knowledge:0,reasoning:0,multilingual:0},service:null});logEvent(s,'trainingStarted',c.name);return true;
+  expense(s,e.cost);s.models.push({id:`m-${++s.modelSeq}`,name:c.name,design:c.design,clusterId:c.clusterId,status:'training',remainingSeconds:e.seconds,initialSeconds:e.seconds,preparationRemaining:b.preparationDays,trainingCost:e.cost,scores:{math:0,coding:0,knowledge:0,reasoning:0,multilingual:0},service:null});logEvent(s,'trainingStarted',c.name);return true;
  }
  if(c.type==='deployModel'){
   const m=s.models.find(m=>m.id===c.id);const cluster=s.clusters.find(x=>x.id===c.clusterId);if(!m||m.status!=='ready'||!cluster)throw new Error('評価済みモデルとクラスタが必要です');
@@ -71,6 +73,7 @@ export function aiWeekly(s:GameState){
 }
 export function aiMarketQuote(s:GameState){const level=Math.max(0,...s.rivals.filter(r=>!r.acquired).map(r=>r.researchLevel));const playerPrices=s.models.flatMap(m=>m.service?.enabled&&m.service.mode==='api'?[m.service.apiPrice]:[]);return {price:Math.max(b.marketPriceFloor,Math.round(Math.min(b.marketBasePrice/(1+level*b.competitorPriceDecay),...playerPrices.map(p=>p*b.priceUndercut)))),quality:Math.min(b.marketQualityCeiling,b.marketQualityBase+level*b.marketQualityPerTech)};}
 export function aiDaily(s:GameState){
+ refreshInference(s);
  const quote=aiMarketQuote(s);
  for(const m of s.models){const service=m.service;if(!service?.enabled||m.status!=='ready')continue;
   if(service.mode==='open'){s.company.awareness=Math.min(100,s.company.awareness+b.publicAwarenessDaily);s.company.reputation=Math.min(100,s.company.reputation+b.publicReputationDaily);continue;}

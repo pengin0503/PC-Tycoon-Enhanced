@@ -14,7 +14,7 @@ import {estimateReview,starsFor} from '../../../packages/sim/src/reception';
 import {researchPointCost,hasRole} from '../../../packages/sim/src/business';
 import {developmentCost} from '../../../packages/sim/src/development-cost';
 import {visualFinishCost,type VisualChoice} from '../../../packages/sim/src/visual';
-import {priceRange} from '../../../packages/sim/src/pricing';
+import {productPriceRange} from '../../../packages/sim/src/pricing';
 import {vendorPartsAt} from '../../../packages/sim/src/vendor-market';
 import {companySockets,socketLimits} from '../../../packages/sim/src/sockets';
 import {researchLink} from './research-plan';
@@ -106,7 +106,7 @@ function ComponentDesigner({kind,state,send,back,done}:{kind:HardwareKind,state:
  let problem='';try{evaluateHardware(kind,spec,state.research.completed,{sockets});}catch(e){problem=e instanceof Error?e.message:String(e);}
  const cooling=typeof spec.cooling==='number'?spec.cooling:undefined;
  const unitCost=preview.unitCost+visualFinishCost(tier);
- const range=priceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}});
+ const range=productPriceRange({kind,unitCost,performance:preview.performance,reliability:preview.reliability,visual:{tier}},state.day);
  const suggested=Math.round(unitCost*2);
  const designCost=developmentCost(kind,preview.performance,state.day,definition.designCost),engineer=hasRole(state,'engineering');
  const currentPrice=Math.max(range.min,Math.min(range.max,price||suggested));
@@ -167,7 +167,7 @@ function DeviceDesigner({kind,state,send,back,done}:{kind:'pc'|'laptop',state:Ga
  const coolingIssue=estimate?deviceCoolingProblem(state,kind,estimate.power,cooling):'';
  const unitCost=estimate?estimate.unitCost+visualFinishCost(tier):0;
  const designCost=estimate?developmentCost(kind,estimate.performance,state.day,deviceBalance.designCost):deviceBalance.designCost;
- const range=estimate?priceRange({kind,unitCost,performance:estimate.performance,reliability:estimate.reliability,visual:{tier}}):{min:1,max:1};
+ const range=estimate?productPriceRange({kind,unitCost,performance:estimate.performance,reliability:estimate.reliability,visual:{tier}},state.day):{min:1,max:1};
  const currentPrice=Math.max(range.min,Math.min(range.max,price||Math.round(unitCost*1.6)));
  const synthetic=estimate?{id:'draft',name,kind,spec:{...chosen,purpose,...(osId?{osId}:{})},performance:estimate.performance,power:estimate.power,unitCost,reliability:estimate.reliability,price:currentPrice,remaining:0,inventory:0,target:0,line:false,launched:false,sold:0,revenue:0,profit:0,releaseDay:0,visual:{tier,color:visual.color}} as Product:null;
  const bench=synthetic?benchmarkDevice(state,synthetic):null;
@@ -264,7 +264,7 @@ function OSDesigner({state,send,back,done}:{state:GameState,send:Send,back:React
  const [price,setPrice]=useState(0);
  let result:ReturnType<typeof evaluateOS>|null=null,problem='';
  try{result=evaluateOS(state,{name,version,features,quality,compatibility,support,price:1,lockScreen,theme});}catch(e){problem=e instanceof Error?e.message:String(e);}
- const range=result?priceRange(result):{min:1,max:1};
+ const range=result?productPriceRange(result,state.day):{min:1,max:1};
  const currentPrice=Math.max(range.min,Math.min(range.max,price||hardwareBalance.osReferencePrice));
  const req=osRequirements({spec:{features:features.join(','),version}});
  const toggle=(f:OSFeature)=>setFeatures(features.includes(f)?features.filter(x=>x!==f):[...features,f]);

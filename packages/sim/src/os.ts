@@ -41,7 +41,7 @@ export function resolveAttack(s:GameState,blocked:number){
 }
 export function attackMonthly(s:GameState){
  if(s.pendingAttack)return;
- const targets=s.products.filter(p=>p.kind==='os'&&p.launched);if(!targets.length)return;
+ const targets=s.products.filter(p=>p.kind==='os'&&p.launched&&p.discontinuedDay===undefined);if(!targets.length)return;
  if(derivedRandom(s.initialSeed,s.day,9000)>=attack.monthlyChance)return;
  const os=targets[Math.floor(derivedRandom(s.initialSeed,s.day,9001)*targets.length)];
  s.pendingAttack={osId:os.id,day:s.day,deadlineDay:s.day+attack.deadlineDays,targets:attack.targets};

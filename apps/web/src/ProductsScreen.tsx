@@ -82,7 +82,7 @@ function ProductDetail({state,product:p,send,close,launch}:{state:GameState,prod
      {p.remaining===0&&!p.launched&&<button className="primary" onClick={launch}>発売する</button>}
      {p.discontinuedDay!==undefined&&<p className="hint">{p.discontinuedDay}日目に販売終了しました。生産・販売は行われません。</p>}
      {onSale&&p.kind!=='os'&&<ProductionEditor product={p} state={state} send={sender}/>}
-     {onSale&&<PriceEditor product={p} send={sender}/>}
+      {onSale&&<PriceEditor product={p} state={state} send={sender}/>}
      {onSale&&(confirmEnd?<div className="end-confirm" role="group" aria-label="販売終了の確認">
       <p className="warning">{p.name} の販売を終了します。生産ラインを止め、{p.kind==='os'?'ライセンス販売とサポート費用を停止します':`通常販売できる在庫を定価の${Math.round(hardwareBalance.clearanceShare*100)}%で処分します（自社PCの組立用在庫は残ります）`}。元に戻せません。</p>
       <div className="button-row"><button onClick={()=>setConfirmEnd(false)}>やめる</button><button className="danger" onClick={()=>{if(send({type:'discontinue',id:p.id}))setConfirmEnd(false);}}>販売終了する</button></div></div>

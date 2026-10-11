@@ -4,11 +4,21 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a verified main APK'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
 
 # A PR branch gets one verification per commit, not duplicate push+PR runs.
 # Superseded PR checks are cancelled; releases from main must not be cancelled.
 concurrency:
-  group: verify-${{ github.event.pull_request.number || github.ref }}
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
@@ -32,11 +42,21 @@ jobs:
       - run: npm run test:e2e
       - run: npm run test:pwa
       - uses: actions/upload-artifact@v4
+        with:
+          name: verified-web
+          path: dist
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-results
           path: test-results
   android:
+    needs: game
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      code: ${{ steps.version.outputs.code }}
+      name: ${{ steps.version.outputs.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -55,7 +75,35 @@ jobs:
           cmdline-tools-version: '13114758'
       - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
-      - run: npm run android:build
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-web
+          path: dist
+      - name: Choose a unique beta version before building
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          node tools/release_version.mjs "v$VERSION" >/dev/null
+          TAG="v$VERSION-beta.$GITHUB_RUN_ID"
+          CODE="$(date +%s)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=$VERSION-beta.$GITHUB_RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "PCT_VERSION_NAME=$VERSION-beta.$GITHUB_RUN_ID" >> "$GITHUB_ENV"
+          echo "PCT_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+      - run: npm exec --workspace @pc-tycoon/android -- cap sync android
+      - name: Build verified Debug APK
+        working-directory: apps/android/android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Verify version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging apps/android/android/app/build/outputs/apk/debug/app-debug.apk)"
+          printf '%s\\n' "$BADGING" | grep -F "versionCode='$PCT_VERSION_CODE'"
+          printf '%s\\n' "$BADGING" | grep -F "versionName='$PCT_VERSION_NAME'"
       - run: npm run android:verify
       - run: "$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose apps/android/android/app/build/outputs/apk/debug/app-debug.apk"
       - uses: actions/upload-artifact@v4
@@ -63,3 +111,52 @@ jobs:
           name: pc-tycoon-debug-apk
           path: apps/android/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+  release:
+    needs: [game, android]
+    if: github.repository == 'pengin0503/PC-Tycoon-Enhanced' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      PCT_RELEASE_TAG: ${{ needs.android.outputs.tag }}
+      PCT_VERSION_CODE: ${{ needs.android.outputs.code }}
+      PCT_VERSION_NAME: ${{ needs.android.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: pc-tycoon-debug-apk
+          path: apps/android/android/app/build/outputs/apk/debug
+      - name: Prepare APK asset and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASENAME="PC-Tycoon-Enhanced-$PCT_RELEASE_TAG.apk"
+          cp apps/android/android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/$BASENAME"
+          (cd "$RUNNER_TEMP" && sha256sum "$BASENAME" > "$BASENAME.sha256")
+          echo "Release $PCT_RELEASE_TAG from $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/$BASENAME.sha256" >> "$GITHUB_STEP_SUMMARY"
+      - name: Create GitHub prerelease as draft with a direct APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASENAME="PC-Tycoon-Enhanced-$PCT_RELEASE_TAG.apk"
+          gh release create "$PCT_RELEASE_TAG" "$RUNNER_TEMP/$BASENAME" "$RUNNER_TEMP/$BASENAME.sha256" \
+            --target "$GITHUB_SHA" --title "PC Tycoon Enhanced $PCT_RELEASE_TAG" --prerelease --draft \
+            --notes "Personal testing build from main at $GITHUB_SHA. This APK uses the GitHub runner's temporary Android debug signing key, so installing a future build over it is not guaranteed. Export your game save to JSON before uninstalling or updating. The public repository provides direct APK downloads."
+      - name: Publish only after verifying both Release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASENAME="PC-Tycoon-Enhanced-$PCT_RELEASE_TAG.apk"
+          ASSETS="$(gh release view "$PCT_RELEASE_TAG" --json assets --jq '.assets[].name')"
+          printf '%s\n' "$ASSETS" | grep -Fx "$BASENAME"
+          printf '%s\n' "$ASSETS" | grep -Fx "$BASENAME.sha256"
+          gh release edit "$PCT_RELEASE_TAG" --draft=false --prerelease

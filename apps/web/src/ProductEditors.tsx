@@ -1,17 +1,18 @@
 import { t as uiText } from './i18n';
 import { useState } from 'react';
-import {priceRange} from '../../../packages/sim/src/pricing';
+import {productPriceRange} from '../../../packages/sim/src/pricing';
 import {assemblyDemand,availableForRetail,availableForAssembly,availableForAI} from '../../../packages/sim/src/inventory-allocation';
 import {yen} from './i18n';
 import type { Product } from '../../../packages/sim/src/types';
 import type {GameState} from '../../../packages/sim/src/index';
 import type { GameCommand } from '../../../packages/sim/src/index';
-export function PriceEditor({ product: p, send }: {
+export function PriceEditor({ product: p, state, send }: {
     product: Product;
+    state: GameState;
     send: (c: GameCommand) => void;
 }) {
     const [draft, setDraft] = useState(String(p.price));
-    const {min,max}=priceRange(p);const valid=Number.isSafeInteger(Number(draft))&&Number(draft)>=min&&Number(draft)<=max;
+    const {min,max}=productPriceRange(p,state.day);const valid=Number.isSafeInteger(Number(draft))&&Number(draft)>=min&&Number(draft)<=max;
     return <div><label>{uiText("ui_7fbd0b3bdbca")}<input aria-label={`${p.name} 価格`} type="number" min={min} max={max} step={1} value={draft} onChange={e => setDraft(e.target.value)}/></label><small>設定可能範囲：{yen(min)}～{yen(max)}</small><button disabled={!valid} onClick={() => send({ type: 'price', id: p.id, price: Number(draft) })}>{uiText("ui_4fd144438643")}</button></div>;
 }
 export function ProductionEditor({product:p,state,send}:{product:Product,state:GameState,send:(c:GameCommand)=>void}){
