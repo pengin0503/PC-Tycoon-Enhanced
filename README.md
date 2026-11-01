@@ -1,11 +1,13 @@
 # PC Tycoon Enhanced
 
-An offline Android company-management game with Japanese UI, research, hardware design, PC assembly, management and fictional AI/LLM development. No real AI models are trained.
+**日本語** | [English](README.en.md)
 
-Install the `pc-tycoon-debug-apk` artifact from a successful GitHub Actions verify run. Debug signatures can change between runners, so export and back up your JSON save before replacing an installation. Game time advances through player actions or foreground timers. Physical-device acceptance remains separate from automated tests.
+オフラインで遊べるAndroid向け経営ゲームです。日本語の画面で、研究、ハードウェア設計、PC組み立て、会社経営、架空のAI・LLM開発を楽しめます。実際のAIモデルは学習しません。
 
-## 日本語
+## インストール
 
-PC Tycoon Enhancedは、研究、ハードウェア設計、PC組立、経営、架空のAI・LLM開発を楽しむオフラインAndroidゲームです。ゲーム内UIは日本語です。実際のAIモデルの学習は行いません。
+[Actions](https://github.com/pengin0503/PC-Tycoon-Enhanced/actions) の成功した `verify` 実行から `pc-tycoon-debug-apk` を取得し、Androidにインストールします。実機での動作確認は自動テストとは別で、完了した保証はありません。
 
-成功したGitHub Actionsのverify実行から `pc-tycoon-debug-apk` を入手してインストールできます。デバッグ署名は実行環境ごとに変わるため、入れ替え前にセーブをJSONで書き出し、バックアップしてください。時間は操作中またはアプリが前面にある間に進みます。実機での確認は自動テストとは別で、完了した保証はありません。
+## セーブと時間
+
+ゲーム時間はプレイヤーの操作中、またはアプリが前面にある間に進みます。セーブは端末内に保存されます。デバッグ版の署名はビルド環境ごとに変わる場合があるため、入れ替え前にセーブをJSONで書き出し、バックアップしてください。
