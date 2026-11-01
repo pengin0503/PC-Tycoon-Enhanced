@@ -1,17 +1,11 @@
-# PC Tycoon Enhanced — Android Game
+# PC Tycoon Enhanced
 
-Independent **offline Android company-management game** with Japanese UI, original 3D-look product illustrations, research, hardware design, PC assembly, management and fictional AI/LLM development.
+An offline Android company-management game with Japanese UI, research, hardware design, PC assembly, management and fictional AI/LLM development. No real AI models are trained.
 
-## Technology
-The gameplay engine is strict **TypeScript** and remains deterministic. The UI uses React/Vite bundled locally in the **Capacitor Android APK**. Android-specific fullscreen, Back handling and file export are implemented in a small Java host. The WebView is an internal renderer: a public website or PWA is **not** the delivery target.
+Install the `pc-tycoon-debug-apk` artifact from a successful GitHub Actions verify run. Debug signatures can change between runners, so export and back up your JSON save before replacing an installation. Game time advances through player actions or foreground timers. Physical-device acceptance remains separate from automated tests.
 
-## Play / build
-- Install the APK artifact from a successful GitHub Actions **verify** run, named `pc-tycoon-debug-apk`. Debug signatures change between CI runners: export JSON before replacing an existing install. Keep backups.
-- Node 24+ and Java 21/Android SDK 36: `npm ci`, `npm run android:build`. This creates `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`.
-- For upgradeable signed release APKs, configure a **persistent keystore** and use the manual Android release workflow (see [APK distribution and acceptance](docs/android/APK_DISTRIBUTION.md)). Never commit signing keys.
-- Verification: `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e`, `npm run android:verify`. The browser harness only enables automated UI regression tests; it is not supported as a separate player distribution.
+## 日本語
 
-## Modules and data
-`packages/sim` deterministic game state, `packages/content` gameplay data, `packages/save` backwards-compatible versioned JSON, `apps/web` bundled render UI, `apps/android` APK host. Game time advances through player actions or foreground timers only. The save file is local: keep periodic JSON exports, especially before signing identity changes. No real AI models are trained.
+PC Tycoon Enhancedは、研究、ハードウェア設計、PC組立、経営、架空のAI・LLM開発を楽しむオフラインAndroidゲームです。ゲーム内UIは日本語です。実際のAIモデルの学習は行いません。
 
-See [Android design](docs/superpowers/specs/2026-10-08-android-first-game-design.md) and [Android acceptance](docs/android/APK_DISTRIBUTION.md). Physical-device acceptance remains separate from green CI.
+成功したGitHub Actionsのverify実行から `pc-tycoon-debug-apk` を入手してインストールできます。デバッグ署名は実行環境ごとに変わるため、入れ替え前にセーブをJSONで書き出し、バックアップしてください。時間は操作中またはアプリが前面にある間に進みます。実機での確認は自動テストとは別で、完了した保証はありません。
